@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>GymTracker Pro</title>
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="manifest" href="manifest.json" />
+
+  <style>
+    :root{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color:#e5e7eb;
+      background:#0b1220;
+    }
+    body{
+      margin:0;
+      background:
+        radial-gradient(1000px 600px at 10% 10%, rgba(99,102,241,.25), transparent 60%),
+        radial-gradient(900px 600px at 90% 20%, rgba(16,185,129,.20), transparent 55%),
+        radial-gradient(1000px 700px at 50% 90%, rgba(244,63,94,.18), transparent 60%),
+        #0b1220;
+    }
+
+    header{
+      position: sticky;
+      top: 0;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255,255,255,.06);
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(10px);
+      z-index: 20;
+    }
+
+    .wrap{ padding: 14px 16px 96px; max-width: 980px; margin: 0 auto; }
+    button,input,select{ font:inherit; }
+
+    .btn{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color:#e5e7eb;
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+
+      box-sizing: border-box;
+      max-width: 100%;
+    }
+    .btn.primary{ background:#fff; color:#0b1220; border-color:#fff; }
+    .btn.ghost{ background:transparent; border-color:rgba(255,255,255,.10); }
+
+    .card{
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 18px;
+      padding: 14px;
+      margin: 10px 0;
+    }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .muted{ color: rgba(229,231,235,.72); font-size: 13px; }
+    .pill{
+      display:inline-flex; gap:8px; align-items:center;
+      padding:8px 12px; border-radius:999px;
+      background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      font-size:13px;
+    }
+
+    .bottomNav{
+      position: fixed; left:0; right:0; bottom:0;
+      background: rgba(10, 16, 32, .72);
+      border-top: 1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(12px);
+      display:flex; justify-content:space-around; gap:6px;
+      padding: 10px 10px 14px;
+      z-index: 30;
+    }
+    .navBtn{
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+      background:transparent; border:0; color: rgba(229,231,235,.65);
+      padding: 8px 10px; border-radius:14px;
+      cursor:pointer; min-width: 64px;
+    }
+    .navBtn.active{ color: rgba(167,139,250,.98); background: rgba(167,139,250,.12); }
+    .navIcon{
+      width:26px; height:26px; display:grid; place-items:center;
+      border-radius: 12px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .navLabel{ font-size: 12px; }
+
+    .kpiGrid4{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; }
+    .kpiBox{
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+      min-height: 86px;
+      display:flex; flex-direction:column; justify-content:center; gap:6px;
+    }
+    .kpiBox .ico{ opacity:.9; }
+    .kpiBox .val{ font-size: 30px; font-weight: 900; letter-spacing: .2px; }
+    .kpiBox .lbl{ font-size: 13px; opacity: .75; }
+    .kpiPurple{ background: rgba(99,102,241,.45); }
+    .kpiTeal{ background: rgba(6,182,212,.45); }
+    .kpiPink{ background: rgba(244,114,182,.45); }
+    .kpiGold{ background: rgba(255,200,87,.55); }
+
+    .itemRow{
+      display:flex; justify-content:space-between; align-items:center; gap:12px;
+      padding: 14px;
+      border-radius: 18px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+    }
+    .left{ display:flex; align-items:center; gap:12px; min-width: 0; flex:1; }
+
+    .exIconWrap{
+      width:44px; height:44px; border-radius: 14px;
+      display:grid; place-items:center;
+      background: rgba(167,139,250,.14);
+      border:1px solid rgba(167,139,250,.18);
+      flex: 0 0 auto;
+    }
+    .exIconWrap.teal{ background: rgba(6,182,212,.14); border-color: rgba(6,182,212,.18); }
+    .exIconWrap.pink{ background: rgba(244,114,182,.14); border-color: rgba(244,114,182,.18); }
+    .exIconWrap.gold{ background: rgba(255,200,87,.14); border-color: rgba(255,200,87,.18); }
+    .exIconWrap svg{ width:28px; height:28px; opacity:.95; }
+    .titleLine{ display:flex; gap:10px; align-items:center; min-width:0; }
+    .titleLine strong{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    .filters{ display:flex; gap:10px; flex-wrap:wrap; margin: 10px 0 6px; }
+    .fchip{
+      padding:10px 14px; border-radius: 999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+      color: rgba(229,231,235,.8);
+      cursor:pointer;
+      display:inline-flex; align-items:center; gap:8px;
+    }
+    .fchip.active{
+      background: rgba(167,139,250,.22);
+      border-color: rgba(167,139,250,.35);
+      color:#fff;
+    }
+
+    .setline{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .setline input{
+      width: 92px;
+      padding: 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color:#e5e7eb;
+    }
+
+    .chips{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .chip{
+      padding:8px 12px; border-radius:999px; font-size:13px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+    }
+    .pr{
+      border-color: rgba(16,185,129,.55)!important;
+      background: rgba(16,185,129,.16)!important;
+    }
+    .prText{ color: rgba(16,185,129,.95); font-weight:800; }
+
+    .detailHeader{ display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .detailTitle{ display:flex; flex-direction:column; gap:2px; }
+    .detailTitle h2{ margin:0; font-size:22px; }
+    .detailTitle .sub{ color: rgba(229,231,235,.68); font-size:13px; }
+
+    .kpiGrid2{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; margin-top:14px; }
+    .kpi{
+      border-radius:18px; padding:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+    }
+    .kpi.gold{ background: rgba(255, 200, 87, .92); border-color: rgba(255, 200, 87, .35); color:#0b1220; }
+    .kpi .label{ font-size:13px; opacity:.75; }
+    .kpi.gold .label{ opacity:.85; }
+    .kpi .value{ margin-top:8px; font-size:30px; font-weight:900; letter-spacing:.2px; }
+    .kpi .value.sm{ font-size:20px; font-weight:900; }
+
+    .sectionCard{ margin-top:14px; border-radius:18px; padding:14px; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.06); }
+    .sectionTitle{ font-weight:900; margin:0 0 10px; }
+    .canvasWrap{ border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.04); }
+    .canvasWrap canvas{
+    width:100%;
+    height:260px;      /* фіксуємо висоту */
+    display:block;
+  }
+
+    /* Body measurements */
+    .bodyGrid{ display:grid; grid-template-columns: repeat(6, minmax(180px, 1fr)); gap:10px; align-items:end; }
+    .bodyField .btn{ width:100%; }
+    .bodyActions{ grid-column: 1 / -1; display:flex; justify-content:flex-end; }
+    @media (max-width: 980px){
+      .bodyGrid{ grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+    }
+    @media (max-width: 560px){
+      .bodyGrid{ grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+    }
+
+    .histItem{ border-radius:18px; padding:14px; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.06); }
+    .histTop{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .histDate{ font-weight:900; font-size:16px; }
+    .histBottom{ display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.10); }
+    .histLeftBig{ font-weight:900; font-size:18px; color: rgba(167, 139, 250, .95); }
+    .histRight{ color: rgba(229,231,235,.7); font-size:13px; }
+
+    .errBox{
+      border-radius:18px;
+      padding:14px;
+      border:1px solid rgba(244,63,94,.45);
+      background: rgba(244,63,94,.10);
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      color: rgba(255,255,255,.92);
+    }
+
+    @media (max-width:520px){ .wrap{ padding-bottom: 110px; } }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div>
+      <div class="muted" style="margin-bottom:2px">Вітаємо!</div>
+      <div style="font-size:22px; font-weight:900; letter-spacing:.2px">GymTracker Pro</div>
+    </div>
+    <div class="row">
+      <span class="pill" id="prBadge" style="display:none;">🏆 PR!</span>
+      <button class="btn" id="langBtn">UA</button>
+    </div>
+  </header>
+
+  <main class="wrap" id="app"></main>
+
+  <nav class="bottomNav">
+    <button class="navBtn active" data-tab="home">
+      <div class="navIcon">🏠</div><div class="navLabel">Головна</div>
+    </button>
+    <button class="navBtn" data-tab="workout">
+      <div class="navIcon">🏋️</div><div class="navLabel">Тренування</div>
+    </button>
+    <button class="navBtn" data-tab="exercises">
+      <div class="navIcon">➕</div><div class="navLabel">Вправи</div>
+    </button>
+    <button class="navBtn" data-tab="stats">
+      <div class="navIcon">📊</div><div class="navLabel">Статистика</div>
+    </button>
+    <button class="navBtn" data-tab="body">
+      <div class="navIcon">🧍</div><div class="navLabel">Тіло</div>
+    </button>
+    <button class="navBtn" data-tab="records">
+      <div class="navIcon">🏆</div><div class="navLabel">Рекорди</div>
+    </button>
+    <button class="navBtn" data-tab="settings">
+      <div class="navIcon">⚙️</div><div class="navLabel">Налаштув.</div>
+    </button>
+  </nav>
+
+  <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
+  <script defer src="app.js?v=5"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    }
+  </script>
+</body>
+</html>
