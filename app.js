@@ -95,6 +95,9 @@ document.addEventListener("DOMContentLoaded", () => {
       all: "Все",
       volumeBarsHint: "Кожен стовпчик = одне тренування",
       addToWorkout: "＋",
+      deleteExercise: "Видалити вправу",
+      confirmDeleteExercise: "Точно видалити цю вправу?",
+      exerciseUsedInWorkouts: "Ця вправа вже є в тренуваннях. Спочатку видали її з історії або зміни логіку видалення.",  
     },
     en: {
       home: "Home",
@@ -175,6 +178,9 @@ document.addEventListener("DOMContentLoaded", () => {
       all: "All",
       volumeBarsHint: "Each bar = one workout",
       addToWorkout: "＋",
+      deleteExercise: "Delete exercise",
+      confirmDeleteExercise: "Delete this exercise?",
+      exerciseUsedInWorkouts: "This exercise is already used in workouts. Delete it from history first or change delete logic.",
     }
   };
 
@@ -350,6 +356,33 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isFav(id)) state.favorites = state.favorites.filter(x=>x!==id);
     else state.favorites.unshift(id);
     save();
+  }
+
+  function deleteExerciseById(id){
+    if (!id) return;
+
+    const usedInWorkouts = (state.workouts || []).some(w =>
+      (w.items || []).some(it => it.exerciseId === id)
+    );
+
+    if (usedInWorkouts){
+      alert(t("exerciseUsedInWorkouts"));
+      return;
+    }
+
+    if (!confirm(t("confirmDeleteExercise"))) return;
+
+    state.exercises = (state.exercises || []).filter(ex => ex.id !== id);
+    state.favorites = (state.favorites || []).filter(favId => favId !== id);
+
+    if (state.prs && state.prs[id]) {
+      const copy = { ...state.prs };
+      delete copy[id];
+      state.prs = copy;
+    }
+
+    save();
+    renderExList();
   }
 
   // ---------- icons ----------
@@ -1196,6 +1229,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
           <div class="row">
             <button class="btn" data-fav="${ex.id}">${isFav(ex.id)?"⭐":"☆"}</button>
+            <button class="btn" data-delex="${ex.id}" title="${t("deleteExercise")}">🗑</button>
             <button class="btn primary" data-addw="${ex.id}">${t("addToWorkout")}</button>
           </div>
         </div>
@@ -1206,6 +1240,12 @@ document.addEventListener("DOMContentLoaded", () => {
       b.onclick = ()=>{
         toggleFav(b.getAttribute("data-fav"));
         renderExList();
+      };
+    });
+
+    box.querySelectorAll("[data-delex]").forEach(b=>{
+      b.onclick = ()=>{
+        deleteExerciseById(b.getAttribute("data-delex"));
       };
     });
 
