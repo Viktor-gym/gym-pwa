@@ -339,6 +339,8 @@
     .chartDelta{font-size:12px;font-weight:850;padding:6px 9px;border-radius:999px;background:rgba(52,211,153,.11);color:#6ee7b7;white-space:nowrap}
     .chartDelta.down{background:rgba(251,113,133,.11);color:#fda4af}
     .trendSvg{display:block;width:100%;height:150px;overflow:visible}
+    .pointLabel{font-size:4.4px;font-weight:850;fill:#e9edf7;paint-order:stroke;stroke:#0b1020;stroke-width:1.7px;stroke-linejoin:round}
+    .pointLabel.last{fill:#fff;font-size:5px}
     .trendLabels{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:3px}
     .distribution{display:grid;gap:12px}
     .distRow{display:grid;grid-template-columns:minmax(72px,110px) 1fr auto;align-items:center;gap:10px}
@@ -353,6 +355,7 @@
     .bodyTrendName{font-size:13px;color:var(--muted);font-weight:750}
     .bodyTrendValue{font-size:24px;font-weight:900;letter-spacing:-.035em;margin-top:4px}
     .miniTrend{width:100%;height:74px;display:block;margin-top:8px}
+    .miniPointLabel{font-size:5px;font-weight:850;fill:#e9edf7;paint-order:stroke;stroke:#0b1020;stroke-width:1.8px;stroke-linejoin:round}
     .exerciseArt svg{width:34px;height:34px}
     .bottomNav{
       left:50%;right:auto;bottom:14px;transform:translateX(-50%);
@@ -443,7 +446,7 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app.js?v=8"></script>
+  <script defer src="app.js?v=9"></script>
 
   <script>
     if ('serviceWorker' in navigator) {

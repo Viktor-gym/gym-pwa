@@ -1644,6 +1644,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const color = options.color || "#8b5cf6";
     const unit = options.unit || "";
     const id = `g${Math.random().toString(16).slice(2)}`;
+    const labelStep = pts.length > 7 ? 2 : 1;
+    const labelValue = (v)=> options.pointFormat ? options.pointFormat(v) : fmtNum(v);
     return `
       <div class="chartHeader">
         <div>
@@ -1663,6 +1665,13 @@ document.addEventListener("DOMContentLoaded", () => {
         <polygon points="${area}" fill="url(#${id})"/>
         <polyline points="${line}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
         ${coords.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="${i===coords.length-1?2.5:1.35}" fill="${color}" stroke="#111827" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("")}
+        ${coords.map((p,i)=>{
+          if (i%labelStep!==0 && i!==coords.length-1) return "";
+          const anchor = i===0 ? "start" : i===coords.length-1 ? "end" : "middle";
+          const x = i===0 ? p.x+1 : i===coords.length-1 ? p.x-1 : p.x;
+          const y = Math.max(8,p.y-6);
+          return `<text class="pointLabel ${i===coords.length-1?"last":""}" x="${x}" y="${y}" text-anchor="${anchor}">${escapeHtml(labelValue(p.value))}</text>`;
+        }).join("")}
       </svg>
       <div class="trendLabels"><span>${escapeHtml(pts[0].label)}</span><span>${escapeHtml(pts[pts.length-1].label)}</span></div>
     `;
@@ -1679,6 +1688,7 @@ document.addEventListener("DOMContentLoaded", () => {
       color:"#a78bfa",
       unit:"kg",
       format:fmtVol,
+      pointFormat:fmtVol,
       caption:state.lang==="en" ? "Volume of latest workout" : "Обʼєм останнього тренування"
     });
   }
@@ -1920,6 +1930,7 @@ document.addEventListener("DOMContentLoaded", () => {
       color:"#22d3ee",
       unit:"kg",
       format:fmtVol,
+      pointFormat:fmtVol,
       caption:state.lang==="en" ? "Exercise volume" : "Обʼєм вправи"
     });
   }
@@ -2134,6 +2145,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const line = coords.map(p=>`${p.x},${p.y}`).join(" ");
     const last = values[values.length-1];
     const delta = last-values[0];
+    const labelStep = data.length > 6 ? 2 : 1;
     box.innerHTML = `
       <div class="bodyTrendTop">
         <div>
@@ -2146,6 +2158,12 @@ document.addEventListener("DOMContentLoaded", () => {
         <path d="M3 66H97" stroke="rgba(255,255,255,.07)" stroke-width=".8" vector-effect="non-scaling-stroke"/>
         <polyline points="${line}" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
         ${coords.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="${i===coords.length-1?2.7:1.3}" fill="${stroke}" stroke="#111827" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("")}
+        ${coords.map((p,i)=>{
+          if (i%labelStep!==0 && i!==coords.length-1) return "";
+          const anchor = i===0 ? "start" : i===coords.length-1 ? "end" : "middle";
+          const x = i===0 ? p.x+1 : i===coords.length-1 ? p.x-1 : p.x;
+          return `<text class="miniPointLabel" x="${x}" y="${Math.max(8,p.y-6)}" text-anchor="${anchor}">${escapeHtml(fmtNum(values[i]))}</text>`;
+        }).join("")}
       </svg>
       <div class="trendLabels"><span>${escapeHtml(data[0].label)}</span><span>${escapeHtml(data[data.length-1].label)}</span></div>`;
   }
