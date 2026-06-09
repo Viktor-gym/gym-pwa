@@ -86,6 +86,8 @@ document.addEventListener("DOMContentLoaded", () => {
       totalTrainings: "всього тренувань",
       totalSets: "всього підходів",
       totalVolume: "загальний обʼєм",
+      calories: "Спалені калорії",
+      caloriesApprox: "приблизна оцінка",
       volumeProgress: "Прогрес обʼєму",
       muscleSplit: "Розподіл навантаження",
       muscleSplitHint: "Частка обʼєму по групах",
@@ -176,6 +178,8 @@ document.addEventListener("DOMContentLoaded", () => {
       totalTrainings: "total trainings",
       totalSets: "total sets",
       totalVolume: "total volume",
+      calories: "Calories burned",
+      caloriesApprox: "approximate estimate",
       volumeProgress: "Volume progress",
       muscleSplit: "Muscle split",
       muscleSplitHint: "Share of volume by muscle group",
@@ -678,6 +682,27 @@ document.addEventListener("DOMContentLoaded", () => {
   function volumeInWorkouts(workouts){
     return workouts.reduce((a,w)=> a + (w.items||[]).reduce((x,it)=> x + volumeOfSets(it.sets), 0), 0);
   }
+  function latestBodyWeight(){
+    const measurements = [...(state.body||[])]
+      .filter(x=>parseNum(x?.weight)>0)
+      .sort((a,b)=>new Date(b.date)-new Date(a.date));
+    return parseNum(measurements[0]?.weight) || 80;
+  }
+  function estimatedWorkoutMinutes(workout){
+    const sets = countSetsInWorkouts([workout]);
+    return Math.min(180, Math.max(12, Math.round(sets * 2.5)));
+  }
+  function estimateWorkoutCalories(workout){
+    const sets = countSetsInWorkouts([workout]);
+    if (!sets) return 0;
+    const weight = latestBodyWeight();
+    const minutes = estimatedWorkoutMinutes(workout);
+    const met = sets >= 20 ? 6.5 : sets >= 10 ? 6 : 5.5;
+    return Math.round(met * 3.5 * weight / 200 * minutes);
+  }
+  function estimateCaloriesInWorkouts(workouts){
+    return workouts.reduce((sum,w)=>sum+estimateWorkoutCalories(w),0);
+  }
   function activeDaysCount(workouts){
     const s = new Set(workouts.map(w=>fmtDate(w.date)));
     return s.size;
@@ -729,6 +754,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const weekTrainings = weekWorkouts.length;
     const weekSets = countSetsInWorkouts(weekWorkouts);
     const weekVol = volumeInWorkouts(weekWorkouts);
+    const weekCalories = estimateCaloriesInWorkouts(weekWorkouts);
 
     el.appendChild(card(`
       <div style="font-weight:900; font-size:18px; margin-bottom:10px;">${t("thisWeek")}</div>
@@ -753,6 +779,10 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="val">${fmtVol(weekVol)}</div>
           <div class="lbl">${t("volume")}</div>
         </div>
+      </div>
+      <div class="calorieCard">
+        <div><div style="font-weight:900">🔥 ${t("calories")}</div><div class="muted">${t("caloriesApprox")} · ${fmtNum(latestBodyWeight())} kg</div></div>
+        <div class="calorieValue">≈ ${weekCalories} kcal</div>
       </div>
 
       <div style="margin-top:12px">
@@ -797,6 +827,7 @@ document.addEventListener("DOMContentLoaded", () => {
     box.innerHTML = last.map(w=>{
       const title = w.title || (state.lang==="en" ? "Workout" : "Тренування");
       const maxW = Math.max(0, ...(w.items||[]).map(it=>maxWeightOfSets(it.sets)));
+      const calories = estimateWorkoutCalories(w);
       return `
         <div class="itemRow" style="cursor:pointer" data-openw="${w.id}">
           <div class="left">
@@ -805,7 +836,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="muted">${fmtDate(w.date)}</div>
             </div>
           </div>
-          <div style="font-weight:900; color: rgba(167,139,250,.95)">${fmtNum(maxW)} kg</div>
+          <div style="text-align:right"><div style="font-weight:900;color:rgba(167,139,250,.95)">${fmtNum(maxW)} kg</div><div class="muted">≈ ${calories} kcal</div></div>
         </div>
       `;
     }).join("");
@@ -1274,6 +1305,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalVol = volumeInWorkouts([w]);
     const totalSets = countSetsInWorkouts([w]);
     const maxW = Math.max(0, ...(w.items||[]).map(it=>maxWeightOfSets(it.sets)));
+    const calories = estimateWorkoutCalories(w);
+    const estimatedMinutes = estimatedWorkoutMinutes(w);
 
     const itemsHtml = (w.items||[]).map(it=>{
       const ex = state.exercises.find(e=>e.id===it.exerciseId);
@@ -1313,6 +1346,8 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="kpi"><div class="label">${state.lang==="en" ? "Sets" : "Підходів"}</div><div class="value">${totalSets}</div></div>
         <div class="kpi"><div class="label">${state.lang==="en" ? "Volume" : "Обʼєм"}</div><div class="value sm">${fmtVol(totalVol)} kg</div></div>
         <div class="kpi"><div class="label">${t("exercisesCount")}</div><div class="value">${(w.items||[]).length}</div></div>
+        <div class="kpi"><div class="label">${t("calories")} · ≈</div><div class="value sm">${calories} kcal</div></div>
+        <div class="kpi"><div class="label">${state.lang==="en" ? "Estimated duration" : "Орієнтовний час"}</div><div class="value sm">≈ ${estimatedMinutes} ${state.lang==="en"?"min":"хв"}</div></div>
       </div>
 
       ${itemsHtml}
@@ -1558,6 +1593,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const days = activeDaysCount(workouts);
     const sets = countSetsInWorkouts(workouts);
     const vol = volumeInWorkouts(workouts);
+    const calories = estimateCaloriesInWorkouts(workouts);
 
     el.appendChild(card(`
       <div class="detailHeader">
@@ -1578,6 +1614,10 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="kpiBox kpiTeal"><div class="ico">📅</div><div class="val">${days}</div><div class="lbl">${t("activeDays")}</div></div>
         <div class="kpiBox kpiPink"><div class="ico">🧱</div><div class="val">${sets}</div><div class="lbl">${t("totalSets")}</div></div>
         <div class="kpiBox kpiGold"><div class="ico">🔥</div><div class="val">${fmtVol(vol)}</div><div class="lbl">${t("totalVolume")}</div></div>
+      </div>
+      <div class="calorieCard">
+        <div><div style="font-weight:900">🔥 ${t("calories")}</div><div class="muted">${t("caloriesApprox")} · MET + ${fmtNum(latestBodyWeight())} kg</div></div>
+        <div class="calorieValue">≈ ${calories} kcal</div>
       </div>
 
       <div class="sectionCard">
@@ -1632,7 +1672,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const span = Math.max(1, max-min);
     const coords = pts.map((p,i)=>{
       const x = pts.length===1 ? 50 : 4 + (92*i/(pts.length-1));
-      const y = 88 - ((parseNum(p.value)-min)/span)*56;
+      const y = 92 - ((parseNum(p.value)-min)/span)*48;
       return { ...p, x, y };
     });
     const line = coords.map(p=>`${p.x},${p.y}`).join(" ");
@@ -1669,11 +1709,16 @@ document.addEventListener("DOMContentLoaded", () => {
           if (i%labelStep!==0 && i!==coords.length-1) return "";
           const anchor = i===0 ? "start" : i===coords.length-1 ? "end" : "middle";
           const x = i===0 ? p.x+1 : i===coords.length-1 ? p.x-1 : p.x;
-          const y = Math.max(16,p.y-8);
+          const y = Math.max(25,p.y-12);
           return `<text class="pointLabel ${i===coords.length-1?"last":""}" x="${x}" y="${y}" text-anchor="${anchor}">${escapeHtml(labelValue(p.value))}</text>`;
         }).join("")}
       </svg>
       <div class="trendLabels"><span>${escapeHtml(pts[0].label)}</span><span>${escapeHtml(pts[pts.length-1].label)}</span></div>
+      <div class="chartStats">
+        <div class="chartStat"><span>${state.lang==="en"?"Minimum":"Мінімум"}</span><strong>${labelValue(min)}${unit?` ${unit}`:""}</strong></div>
+        <div class="chartStat"><span>${state.lang==="en"?"Average":"Середнє"}</span><strong>${labelValue(values.reduce((a,v)=>a+v,0)/values.length)}${unit?` ${unit}`:""}</strong></div>
+        <div class="chartStat"><span>${state.lang==="en"?"Maximum":"Максимум"}</span><strong>${labelValue(max)}${unit?` ${unit}`:""}</strong></div>
+      </div>
     `;
   }
 
@@ -1708,7 +1753,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const entries = Object.entries(totals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
     if (!entries.length) return void (box.innerHTML = `<div class="muted">${t("noData")}</div>`);
     const total = entries.reduce((a,[,v])=>a+v,0);
-    const colors = ["#8b5cf6","#22d3ee","#fb7185","#fbbf24","#34d399","#60a5fa"];
+    const colors = [
+      ["#8b5cf6","#c4b5fd","rgba(139,92,246,.45)"],
+      ["#0891b2","#67e8f9","rgba(34,211,238,.4)"],
+      ["#db2777","#f9a8d4","rgba(251,113,133,.38)"],
+      ["#d97706","#fde68a","rgba(251,191,36,.38)"],
+      ["#059669","#6ee7b7","rgba(52,211,153,.38)"],
+      ["#2563eb","#93c5fd","rgba(96,165,250,.38)"],
+      ["#7c3aed","#ddd6fe","rgba(167,139,250,.38)"]
+    ];
     box.innerHTML = `
       <div class="chartHeader">
         <div><div class="muted">${state.lang==="en" ? "Total load" : "Сумарне навантаження"}</div><div class="chartBig">${fmtVol(total)} <small style="font-size:.48em;color:var(--muted)">kg</small></div></div>
@@ -1716,10 +1769,11 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="distribution">
         ${entries.map(([cat,v],i)=>{
           const pct = Math.round(v/total*100);
+          const palette = colors[i%colors.length];
           return `<div class="distRow">
-            <div class="distName">${escapeHtml(catName(cat))}</div>
-            <div class="distTrack"><span class="distFill" style="width:${pct}%;--bar-color:${colors[i%colors.length]}"></span></div>
-            <div class="distValue">${pct}%</div>
+            <div class="distName">${escapeHtml(catName(cat))}<small>${fmtVol(v)} kg</small></div>
+            <div class="distTrack"><span class="distFill" style="width:${Math.max(2,pct)}%;--bar-color:${palette[0]};--bar-color-light:${palette[1]};--bar-glow:${palette[2]}"></span></div>
+            <div class="distValue" title="${fmtVol(v)} kg">${pct}%</div>
           </div>`;
         }).join("")}
       </div>`;
@@ -2140,9 +2194,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const span = Math.max(1,max-min);
     const coords = data.map((p,i)=>({
       x:data.length===1?50:3+(94*i/(data.length-1)),
-      y:72-((p.value-min)/span)*42
+      y:78-((p.value-min)/span)*36
     }));
     const line = coords.map(p=>`${p.x},${p.y}`).join(" ");
+    const area = `3,84 ${line} 97,84`;
     const last = values[values.length-1];
     const delta = last-values[0];
     const labelStep = data.length > 6 ? 2 : 1;
@@ -2154,15 +2209,17 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         ${values.length>1?`<div class="chartDelta ${delta<0?"down":""}">${delta>=0?"+":""}${fmtNum(delta)}</div>`:""}
       </div>
-      <svg class="miniTrend" viewBox="0 0 100 84" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M3 74H97" stroke="rgba(255,255,255,.07)" stroke-width=".8" vector-effect="non-scaling-stroke"/>
+      <svg class="miniTrend" viewBox="0 0 100 92" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="${canvasId}Fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${stroke}" stop-opacity=".28"/><stop offset="1" stop-color="${stroke}" stop-opacity="0"/></linearGradient></defs>
+        <path d="M3 84H97" stroke="rgba(255,255,255,.07)" stroke-width=".8" vector-effect="non-scaling-stroke"/>
+        <polygon points="${area}" fill="url(#${canvasId}Fill)"/>
         <polyline points="${line}" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
         ${coords.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="${i===coords.length-1?2.7:1.3}" fill="${stroke}" stroke="#111827" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("")}
         ${coords.map((p,i)=>{
           if (i%labelStep!==0 && i!==coords.length-1) return "";
           const anchor = i===0 ? "start" : i===coords.length-1 ? "end" : "middle";
           const x = i===0 ? p.x+1 : i===coords.length-1 ? p.x-1 : p.x;
-          return `<text class="miniPointLabel" x="${x}" y="${Math.max(14,p.y-7)}" text-anchor="${anchor}">${escapeHtml(fmtNum(values[i]))}</text>`;
+          return `<text class="miniPointLabel" x="${x}" y="${Math.max(21,p.y-10)}" text-anchor="${anchor}">${escapeHtml(fmtNum(values[i]))}</text>`;
         }).join("")}
       </svg>
       <div class="trendLabels"><span>${escapeHtml(data[0].label)}</span><span>${escapeHtml(data[data.length-1].label)}</span></div>`;
