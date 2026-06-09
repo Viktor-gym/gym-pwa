@@ -322,9 +322,38 @@
     .kpiGold{color:#fff;background:linear-gradient(145deg,rgba(217,119,6,.76),rgba(146,64,14,.75))}
     .exIconWrap{width:48px;height:48px;border-radius:16px}
     .canvasWrap{background:rgba(3,6,12,.48);border-color:var(--line)}
-    .bodyGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
-    .bodyField{min-width:0}
-    .bodyField .btn{width:100%;min-width:0}
+    .bodyGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .bodyField{min-width:0;display:grid;gap:7px}
+    .bodyField .btn{display:block;width:100%;min-width:0;max-width:100%;overflow:hidden}
+    .bodyField input[type="date"]{appearance:none;-webkit-appearance:none}
+    .bodyActions{margin-top:4px}
+    .chartSurface{
+      min-height:230px;padding:16px;border-radius:18px;overflow:hidden;
+      border:1px solid rgba(255,255,255,.07);
+      background:
+        radial-gradient(420px 180px at 20% 0%,rgba(139,92,246,.12),transparent 70%),
+        rgba(3,6,12,.44);
+    }
+    .chartHeader{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:14px}
+    .chartBig{font-size:27px;font-weight:900;letter-spacing:-.04em}
+    .chartDelta{font-size:12px;font-weight:850;padding:6px 9px;border-radius:999px;background:rgba(52,211,153,.11);color:#6ee7b7;white-space:nowrap}
+    .chartDelta.down{background:rgba(251,113,133,.11);color:#fda4af}
+    .trendSvg{display:block;width:100%;height:150px;overflow:visible}
+    .trendLabels{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:3px}
+    .distribution{display:grid;gap:12px}
+    .distRow{display:grid;grid-template-columns:minmax(72px,110px) 1fr auto;align-items:center;gap:10px}
+    .distName{font-size:12px;font-weight:760;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .distTrack{height:10px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+    .distFill{display:block;height:100%;min-width:5px;border-radius:inherit;background:linear-gradient(90deg,var(--bar-color),color-mix(in srgb,var(--bar-color),white 22%))}
+    .distValue{font-size:12px;color:#cbd5e1;font-weight:800;min-width:38px;text-align:right}
+    .bodyCharts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .bodyTrendCard{padding:15px;border:1px solid var(--line);border-radius:19px;background:rgba(4,8,16,.38);min-width:0}
+    .bodyTrendCard.primary{grid-column:1/-1}
+    .bodyTrendTop{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .bodyTrendName{font-size:13px;color:var(--muted);font-weight:750}
+    .bodyTrendValue{font-size:24px;font-weight:900;letter-spacing:-.035em;margin-top:4px}
+    .miniTrend{width:100%;height:74px;display:block;margin-top:8px}
+    .exerciseArt svg{width:34px;height:34px}
     .bottomNav{
       left:50%;right:auto;bottom:14px;transform:translateX(-50%);
       width:min(760px,calc(100% - 28px));display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
@@ -354,13 +383,16 @@
       .wrap{padding:16px 16px 112px}.card{padding:16px;border-radius:22px}
       .kpiGrid4{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
       .kpiBox{min-height:118px;padding:15px}.kpiBox .val{font-size:31px}
-      .bodyGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .bodyGrid{grid-template-columns:1fr}
+      .bodyCharts{grid-template-columns:1fr}
+      .bodyTrendCard.primary{grid-column:auto}
       .itemRow{align-items:flex-start}.itemRow>.row{justify-content:flex-end}
       .bottomNav{bottom:8px;width:calc(100% - 16px);border-radius:21px;padding:6px 4px}
       .navBtn{padding:7px 1px}.navIcon{width:27px;height:27px}.navLabel{font-size:9px}
     }
     @media(max-width:460px){
       .bodyGrid{grid-template-columns:1fr}.bodyActions{grid-column:auto}.bodyActions .btn{width:100%}
+      .chartSurface{padding:13px;min-height:218px}.chartBig{font-size:24px}.distRow{grid-template-columns:76px 1fr 38px}
       .itemRow{flex-direction:column}.itemRow>.left{width:100%}.itemRow>.row{width:100%;display:grid;grid-auto-flow:column;grid-auto-columns:1fr}.itemRow>.row .btn{width:100%}
       .setline{display:grid;grid-template-columns:auto 1fr 1fr auto}.setline input{width:100%;min-width:0}
       .restPanel{grid-template-columns:auto 1fr}.restActions{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr)}
@@ -411,7 +443,7 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app.js?v=7"></script>
+  <script defer src="app.js?v=8"></script>
 
   <script>
     if ('serviceWorker' in navigator) {

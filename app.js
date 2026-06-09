@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
       month: "Місяць",
       week: "Тиждень",
       all: "Все",
-      volumeBarsHint: "Кожен стовпчик = одне тренування",
+      volumeBarsHint: "Показано останні тренування — без масштабування",
       addToWorkout: "＋",
       deleteExercise: "Видалити вправу",
       confirmDeleteExercise: "Точно видалити цю вправу?",
@@ -190,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
       month: "Month",
       week: "Week",
       all: "All",
-      volumeBarsHint: "Each bar = one workout",
+      volumeBarsHint: "Latest workouts shown clearly without zooming",
       addToWorkout: "＋",
       deleteExercise: "Delete exercise",
       confirmDeleteExercise: "Delete this exercise?",
@@ -487,6 +487,67 @@ document.addEventListener("DOMContentLoaded", () => {
         <path d="M7 13l3 3"/>
         <path d="M5 21h4"/>
       </svg>`;
+    if (kind==="incline") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 18h14M7 18l6-9 4 3M7 21v-3M18 21v-3"/>
+        <circle cx="15.5" cy="8" r="1.7"/><path d="M10 7h10M9 5v4M21 5v4"/>
+      </svg>`;
+    if (kind==="fly") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="5" r="2"/><path d="M12 7v8M12 10L5 8M12 10l7-2M5 6v4M19 6v4M9 21l3-6 3 6"/>
+      </svg>`;
+    if (kind==="row") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="9" cy="5" r="2"/><path d="M9 7l3 5 5 2M12 12l-4 3M8 15l-2 6M11 14l3 7M16 11h5M18 9v4"/>
+      </svg>`;
+    if (kind==="pulldown") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 4h16M6 4v3M18 4v3M6 7h12"/><circle cx="12" cy="10" r="2"/><path d="M12 12v5M12 13L7 9M12 13l5-4M8 21v-4h8v4"/>
+      </svg>`;
+    if (kind==="legpress") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 19h6l3-5M5 19V9M3 9h5"/><circle cx="10" cy="9" r="1.8"/><path d="M11 11l3 3 4-5M16 7l4 4M18 5l4 4"/>
+      </svg>`;
+    if (kind==="legcurl") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 15h9M5 18v-3M13 18v-3"/><circle cx="8" cy="10" r="2"/><path d="M10 11l5 3 3-3M18 11l2 2M20 11v4"/>
+      </svg>`;
+    if (kind==="hipthrust") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 17h6M4 20v-3M9 20v-3"/><circle cx="9" cy="11" r="2"/><path d="M11 12l4 3 5-1M13 14l-2 6M18 14l2 6M12 13h7"/>
+      </svg>`;
+    if (kind==="overhead") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="2"/><path d="M12 10v6M9 21l3-5 3 5M8 8L6 4M16 8l2-4M3 4h6M15 4h6M4 2v4M20 2v4"/>
+      </svg>`;
+    if (kind==="lateral") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="6" r="2"/><path d="M12 8v7M8 21l4-6 4 6M12 10L5 12M12 10l7 2M3 10v4M21 10v4"/>
+      </svg>`;
+    if (kind==="curl") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="10" cy="5" r="2"/><path d="M10 7v7M8 21l2-7 3 7M10 9l5 3 2-4M15 7l4 2M18 7v4"/>
+      </svg>`;
+    if (kind==="triceps") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3v4M9 3h6"/><circle cx="12" cy="9" r="2"/><path d="M12 11v5M12 13L8 18M12 13l4 5M6 18h4M14 18h4M9 22l3-6 3 6"/>
+      </svg>`;
+    if (kind==="plank") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="18" cy="9" r="2"/><path d="M16 10L9 13 4 12M9 13l6 3M4 12l-2 5M15 16h5M2 20h20"/>
+      </svg>`;
+    if (kind==="legraise") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 3h16M7 3v5M17 3v5"/><circle cx="12" cy="8" r="2"/><path d="M12 10v5M12 15l-5 5M12 15l5 5"/>
+      </svg>`;
+    if (kind==="hyper") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 18h7l4-6M7 21l2-3M14 21l-2-3"/><circle cx="17" cy="8" r="2"/><path d="M15 9l-5 5"/>
+      </svg>`;
+    if (kind==="shrug") return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="6" r="2"/><path d="M12 8v8M8 21l4-5 4 5M12 10l-5 2M12 10l5 2M4 11v4M20 11v4"/>
+      </svg>`;
     return `
       <svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 10v4M7 9v6M17 9v6M20 10v4"/>
@@ -495,8 +556,23 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function exerciseIconKind(ex){
-    const name = (state.lang==="ua" ? ex.name_ua : ex.name_en).toLowerCase();
-    if (name.includes("жим") && name.includes("леж")) return "bench";
+    const name = `${ex.name_ua || ""} ${ex.name_en || ""}`.toLowerCase();
+    if (name.includes("жим під кут") || name.includes("incline")) return "incline";
+    if (name.includes("кросовер") || name.includes("fly")) return "fly";
+    if (name.includes("жим ногами") || name.includes("leg press")) return "legpress";
+    if (name.includes("згинання ніг") || name.includes("leg curl")) return "legcurl";
+    if (name.includes("ягодич") || name.includes("hip thrust")) return "hipthrust";
+    if (name.includes("жим над голов") || name.includes("overhead")) return "overhead";
+    if (name.includes("розведення") || name.includes("lateral")) return "lateral";
+    if (name.includes("шраг") || name.includes("shrug")) return "shrug";
+    if (name.includes("біцепс") || name.includes("curl")) return "curl";
+    if (name.includes("тріцепс") || name.includes("француз") || name.includes("pushdown") || name.includes("skull")) return "triceps";
+    if (name.includes("планк") || name.includes("plank")) return "plank";
+    if (name.includes("підйом ніг") || name.includes("leg raise")) return "legraise";
+    if (name.includes("гіперекст") || name.includes("hyperextension")) return "hyper";
+    if (name.includes("верхнього блоку") || name.includes("lat pulldown")) return "pulldown";
+    if (name.includes("тяга нижнього") || name.includes("тяга штанги") || name.includes("row")) return "row";
+    if ((name.includes("жим") && name.includes("леж")) || name.includes("bench press")) return "bench";
     if (name.includes("присідан")) return "squat";
     if (name.includes("підтяг")) return "pullup";
     if (name.includes("станов") || name.includes("deadlift") || name.includes("румун")) return "deadlift";
@@ -512,7 +588,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const tone = catTone(ex.category);
     const wrapCls = toneWrapClass(tone);
     const kind = exerciseIconKind(ex);
-    return `<div class="exIconWrap ${wrapCls}">${iconSvg(kind)}</div>`;
+    return `<div class="exIconWrap exerciseArt ${wrapCls}">${iconSvg(kind)}</div>`;
   }
 
   // ---------- session ----------
@@ -1506,13 +1582,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       <div class="sectionCard">
         <div class="sectionTitle">${t("volumeProgress")}</div>
-        <div class="canvasWrap"><canvas id="chartAllVol"></canvas></div>
+        <div class="chartSurface" id="chartAllVol"></div>
         <div class="muted" style="margin-top:10px">${t("volumeBarsHint")}</div>
       </div>
 
       <div class="sectionCard">
-        <div class="sectionTitle">${t("muscleSplit")} (${state.lang==="en" ? "pie" : "кругова"})</div>
-        <div class="canvasWrap"><canvas id="chartMusclePie"></canvas></div>
+        <div class="sectionTitle">${t("muscleSplit")}</div>
+        <div class="chartSurface" id="chartMusclePie"></div>
         <div class="muted" style="margin-top:10px">${t("muscleSplitHint")}</div>
       </div>
     `));
@@ -1543,87 +1619,73 @@ document.addEventListener("DOMContentLoaded", () => {
     return el;
   }
 
-  function drawAllVolumeBars(workouts){
-    const canvas = $("#chartAllVol");
-    if (!canvas) return;
-    const ctx = canvas.getContext?.("2d");
-    if (!ctx) return;
+  function recentPoints(points, limit=9){
+    return points.slice(Math.max(0, points.length-limit));
+  }
 
-    resizeCanvasToDisplaySize(canvas);
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    if (!workouts.length){
-      ctx.fillStyle = "rgba(229,231,235,.75)";
-      ctx.font = "16px system-ui";
-      ctx.fillText(t("noData"), 20, 40);
-      return;
-    }
-
-    const pts = [...workouts].slice().reverse().map(w=>({
-      v: volumeInWorkouts([w]),
-      label: fmtDate(w.date)
-    }));
-
-    const padL=44, padR=16, padT=18, padB=34;
-    const W = canvas.width - padL - padR;
-    const H = canvas.height - padT - padB;
-    const maxV = Math.max(1, ...pts.map(p=>p.v));
-
-    ctx.strokeStyle = "rgba(255,255,255,.10)";
-    for(let i=0;i<=4;i++){
-      const y = padT + (H*i/4);
-      ctx.beginPath();
-      ctx.moveTo(padL,y);
-      ctx.lineTo(padL+W,y);
-      ctx.stroke();
-    }
-
-    const barW = Math.max(10, Math.min(44, W/(pts.length*1.6)));
-    ctx.fillStyle = "rgba(167,139,250,.92)";
-
-    pts.forEach((p,i)=>{
-      const xCenter = padL + (W * (pts.length===1 ? 0.5 : i/(pts.length-1)));
-      const h = H*(p.v/maxV);
-      const x = xCenter - barW/2;
-      const y = padT + (H - h);
-
-      const r = 10;
-      const rr = Math.min(r, barW/2, h/2);
-
-      ctx.beginPath();
-      ctx.moveTo(x+rr, y);
-      ctx.arcTo(x+barW, y, x+barW, y+h, rr);
-      ctx.arcTo(x+barW, y+h, x, y+h, rr);
-      ctx.arcTo(x, y+h, x, y, rr);
-      ctx.arcTo(x, y, x+barW, y, rr);
-      ctx.closePath();
-      ctx.fill();
+  function trendMarkup(points, options={}){
+    if (!points.length) return `<div class="muted">${t("noData")}</div>`;
+    const pts = recentPoints(points, options.limit || 9);
+    const values = pts.map(p=>parseNum(p.value));
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = Math.max(1, max-min);
+    const coords = pts.map((p,i)=>{
+      const x = pts.length===1 ? 50 : 4 + (92*i/(pts.length-1));
+      const y = 84 - ((parseNum(p.value)-min)/span)*66;
+      return { ...p, x, y };
     });
+    const line = coords.map(p=>`${p.x},${p.y}`).join(" ");
+    const area = `4,92 ${line} 96,92`;
+    const first = values[0];
+    const last = values[values.length-1];
+    const delta = last-first;
+    const deltaText = `${delta>=0?"+":""}${fmtNum(delta)}${options.unit ? ` ${options.unit}` : ""}`;
+    const color = options.color || "#8b5cf6";
+    const unit = options.unit || "";
+    const id = `g${Math.random().toString(16).slice(2)}`;
+    return `
+      <div class="chartHeader">
+        <div>
+          <div class="muted">${options.caption || (state.lang==="en" ? "Latest result" : "Останній результат")}</div>
+          <div class="chartBig">${options.format ? options.format(last) : fmtNum(last)}${unit ? ` <small style="font-size:.48em;color:var(--muted)">${unit}</small>` : ""}</div>
+        </div>
+        ${values.length>1 ? `<div class="chartDelta ${delta<0?"down":""}">${deltaText}</div>` : ""}
+      </div>
+      <svg class="trendSvg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="${color}" stop-opacity=".34"/>
+            <stop offset="1" stop-color="${color}" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M4 25H96 M4 58H96 M4 91H96" stroke="rgba(255,255,255,.07)" stroke-width=".7" vector-effect="non-scaling-stroke"/>
+        <polygon points="${area}" fill="url(#${id})"/>
+        <polyline points="${line}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+        ${coords.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="${i===coords.length-1?2.5:1.35}" fill="${color}" stroke="#111827" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("")}
+      </svg>
+      <div class="trendLabels"><span>${escapeHtml(pts[0].label)}</span><span>${escapeHtml(pts[pts.length-1].label)}</span></div>
+    `;
+  }
 
-    ctx.fillStyle = "rgba(229,231,235,.70)";
-    ctx.font = "12px system-ui";
-    ctx.fillText("0", 14, padT+H);
-    ctx.fillText(fmtVol(maxV), 6, padT+10);
-
-    ctx.fillText(pts[0].label, padL, padT+H+24);
-    if (pts.length>1){
-      const last = pts[pts.length-1].label;
-      const tw = ctx.measureText(last).width;
-      ctx.fillText(last, padL + W - tw, padT+H+24);
-    }
+  function drawAllVolumeBars(workouts){
+    const box = $("#chartAllVol");
+    if (!box) return;
+    const points = [...workouts].reverse().map(w=>({
+      value:volumeInWorkouts([w]),
+      label:fmtDate(w.date)
+    }));
+    box.innerHTML = trendMarkup(points,{
+      color:"#a78bfa",
+      unit:"kg",
+      format:fmtVol,
+      caption:state.lang==="en" ? "Volume of latest workout" : "Обʼєм останнього тренування"
+    });
   }
 
   function drawMusclePie(workouts){
-    const canvas = $("#chartMusclePie");
-    if (!canvas) return;
-    const ctx = canvas.getContext?.("2d");
-    if (!ctx) return;
-
-    resizeCanvasToDisplaySize(canvas);   // ✅ ДОДАТИ
-    ctx.setTransform(1,0,0,1,0,0);        // ✅ ДОДАТИ
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
+    const box = $("#chartMusclePie");
+    if (!box) return;
     const totals = {};
     for (const w of workouts){
       for (const it of (w.items||[])){
@@ -1634,54 +1696,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const entries = Object.entries(totals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-    if (!entries.length){
-      ctx.fillStyle = "rgba(229,231,235,.75)";
-      ctx.font = "16px system-ui";
-      ctx.fillText(t("noData"), 20, 40);
-      return;
-    }
-
+    if (!entries.length) return void (box.innerHTML = `<div class="muted">${t("noData")}</div>`);
     const total = entries.reduce((a,[,v])=>a+v,0);
-    const w = canvas.width;
-    const h = canvas.height;
-
-    const cx = Math.min(180, w * 0.22);
-    const cy = h / 2;
-    const r  = Math.min(90, h * 0.35);
-
-    let start = -Math.PI/2;
-
-    entries.forEach(([cat, v], i)=>{
-      const ang = (v/total) * Math.PI*2;
-      const hue = (i * 360 / entries.length) % 360;
-
-      ctx.fillStyle = `hsla(${hue}, 70%, 60%, 0.9)`;
-
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, start, start + ang);
-      ctx.closePath();
-      ctx.fill();
-
-      start += ang;
-    });
-
-    ctx.font = "14px system-ui";
-    ctx.fillStyle = "rgba(229,231,235,.9)";
-    const lx = 300;
-    let ly = 50;
-
-    entries.forEach(([cat, v], i)=>{
-      const pct = Math.round((v/total)*100);
-      const hue = (i * 360 / entries.length) % 360;
-
-      ctx.fillStyle = `hsla(${hue}, 70%, 60%, 0.9)`;
-      ctx.fillRect(lx, ly-12, 14, 14);
-
-      ctx.fillStyle = "rgba(229,231,235,.9)";
-      ctx.fillText(`${catName(cat)} — ${pct}%`, lx + 22, ly);
-      ly += 26;
-    });
+    const colors = ["#8b5cf6","#22d3ee","#fb7185","#fbbf24","#34d399","#60a5fa"];
+    box.innerHTML = `
+      <div class="chartHeader">
+        <div><div class="muted">${state.lang==="en" ? "Total load" : "Сумарне навантаження"}</div><div class="chartBig">${fmtVol(total)} <small style="font-size:.48em;color:var(--muted)">kg</small></div></div>
+      </div>
+      <div class="distribution">
+        ${entries.map(([cat,v],i)=>{
+          const pct = Math.round(v/total*100);
+          return `<div class="distRow">
+            <div class="distName">${escapeHtml(catName(cat))}</div>
+            <div class="distTrack"><span class="distFill" style="width:${pct}%;--bar-color:${colors[i%colors.length]}"></span></div>
+            <div class="distValue">${pct}%</div>
+          </div>`;
+        }).join("")}
+      </div>`;
   }
 
   function renderStatsExercisesOnlyTrained(){
@@ -1803,12 +1834,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       <div class="sectionCard">
         <div class="sectionTitle">${t("weightProgress")}</div>
-        <div class="canvasWrap"><canvas id="chartWeight" width="900" height="260"></canvas></div>
+        <div class="chartSurface" id="chartWeight"></div>
       </div>
 
       <div class="sectionCard">
         <div class="sectionTitle">${t("volumeProgress")}</div>
-        <div class="canvasWrap"><canvas id="chartVolume" width="900" height="260"></canvas></div>
+        <div class="chartSurface" id="chartVolume"></div>
       </div>
 
       <div class="sectionCard">
@@ -1867,130 +1898,30 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function drawWeightChart(logs){
-    const canvas = $("#chartWeight");
-    if (!canvas) return;
-    const ctx = canvas.getContext?.("2d");
-    if (!ctx) return;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    if (!logs.length) return;
-
-    const pts = logs.map(l=>({ y: maxWeightOfSets(l.sets), label: fmtDate(l.date) }));
-    const padL=44, padR=16, padT=18, padB=34;
-    const W = canvas.width-padL-padR;
-    const H = canvas.height-padT-padB;
-    const maxY = Math.max(1, ...pts.map(p=>p.y));
-
-    ctx.strokeStyle="rgba(255,255,255,.10)";
-    for(let i=0;i<=4;i++){
-      const y = padT + (H*i/4);
-      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+W,y); ctx.stroke();
-    }
-
-    ctx.lineWidth=4;
-    ctx.strokeStyle="rgba(255, 200, 87, .95)";
-
-    ctx.beginPath();
-    pts.forEach((p,i)=>{
-      const x = padL + (W*(pts.length===1 ? 0.5 : i/(pts.length-1)));
-      const y = padT + (H*(1 - p.y/maxY));
-      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    const box = $("#chartWeight");
+    if (!box) return;
+    box.innerHTML = trendMarkup(logs.map(l=>({
+      value:maxWeightOfSets(l.sets),
+      label:fmtDate(l.date)
+    })),{
+      color:"#fbbf24",
+      unit:"kg",
+      caption:state.lang==="en" ? "Working weight" : "Робоча вага"
     });
-    ctx.stroke();
-
-    ctx.fillStyle="rgba(255, 200, 87, .95)";
-    pts.forEach((p,i)=>{
-      const x = padL + (W*(pts.length===1 ? 0.5 : i/(pts.length-1)));
-      const y = padT + (H*(1 - p.y/maxY));
-      ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
-    });
-
-    // value labels above points
-    ctx.font = "12px system-ui";
-    ctx.fillStyle = "rgba(229,231,235,.92)";
-    pts.forEach((p,i)=>{
-      const x = padL + (W*(pts.length===1 ? 0.5 : i/(pts.length-1)));
-      const y = padT + (H*(1 - p.y/maxY));
-      const txt = fmtNum(p.y);
-      const tw = ctx.measureText(txt).width;
-      ctx.fillText(txt, x - tw/2, y - 10);
-    });
-
-    ctx.fillStyle="rgba(229,231,235,.70)";
-    ctx.font="12px system-ui";
-    ctx.fillText("0", 14, padT+H);
-    ctx.fillText(String(Math.round(maxY)), 10, padT+10);
-
-    ctx.fillText(pts[0].label, padL, padT+H+24);
-    if (pts.length>1){
-      const last = pts[pts.length-1].label;
-      const tw = ctx.measureText(last).width;
-      ctx.fillText(last, padL+W-tw, padT+H+24);
-    }
   }
 
   function drawVolumeBars(logs){
-    const canvas = $("#chartVolume");
-    if (!canvas) return;
-    const ctx = canvas.getContext?.("2d");
-    if (!ctx) return;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    if (!logs.length) return;
-
-    const pts = logs.map(l=>({ v: volumeOfSets(l.sets), label: fmtDate(l.date) }));
-
-    const padL=44, padR=16, padT=18, padB=34;
-    const W = canvas.width-padL-padR;
-    const H = canvas.height-padT-padB;
-    const maxV = Math.max(1, ...pts.map(p=>p.v));
-
-    ctx.strokeStyle="rgba(255,255,255,.10)";
-    for(let i=0;i<=4;i++){
-      const y = padT + (H*i/4);
-      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+W,y); ctx.stroke();
-    }
-
-    const barW = Math.max(10, Math.min(42, W/(pts.length*1.6)));
-    ctx.fillStyle="rgba(255, 200, 87, .95)";
-
-    pts.forEach((p,i)=>{
-      const xCenter = padL + (W*(pts.length===1 ? 0.5 : i/(pts.length-1)));
-      const h = H*(p.v/maxV);
-      const x = xCenter - barW/2;
-      const y = padT + (H-h);
-
-      const r=10;
-      const rr = Math.min(r, barW/2, h/2);
-
-      ctx.beginPath();
-      ctx.moveTo(x+rr, y);
-      ctx.arcTo(x+barW, y, x+barW, y+h, rr);
-      ctx.arcTo(x+barW, y+h, x, y+h, rr);
-      ctx.arcTo(x, y+h, x, y, rr);
-      ctx.arcTo(x, y, x+barW, y, rr);
-      ctx.closePath();
-      ctx.fill();
-
-      // label above bar
-      ctx.font = "12px system-ui";
-      ctx.fillStyle = "rgba(229,231,235,.92)";
-      const txt = fmtVol(p.v);
-      const tw = ctx.measureText(txt).width;
-      ctx.fillText(txt, xCenter - tw/2, y - 10);
-
-      ctx.fillStyle="rgba(255, 200, 87, .95)";
+    const box = $("#chartVolume");
+    if (!box) return;
+    box.innerHTML = trendMarkup(logs.map(l=>({
+      value:volumeOfSets(l.sets),
+      label:fmtDate(l.date)
+    })),{
+      color:"#22d3ee",
+      unit:"kg",
+      format:fmtVol,
+      caption:state.lang==="en" ? "Exercise volume" : "Обʼєм вправи"
     });
-
-    ctx.fillStyle="rgba(229,231,235,.70)";
-    ctx.font="12px system-ui";
-    ctx.fillText("0", 14, padT+H);
-    ctx.fillText(fmtVol(maxV), 6, padT+10);
-
-    ctx.fillText(pts[0].label, padL, padT+H+24);
-    if (pts.length>1){
-      const last = pts[pts.length-1].label;
-      const tw = ctx.measureText(last).width;
-      ctx.fillText(last, padL+W-tw, padT+H+24);
-    }
   }
 
   // ---------- BODY ----------
@@ -2056,25 +1987,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     el.appendChild(card(`
       <div class="sectionTitle" style="margin:0 0 10px">${t("bodyProgress")}</div>
-      <div class="sectionCard">
-        <div class="sectionTitle">⚖️ ${state.lang==="en" ? "Weight" : "Вага"}</div>
-        <div class="canvasWrap"><canvas id="chartBodyWeight" width="900" height="260"></canvas></div>
-      </div>
-      <div class="sectionCard">
-        <div class="sectionTitle">📏 ${state.lang==="en" ? "Forearm" : "Передпліччя"}</div>
-        <div class="canvasWrap"><canvas id="chartBodyForearm" width="900" height="260"></canvas></div>
-      </div>
-      <div class="sectionCard">
-        <div class="sectionTitle">📏 ${state.lang==="en" ? "Chest" : "Груди"}</div>
-        <div class="canvasWrap"><canvas id="chartBodyChest" width="900" height="260"></canvas></div>
-      </div>
-      <div class="sectionCard">
-        <div class="sectionTitle">📏 ${state.lang==="en" ? "Waist" : "Талія"}</div>
-        <div class="canvasWrap"><canvas id="chartBodyWaist" width="900" height="260"></canvas></div>
-      </div>
-      <div class="sectionCard">
-        <div class="sectionTitle">📏 ${state.lang==="en" ? "Legs" : "Ноги"}</div>
-        <div class="canvasWrap"><canvas id="chartBodyLegs" width="900" height="260"></canvas></div>
+      <div class="bodyCharts">
+        <div class="bodyTrendCard primary" id="chartBodyWeight"></div>
+        <div class="bodyTrendCard" id="chartBodyForearm"></div>
+        <div class="bodyTrendCard" id="chartBodyChest"></div>
+        <div class="bodyTrendCard" id="chartBodyWaist"></div>
+        <div class="bodyTrendCard" id="chartBodyLegs"></div>
       </div>
     `));
 
@@ -2191,73 +2109,45 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function drawSimpleLineWithLabels(canvasId, pts, stroke){
-    const canvas = $("#"+canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext?.("2d");
-    if (!ctx) return;
-
-    resizeCanvasToDisplaySize(canvas);   // ✅ ОЦЕ ГОЛОВНЕ
-    ctx.setTransform(1,0,0,1,0,0);        // скинути трансформ
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const box = $("#"+canvasId);
+    if (!box) return;
+    const meta = {
+      chartBodyWeight: { icon:"⚖️", ua:"Вага", en:"Weight", unit:"kg" },
+      chartBodyForearm: { icon:"🦾", ua:"Передпліччя", en:"Forearm", unit:"cm" },
+      chartBodyChest: { icon:"◫", ua:"Груди", en:"Chest", unit:"cm" },
+      chartBodyWaist: { icon:"◎", ua:"Талія", en:"Waist", unit:"cm" },
+      chartBodyLegs: { icon:"◒", ua:"Ноги", en:"Legs", unit:"cm" }
+    }[canvasId];
     if (!pts || !pts.length){
-      ctx.fillStyle = "rgba(229,231,235,.75)";
-      ctx.font = "16px system-ui";
-      ctx.fillText(t("noData"), 20, 40);
+      box.innerHTML = `<div class="bodyTrendName">${meta.icon} ${state.lang==="en"?meta.en:meta.ua}</div><div class="muted" style="margin-top:12px">${t("noData")}</div>`;
       return;
     }
-
-    const padL=44, padR=16, padT=18, padB=34;
-    const W = canvas.width-padL-padR;
-    const H = canvas.height-padT-padB;
-    const maxY = Math.max(1, ...pts.map(p=>p.y));
-    const minY = Math.min(...pts.map(p=>p.y));
-    const span = Math.max(1e-6, maxY - minY);
-
-    ctx.strokeStyle="rgba(255,255,255,.10)";
-    for(let i=0;i<=4;i++){
-      const y = padT + (H*i/4);
-      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+W,y); ctx.stroke();
-    }
-
-    const xAt = (i)=> padL + (W*(pts.length===1 ? 0.5 : i/(pts.length-1)));
-    const yAt = (val)=> padT + (H*(1 - (val-minY)/span));
-
-    ctx.lineWidth=4;
-    ctx.strokeStyle=stroke;
-    ctx.beginPath();
-    pts.forEach((p,i)=>{
-      const x = xAt(i);
-      const y = yAt(p.y);
-      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    });
-    ctx.stroke();
-
-    ctx.fillStyle=stroke;
-    pts.forEach((p,i)=>{
-      const x = xAt(i);
-      const y = yAt(p.y);
-      ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
-    });
-
-    // labels above points
-    ctx.font = "12px system-ui";
-    ctx.fillStyle = "rgba(229,231,235,.92)";
-    pts.forEach((p,i)=>{
-      const x = xAt(i);
-      const y = yAt(p.y);
-      const txt = fmtNum(p.y);
-      const tw = ctx.measureText(txt).width;
-      ctx.fillText(txt, x - tw/2, y - 10);
-    });
-
-    // x labels (first/last)
-    ctx.fillStyle="rgba(229,231,235,.70)";
-    ctx.fillText(pts[0].label, padL, padT+H+24);
-    if (pts.length>1){
-      const last = pts[pts.length-1].label;
-      const tw = ctx.measureText(last).width;
-      ctx.fillText(last, padL+W-tw, padT+H+24);
-    }
+    const data = recentPoints(pts.map(p=>({value:p.y,label:p.label})),8);
+    const values = data.map(p=>p.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = Math.max(1,max-min);
+    const coords = data.map((p,i)=>({
+      x:data.length===1?50:3+(94*i/(data.length-1)),
+      y:65-((p.value-min)/span)*50
+    }));
+    const line = coords.map(p=>`${p.x},${p.y}`).join(" ");
+    const last = values[values.length-1];
+    const delta = last-values[0];
+    box.innerHTML = `
+      <div class="bodyTrendTop">
+        <div>
+          <div class="bodyTrendName">${meta.icon} ${state.lang==="en"?meta.en:meta.ua}</div>
+          <div class="bodyTrendValue">${fmtNum(last)} <small style="font-size:.48em;color:var(--muted)">${meta.unit}</small></div>
+        </div>
+        ${values.length>1?`<div class="chartDelta ${delta<0?"down":""}">${delta>=0?"+":""}${fmtNum(delta)}</div>`:""}
+      </div>
+      <svg class="miniTrend" viewBox="0 0 100 74" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M3 66H97" stroke="rgba(255,255,255,.07)" stroke-width=".8" vector-effect="non-scaling-stroke"/>
+        <polyline points="${line}" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+        ${coords.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="${i===coords.length-1?2.7:1.3}" fill="${stroke}" stroke="#111827" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("")}
+      </svg>
+      <div class="trendLabels"><span>${escapeHtml(data[0].label)}</span><span>${escapeHtml(data[data.length-1].label)}</span></div>`;
   }
 
   // ---------- RECORDS ----------
