@@ -312,6 +312,55 @@
     .fchip.active{background:linear-gradient(135deg,rgba(139,92,246,.34),rgba(34,211,238,.12));border-color:rgba(167,139,250,.45)}
     .filters{flex-wrap:nowrap;overflow-x:auto;padding:2px 1px 7px;scrollbar-width:none}
     .filters::-webkit-scrollbar{display:none}
+    .categoryRail{
+      display:grid;grid-auto-flow:column;grid-auto-columns:max-content;gap:8px;
+      width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;
+      padding:7px;margin:14px 0 7px;border:1px solid var(--line);border-radius:18px;
+      background:rgba(4,7,14,.42);scroll-snap-type:x proximity;scrollbar-width:none;
+      -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%);
+      mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%);
+    }
+    .categoryRail::-webkit-scrollbar{display:none}
+    .categoryRail .fchip{
+      flex:none;white-space:nowrap;scroll-snap-align:start;padding:9px 13px;border-radius:13px;
+      font-size:12px;min-height:38px;
+    }
+    .newCategoryFields{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%}
+    .guideHero{
+      min-width:0;overflow:hidden;padding:18px;border-radius:22px;border:1px solid rgba(34,211,238,.18);
+      background:radial-gradient(260px 130px at 100% 0,rgba(34,211,238,.15),transparent 70%),linear-gradient(145deg,rgba(76,29,149,.25),rgba(5,9,18,.55));
+    }
+    .guideFlow{display:flex;align-items:center;gap:7px;overflow-x:auto;margin-top:14px;padding-bottom:3px;scrollbar-width:none}
+    .guideFlow::-webkit-scrollbar{display:none}
+    .guideFlowStep{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:10px;font-size:11px;font-weight:900;color:#ddd6fe;background:rgba(139,92,246,.2);border:1px solid rgba(167,139,250,.3)}
+    .guideFlowArrow{flex:none;color:rgba(148,163,184,.55)}
+    .guideList{display:grid;gap:10px;margin-top:14px}
+    .guideMaster{border:1px solid rgba(167,139,250,.2);border-radius:22px;background:rgba(5,8,15,.35);overflow:hidden}
+    .guideMaster>summary{display:flex;align-items:center;gap:12px;padding:16px;cursor:pointer;list-style:none}
+    .guideMaster>summary::-webkit-details-marker{display:none}
+    .guideMasterIcon{display:grid;place-items:center;width:42px;height:42px;flex:0 0 auto;border-radius:14px;background:linear-gradient(135deg,rgba(139,92,246,.38),rgba(34,211,238,.16));border:1px solid rgba(167,139,250,.28)}
+    .guideMasterTitle{min-width:0;flex:1}.guideMasterTitle strong{display:block;font-size:16px}.guideMasterTitle span{display:block;margin-top:3px;font-size:11px;color:var(--muted)}
+    .guideMasterChevron{color:#c4b5fd;transition:transform .2s}.guideMaster[open] .guideMasterChevron{transform:rotate(180deg)}
+    .guideMasterBody{padding:0 12px 12px}
+    .guideStep{border:1px solid var(--line);border-radius:19px;background:rgba(5,8,15,.42);overflow:hidden}
+    .guideStep summary{display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer;list-style:none}
+    .guideStep summary::-webkit-details-marker{display:none}
+    .guideNumber{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;border-radius:12px;font-size:12px;font-weight:950;color:#fff;background:linear-gradient(135deg,#8b5cf6,#6d28d9)}
+    .guideSummaryText{min-width:0;flex:1}.guideSummaryText strong{display:block}.guideSummaryText span{display:block;margin-top:3px;font-size:11px;color:var(--muted)}
+    .guideChevron{color:var(--muted);transition:transform .2s}.guideStep[open] .guideChevron{transform:rotate(180deg)}
+    .guideContent{display:grid;grid-template-columns:1fr;gap:14px;padding:0 14px 14px}
+    .guideHero>div{overflow-wrap:anywhere}
+    .guideCopy{font-size:13px;line-height:1.55;color:#cbd5e1}.guideCopy strong{color:#fff}
+    .guideExample{margin-top:9px;padding:9px 11px;border-radius:12px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.15);color:#a7f3d0;font-size:11px}
+    .miniScreen{align-self:start;width:100%;padding:10px;border-radius:17px;border:1px solid rgba(255,255,255,.1);background:#0a0f1d;box-shadow:0 12px 28px rgba(0,0,0,.24)}
+    .miniTop{height:5px;width:34px;margin:0 auto 9px;border-radius:99px;background:rgba(255,255,255,.13)}
+    .miniTitle{font-size:10px;font-weight:900;margin-bottom:7px}.miniRow{display:flex;gap:5px;margin-top:5px}
+    .miniField{min-width:0;flex:1;padding:7px;border-radius:8px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);font-size:8px;color:#cbd5e1}
+    .miniButton{padding:7px 9px;border-radius:8px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);font-size:8px;font-weight:850;white-space:nowrap}
+    .miniBar{height:6px;margin-top:8px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}.miniBar span{display:block;height:100%;width:68%;background:linear-gradient(90deg,#8b5cf6,#22d3ee)}
+    .miniStat{flex:1;padding:8px;border-radius:9px;background:rgba(255,255,255,.055);font-size:8px}.miniStat strong{display:block;font-size:13px;margin-top:3px}
+    .settingsActions{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-top:12px}
+    .settingsActions .btn{width:100%;white-space:normal}
     .kpiGrid4{grid-template-columns:repeat(4,minmax(0,1fr))}
     .kpiBox{position:relative;overflow:hidden;min-height:132px;border-radius:22px;padding:18px}
     .kpiBox:after{content:"";position:absolute;width:100px;height:100px;right:-34px;top:-42px;border-radius:50%;background:rgba(255,255,255,.12);filter:blur(2px)}
@@ -472,6 +521,9 @@
     @media(max-width:460px){
       .bodyGrid{grid-template-columns:1fr}.bodyGrid.bodyMeasureGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.bodyActions{grid-column:auto}.bodyActions .btn{width:100%}
       .bodyMeasureGrid .bodyActions{grid-column:1/-1}
+      .newCategoryFields{grid-template-columns:1fr}
+      .guideContent{grid-template-columns:1fr}.miniScreen{width:100%;max-width:none}
+      .settingsActions{grid-template-columns:1fr 1fr}.settingsActions #resetBtn{grid-column:1/-1}
       .chartSurface{padding:14px;min-height:218px}.chartBig{font-size:24px}.distRow{grid-template-columns:76px 1fr 42px}
       .itemRow{flex-direction:column}.itemRow>.left{width:100%}.itemRow>.row{width:100%;display:grid;grid-auto-flow:column;grid-auto-columns:1fr}.itemRow>.row .btn{width:100%}
       .statsExerciseRow{display:grid;grid-template-columns:1fr;gap:10px}
@@ -528,7 +580,7 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app-v16.js"></script>
+  <script defer src="app-v17.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
