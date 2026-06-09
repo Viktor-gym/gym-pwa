@@ -88,6 +88,9 @@ document.addEventListener("DOMContentLoaded", () => {
       totalVolume: "загальний обʼєм",
       calories: "Спалені калорії",
       caloriesApprox: "приблизна оцінка",
+      goals: "Мої цілі",
+      addGoal: "Додати ціль",
+      nextWorkout: "Рекомендації на наступне тренування",
       volumeProgress: "Прогрес обʼєму",
       muscleSplit: "Розподіл навантаження",
       muscleSplitHint: "Частка обʼєму по групах",
@@ -180,6 +183,9 @@ document.addEventListener("DOMContentLoaded", () => {
       totalVolume: "total volume",
       calories: "Calories burned",
       caloriesApprox: "approximate estimate",
+      goals: "My goals",
+      addGoal: "Add goal",
+      nextWorkout: "Next workout recommendations",
       volumeProgress: "Volume progress",
       muscleSplit: "Muscle split",
       muscleSplitHint: "Share of volume by muscle group",
@@ -278,6 +284,8 @@ document.addEventListener("DOMContentLoaded", () => {
       prs: {},          // exerciseId -> {weight, reps, date}
       favorites: [],
       body: [],         // {id, date, weight, forearm, chest, waist, legs}
+      goals: [],
+      recommendations: [],
       ui: { exCat:"all", exQ:"", statsRange:"week", recordsCat:"all" }
     };
     if (!old) return base;
@@ -300,6 +308,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!Array.isArray(s.workouts)) s.workouts = [];
     if (!Array.isArray(s.favorites)) s.favorites = [];
     if (!Array.isArray(s.body)) s.body = [];
+    if (!Array.isArray(s.goals)) s.goals = [];
+    if (!Array.isArray(s.recommendations)) s.recommendations = [];
     if (!s.prs) s.prs = {};
     if (!s.settings) s.settings = { defaultRestSec: 90 };
     if (!s.ui) s.ui = { exCat:"all", exQ:"", statsRange:"week", recordsCat:"all" };
@@ -354,6 +364,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }));
 
     s.favorites = [...new Set(s.favorites.map(String))];
+    s.goals = s.goals.filter(Boolean).map(g=>({
+      ...g,
+      id:String(g.id || uid()),
+      type:g.type === "exercise" ? "exercise" : "body",
+      target:parseNum(g.target),
+      start:parseNum(g.start),
+      createdAt:Number(g.createdAt || Date.now())
+    })).filter(g=>g.target>0);
 
     return s;
   }
@@ -703,6 +721,37 @@ document.addEventListener("DOMContentLoaded", () => {
   function estimateCaloriesInWorkouts(workouts){
     return workouts.reduce((sum,w)=>sum+estimateWorkoutCalories(w),0);
   }
+  function latestBodyMetric(metric){
+    const list = [...(state.body||[])]
+      .filter(x=>parseNum(x?.[metric])>0)
+      .sort((a,b)=>new Date(b.date)-new Date(a.date));
+    return parseNum(list[0]?.[metric]);
+  }
+  function goalCurrent(goal){
+    if (goal.type==="exercise") return parseNum(state.prs?.[goal.exerciseId]?.weight);
+    return latestBodyMetric(goal.metric);
+  }
+  function goalLabel(goal){
+    if (goal.type==="exercise"){
+      const ex = state.exercises.find(x=>x.id===goal.exerciseId);
+      return ex ? exName(ex) : (state.lang==="en" ? "Exercise" : "Вправа");
+    }
+    const names = {
+      weight:["Вага","Weight"], forearm:["Передпліччя","Forearm"],
+      chest:["Груди","Chest"], waist:["Талія","Waist"], legs:["Ноги","Legs"]
+    };
+    return names[goal.metric]?.[state.lang==="en"?1:0] || goal.metric;
+  }
+  function goalProgress(goal){
+    const current = goalCurrent(goal);
+    const start = parseNum(goal.start);
+    const target = parseNum(goal.target);
+    if (!current || start===target) return current===target ? 100 : 0;
+    const raw = target>start
+      ? (current-start)/(target-start)
+      : (start-current)/(start-target);
+    return Math.max(0,Math.min(100,Math.round(raw*100)));
+  }
   function activeDaysCount(workouts){
     const s = new Set(workouts.map(w=>fmtDate(w.date)));
     return s.size;
@@ -801,6 +850,24 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="row" style="gap:10px; flex-wrap:nowrap; overflow:auto; padding-bottom:6px;" id="favStrip"></div>
     `));
 
+    el.appendChild(card(`
+      <div class="detailHeader">
+        <div>
+          <div style="font-weight:900;font-size:16px">${t("goals")}</div>
+          <div class="muted">${state.lang==="en" ? "Strength and body targets" : "Силові цілі та показники тіла"}</div>
+        </div>
+        <button class="btn primary" id="addGoalBtn">＋ ${t("addGoal")}</button>
+      </div>
+      <div class="goalList" id="goalList" style="margin-top:12px"></div>
+    `));
+
+    if ((state.recommendations||[]).length){
+      el.appendChild(card(`
+        <div style="font-weight:900;font-size:16px">${t("nextWorkout")}</div>
+        <div>${state.recommendations.slice(0,6).map(r=>`<div class="recommendation"><strong>${escapeHtml(r.title)}</strong><div class="muted" style="margin-top:4px">${escapeHtml(r.text)}</div></div>`).join("")}</div>
+      `));
+    }
+
     setTimeout(()=>{
       const btn = $("#homeStart");
       if (btn) btn.onclick = ()=>{
@@ -809,6 +876,9 @@ document.addEventListener("DOMContentLoaded", () => {
       };
       renderRecentWorkouts();
       renderFavStrip();
+      renderGoals();
+      const addGoal = $("#addGoalBtn");
+      if (addGoal) addGoal.onclick = openGoalModal;
     },0);
 
     return el;
@@ -861,17 +931,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const flat = allLogsFlat();
     box.innerHTML = fav.map(ex=>{
-      const cnt = flat.filter(l=>l.exerciseId===ex.id).length;
+      const logs = flat.filter(l=>l.exerciseId===ex.id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+      const cnt = logs.length;
+      const pr = parseNum(state.prs?.[ex.id]?.weight);
+      const totalVolume = logs.reduce((sum,l)=>sum+volumeOfSets(l.sets),0);
+      const lastDate = logs[0]?.date ? fmtDate(logs[0].date) : "—";
       return `
-        <div class="card" style="min-width:160px; margin:0; text-align:center;">
-          <div style="display:flex; justify-content:center; margin-bottom:10px;">${exIcon(ex)}</div>
-          <div style="font-weight:900; font-size:13px; line-height:1.2; height:32px; overflow:hidden;">
-            ${escapeHtml(exName(ex))}
+        <div class="card favCard" data-favstats="${ex.id}" role="button" tabindex="0">
+          <div class="row" style="flex-wrap:nowrap">
+            ${exIcon(ex)}
+            <div style="min-width:0">
+              <div style="font-weight:900;font-size:13px;line-height:1.25">${escapeHtml(exName(ex))}</div>
+              <div class="muted" style="margin-top:3px">${escapeHtml(catName(ex.category))}</div>
+            </div>
           </div>
-          <div class="muted" style="margin-top:8px">${cnt} ${t("times")}</div>
+          <div class="favMetrics">
+            <div class="favMetric"><span>PR</span><strong>${fmtNum(pr)} kg</strong></div>
+            <div class="favMetric"><span>${state.lang==="en"?"Trainings":"Тренувань"}</span><strong>${cnt}</strong></div>
+            <div class="favMetric"><span>${state.lang==="en"?"Volume":"Обʼєм"}</span><strong>${fmtVol(totalVolume)} kg</strong></div>
+            <div class="favMetric"><span>${t("last")}</span><strong>${lastDate}</strong></div>
+          </div>
+          <div class="muted" style="margin-top:10px;color:#c4b5fd">${state.lang==="en"?"Open statistics →":"Відкрити статистику →"}</div>
         </div>
       `;
     }).join("");
+    box.querySelectorAll("[data-favstats]").forEach(item=>{
+      const open=()=>{
+        selectedStatsExerciseId=item.getAttribute("data-favstats");
+        setTab("stats");
+      };
+      item.onclick=open;
+      item.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}};
+    });
   }
 
   // ---------- workout session ----------
@@ -1237,6 +1328,55 @@ document.addEventListener("DOMContentLoaded", () => {
     if (qInput) qInput.oninput = renderList;
   }
 
+  function buildWorkoutRecommendations(items){
+    return items.map(it=>{
+      const ex=state.exercises.find(e=>e.id===it.exerciseId);
+      if (!ex || !(it.sets||[]).length) return null;
+      const maxWeight=maxWeightOfSets(it.sets);
+      const repsAtMax=Math.max(0,...it.sets.filter(s=>parseNum(s.weight)===maxWeight).map(s=>parseNum(s.reps)));
+      const previous=allLogsFlat()
+        .filter(l=>l.exerciseId===it.exerciseId)
+        .sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+      const previousMax=previous ? maxWeightOfSets(previous.sets) : 0;
+      const increment=["legs","back"].includes(ex.category)?5:2.5;
+      let text;
+      if (repsAtMax>=8){
+        text=state.lang==="en"
+          ? `Try ${fmtNum(maxWeight+increment)} kg for 6–8 reps. You completed ${fmtNum(maxWeight)} kg for ${fmtNum(repsAtMax)} reps.`
+          : `Спробуй ${fmtNum(maxWeight+increment)} кг на 6–8 повторень. Зараз виконано ${fmtNum(maxWeight)} кг × ${fmtNum(repsAtMax)}.`;
+      }else if(repsAtMax>=6){
+        text=state.lang==="en"
+          ? `Keep ${fmtNum(maxWeight)} kg and aim for ${fmtNum(repsAtMax+1)} reps before increasing weight.`
+          : `Залиши ${fmtNum(maxWeight)} кг і спробуй ${fmtNum(repsAtMax+1)} повторень перед підвищенням ваги.`;
+      }else{
+        text=state.lang==="en"
+          ? `Repeat ${fmtNum(maxWeight)} kg and stabilize technique at 6 reps. Reduce by 2.5–5 kg if form breaks down.`
+          : `Повтори ${fmtNum(maxWeight)} кг і закріпи техніку на 6 повтореннях. Якщо техніка погіршується — зменш вагу на 2.5–5 кг.`;
+      }
+      if (maxWeight>previousMax && previousMax>0){
+        text += state.lang==="en" ? " New working-weight progress." : " Є прогрес робочої ваги.";
+      }
+      return {exerciseId:it.exerciseId,title:exName(ex),text};
+    }).filter(Boolean);
+  }
+
+  function openRecommendationsModal(recommendations,gotAnyPR){
+    const overlay=document.createElement("div");
+    overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(9px);z-index:180;display:grid;place-items:center;padding:16px";
+    const modal=document.createElement("div");
+    modal.className="card";
+    modal.style.cssText="width:min(680px,96vw);max-height:84vh;overflow:auto";
+    modal.innerHTML=`
+      <div class="detailHeader"><div class="detailTitle"><h2>${gotAnyPR?"🏆 ":""}${t("saveOk")}</h2><div class="sub">${t("nextWorkout")}</div></div><button class="btn" id="recClose">✕</button></div>
+      <div style="margin-top:12px">${recommendations.map(r=>`<div class="recommendation"><strong>${escapeHtml(r.title)}</strong><div class="muted" style="margin-top:5px">${escapeHtml(r.text)}</div></div>`).join("")}</div>
+      <div class="premiumNote" style="margin-top:14px">${state.lang==="en"?"Recommendations use your completed weight and reps. Adjust them if technique or recovery is poor.":"Рекомендації враховують виконану вагу й повторення. Коригуй їх, якщо техніка або відновлення недостатні."}</div>
+      <button class="btn primary" id="recOk" style="width:100%;margin-top:14px">${t("ok")}</button>`;
+    overlay.appendChild(modal);document.body.appendChild(overlay);
+    const close=()=>overlay.remove();
+    modal.querySelector("#recClose").onclick=close;
+    modal.querySelector("#recOk").onclick=close;
+  }
+
   function saveWorkoutSession(){
     const workoutId = uid();
     const date = workoutSession.startedAt || new Date().toISOString();
@@ -1270,15 +1410,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const fallbackTitle = state.lang==="en" ? `Workout ${fmtDate(date)}` : `Тренування ${fmtDate(date)}`;
     const title = (workoutSession.title || "").trim() || fallbackTitle;
+    const recommendations=buildWorkoutRecommendations(items);
 
     state.workouts.unshift({ id: workoutId, date, title, items });
+    state.recommendations=recommendations;
     save();
 
     workoutSession = { active:false, startedAt:null, title:"", items:[] };
     resetRestTimer();
 
-    alert(gotAnyPR ? `${t("saveOk")} 🏆` : t("saveOk"));
     setTab("home");
+    setTimeout(()=>openRecommendationsModal(recommendations,gotAnyPR),0);
   }
 
   // ---------- workout detail modal (history) ----------
@@ -1654,6 +1796,7 @@ document.addEventListener("DOMContentLoaded", () => {
       drawAllVolumeBars(workouts);
       drawMusclePie(workouts);
       renderStatsExercisesOnlyTrained();
+      if (selectedStatsExerciseId) renderExerciseDetail();
     },0);
 
     return el;
@@ -1661,6 +1804,71 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function recentPoints(points, limit=9){
     return points.slice(Math.max(0, points.length-limit));
+  }
+
+  function renderGoals(){
+    const box = $("#goalList");
+    if (!box) return;
+    if (!(state.goals||[]).length){
+      box.innerHTML = `<div class="muted">${state.lang==="en" ? "Set a target such as 100 kg bench press or 85 cm waist." : "Постав ціль: наприклад, жим 100 кг або талія 85 см."}</div>`;
+      return;
+    }
+    box.innerHTML = state.goals.map(goal=>{
+      const current = goalCurrent(goal);
+      const progress = goalProgress(goal);
+      const unit = goal.type==="exercise" || goal.metric==="weight" ? "kg" : "cm";
+      return `<div class="goalItem">
+        <div class="goalTop">
+          <div><strong>${escapeHtml(goalLabel(goal))}</strong><div class="muted">${progress>=100 ? (state.lang==="en"?"Goal achieved":"Ціль досягнута") : `${progress}%`}</div></div>
+          <button class="btn" data-delgoal="${goal.id}" title="${t("deleteMeasure")}">✕</button>
+        </div>
+        <div class="goalTrack"><span class="goalFill" style="width:${progress}%"></span></div>
+        <div class="goalMeta"><span>${state.lang==="en"?"Current":"Зараз"}: ${fmtNum(current)} ${unit}</span><span>${state.lang==="en"?"Target":"Ціль"}: ${fmtNum(goal.target)} ${unit}</span></div>
+      </div>`;
+    }).join("");
+    box.querySelectorAll("[data-delgoal]").forEach(btn=>{
+      btn.onclick=()=>{
+        state.goals=state.goals.filter(g=>g.id!==btn.getAttribute("data-delgoal"));
+        save();
+        renderGoals();
+      };
+    });
+  }
+
+  function openGoalModal(){
+    const overlay=document.createElement("div");
+    overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.58);backdrop-filter:blur(8px);z-index:160;display:grid;place-items:center;padding:16px";
+    const modal=document.createElement("div");
+    modal.className="card";
+    modal.style.cssText="width:min(620px,96vw);max-height:84vh;overflow:auto";
+    modal.innerHTML=`
+      <div class="detailHeader"><div class="detailTitle"><h2>${t("addGoal")}</h2><div class="sub">${state.lang==="en"?"Choose a measurable target":"Обери вимірювану ціль"}</div></div><button class="btn" id="goalClose">✕</button></div>
+      <div class="bodyGrid" style="margin-top:14px">
+        <div class="bodyField"><div class="muted">${state.lang==="en"?"Goal type":"Тип цілі"}</div><select class="btn" id="goalType"><option value="exercise">${state.lang==="en"?"Exercise PR":"Рекорд у вправі"}</option><option value="body">${state.lang==="en"?"Body metric":"Показник тіла"}</option></select></div>
+        <div class="bodyField" id="goalExerciseField"><div class="muted">${t("exercises")}</div><select class="btn" id="goalExercise">${state.exercises.map(ex=>`<option value="${ex.id}">${escapeHtml(exName(ex))}</option>`).join("")}</select></div>
+        <div class="bodyField" id="goalMetricField" style="display:none"><div class="muted">${state.lang==="en"?"Metric":"Показник"}</div><select class="btn" id="goalMetric"><option value="weight">${state.lang==="en"?"Weight":"Вага"}</option><option value="waist">${state.lang==="en"?"Waist":"Талія"}</option><option value="chest">${state.lang==="en"?"Chest":"Груди"}</option><option value="forearm">${state.lang==="en"?"Forearm":"Передпліччя"}</option><option value="legs">${state.lang==="en"?"Legs":"Ноги"}</option></select></div>
+        <div class="bodyField"><div class="muted">${state.lang==="en"?"Target value":"Цільове значення"}</div><input class="btn" id="goalTarget" inputmode="decimal" placeholder="100"></div>
+        <div class="bodyActions"><button class="btn primary" id="goalSave">${t("save")}</button></div>
+      </div>`;
+    overlay.appendChild(modal);document.body.appendChild(overlay);
+    const close=()=>overlay.remove();
+    modal.querySelector("#goalClose").onclick=close;
+    overlay.onclick=e=>{if(e.target===overlay)close();};
+    const type=modal.querySelector("#goalType");
+    type.onchange=()=>{
+      modal.querySelector("#goalExerciseField").style.display=type.value==="exercise"?"grid":"none";
+      modal.querySelector("#goalMetricField").style.display=type.value==="body"?"grid":"none";
+    };
+    modal.querySelector("#goalSave").onclick=()=>{
+      const target=parseNum(modal.querySelector("#goalTarget").value);
+      if (!(target>0)) return;
+      const isExercise=type.value==="exercise";
+      const exerciseId=modal.querySelector("#goalExercise").value;
+      const metric=modal.querySelector("#goalMetric").value;
+      const start=isExercise ? parseNum(state.prs?.[exerciseId]?.weight) : latestBodyMetric(metric);
+      state.goals.unshift({id:uid(),type:isExercise?"exercise":"body",exerciseId:isExercise?exerciseId:null,metric:isExercise?null:metric,target,start,createdAt:Date.now()});
+      save();close();renderGoals();
+    };
   }
 
   function trendMarkup(points, options={}){
@@ -1694,6 +1902,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         ${values.length>1 ? `<div class="chartDelta ${delta<0?"down":""}">${deltaText}</div>` : ""}
       </div>
+      <div class="plotArea">
       <svg class="trendSvg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <defs>
           <linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
@@ -1705,14 +1914,13 @@ document.addEventListener("DOMContentLoaded", () => {
         <polygon points="${area}" fill="url(#${id})"/>
         <polyline points="${line}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
         ${coords.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="${i===coords.length-1?2.5:1.35}" fill="${color}" stroke="#111827" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("")}
+      </svg>
         ${coords.map((p,i)=>{
           if (i%labelStep!==0 && i!==coords.length-1) return "";
-          const anchor = i===0 ? "start" : i===coords.length-1 ? "end" : "middle";
-          const x = i===0 ? p.x+1 : i===coords.length-1 ? p.x-1 : p.x;
-          const y = Math.max(25,p.y-12);
-          return `<text class="pointLabel ${i===coords.length-1?"last":""}" x="${x}" y="${y}" text-anchor="${anchor}">${escapeHtml(labelValue(p.value))}</text>`;
+          const edge = i===0 ? "edgeStart" : i===coords.length-1 ? "edgeEnd" : "";
+          return `<span class="plotLabel ${edge} ${i===coords.length-1?"last":""}" style="left:${p.x}%;top:${Math.max(18,p.y-8)}%">${escapeHtml(labelValue(p.value))}</span>`;
         }).join("")}
-      </svg>
+      </div>
       <div class="trendLabels"><span>${escapeHtml(pts[0].label)}</span><span>${escapeHtml(pts[pts.length-1].label)}</span></div>
       <div class="chartStats">
         <div class="chartStat"><span>${state.lang==="en"?"Minimum":"Мінімум"}</span><strong>${labelValue(min)}${unit?` ${unit}`:""}</strong></div>
@@ -2209,19 +2417,20 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         ${values.length>1?`<div class="chartDelta ${delta<0?"down":""}">${delta>=0?"+":""}${fmtNum(delta)}</div>`:""}
       </div>
+      <div class="miniPlotArea">
       <svg class="miniTrend" viewBox="0 0 100 92" preserveAspectRatio="none" aria-hidden="true">
         <defs><linearGradient id="${canvasId}Fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${stroke}" stop-opacity=".28"/><stop offset="1" stop-color="${stroke}" stop-opacity="0"/></linearGradient></defs>
         <path d="M3 84H97" stroke="rgba(255,255,255,.07)" stroke-width=".8" vector-effect="non-scaling-stroke"/>
         <polygon points="${area}" fill="url(#${canvasId}Fill)"/>
         <polyline points="${line}" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
         ${coords.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="${i===coords.length-1?2.7:1.3}" fill="${stroke}" stroke="#111827" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("")}
+      </svg>
         ${coords.map((p,i)=>{
           if (i%labelStep!==0 && i!==coords.length-1) return "";
-          const anchor = i===0 ? "start" : i===coords.length-1 ? "end" : "middle";
-          const x = i===0 ? p.x+1 : i===coords.length-1 ? p.x-1 : p.x;
-          return `<text class="miniPointLabel" x="${x}" y="${Math.max(21,p.y-10)}" text-anchor="${anchor}">${escapeHtml(fmtNum(values[i]))}</text>`;
+          const edge = i===0 ? "edgeStart" : i===coords.length-1 ? "edgeEnd" : "";
+          return `<span class="plotLabel ${edge} ${i===coords.length-1?"last":""}" style="left:${p.x}%;top:${Math.max(20,p.y-7)}%">${escapeHtml(fmtNum(values[i]))}</span>`;
         }).join("")}
-      </svg>
+      </div>
       <div class="trendLabels"><span>${escapeHtml(data[0].label)}</span><span>${escapeHtml(data[data.length-1].label)}</span></div>`;
   }
 

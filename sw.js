@@ -3,8 +3,8 @@
 // - cache bust via CACHE version
 
 // bump version when you publish updates
-const CACHE = "gym-pwa-v12-calories";
-const ASSETS = ["./", "./index.html", "./app.js?v=12", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
+const CACHE = "gym-pwa-v15-stable-updates";
+const ASSETS = ["./index.html", "./app-v15.js", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -21,9 +21,29 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
+  if (e.request.mode === "navigate") {
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((cache) => cache.put("./index.html", copy));
+          return res;
+        })
+        .catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
+
   e.respondWith(
-    caches
-      .match(e.request, { ignoreSearch: true })
-      .then((res) => res || fetch(e.request).catch(() => caches.match("./index.html")))
+    caches.match(e.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(e.request).then((res) => {
+        if (e.request.method === "GET" && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(e.request, copy));
+        }
+        return res;
+      });
+    })
   );
 });
