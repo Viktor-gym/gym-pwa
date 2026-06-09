@@ -48,6 +48,13 @@ document.addEventListener("DOMContentLoaded", () => {
       saveOk: "Збережено!",
       lang: "Мова",
       defaultRest: "Відпочинок (сек)",
+      restTimer: "Таймер відпочинку",
+      timerReady: "Готовий до наступного підходу",
+      timerStart: "Старт",
+      timerPause: "Пауза",
+      timerReset: "Скинути",
+      importOk: "Дані успішно імпортовано.",
+      importSummary: "Тренування, вправи, рекорди та заміри відновлено.",
       save: "Зберегти",
       export: "Експорт JSON",
       import: "Імпорт JSON",
@@ -131,6 +138,13 @@ document.addEventListener("DOMContentLoaded", () => {
       saveOk: "Saved!",
       lang: "Language",
       defaultRest: "Rest (sec)",
+      restTimer: "Rest timer",
+      timerReady: "Ready for the next set",
+      timerStart: "Start",
+      timerPause: "Pause",
+      timerReset: "Reset",
+      importOk: "Data imported successfully.",
+      importSummary: "Workouts, exercises, records and measurements restored.",
       save: "Save",
       export: "Export JSON",
       import: "Import JSON",
@@ -266,12 +280,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const s = { ...base, ...old };
 
-    if (Array.isArray(s.logs) && !Array.isArray(s.workouts)){
+    if (Array.isArray(s.logs) && (!Array.isArray(old.workouts) || old.workouts.length === 0)){
       s.workouts = s.logs.map(l => ({
         id: l.workoutId || uid(),
         date: l.date,
         title: l.title || (s.lang==="en" ? `Workout ${fmtDate(l.date)}` : `Тренування ${fmtDate(l.date)}`),
-        items: [{ exerciseId: l.exerciseId, sets: l.sets || [] }]
+        items: Array.isArray(l.items)
+          ? l.items
+          : [{ exerciseId: l.exerciseId, sets: l.sets || [] }]
       }));
       delete s.logs;
     }
@@ -285,10 +301,55 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!s.ui) s.ui = { exCat:"all", exQ:"", statsRange:"week", recordsCat:"all" };
     if (!s.lang) s.lang = "ua";
 
-    s.workouts = s.workouts.map(w => ({
-      ...w,
-      title: w.title || (s.lang==="en" ? `Workout ${fmtDate(w.date)}` : `Тренування ${fmtDate(w.date)}`)
+    s.settings = { ...base.settings, ...(s.settings || {}) };
+    s.ui = { ...base.ui, ...(s.ui || {}) };
+    s.lang = s.lang === "en" ? "en" : "ua";
+
+    s.exercises = s.exercises
+      .filter(Boolean)
+      .map(ex => ({
+        ...ex,
+        id: String(ex.id || uid()),
+        name_ua: String(ex.name_ua || ex.name || ex.name_en || "Вправа"),
+        name_en: String(ex.name_en || ex.name || ex.name_ua || "Exercise"),
+        category: String(ex.category || "other")
+      }));
+
+    s.workouts = s.workouts
+      .filter(Boolean)
+      .map(w => {
+        const date = w.date || w.createdAt || new Date().toISOString();
+        const rawItems = Array.isArray(w.items)
+          ? w.items
+          : (w.exerciseId ? [{ exerciseId:w.exerciseId, sets:w.sets || [] }] : []);
+        return {
+          ...w,
+          id: String(w.id || w.workoutId || uid()),
+          date,
+          title: w.title || (s.lang==="en" ? `Workout ${fmtDate(date)}` : `Тренування ${fmtDate(date)}`),
+          items: rawItems.filter(Boolean).map(it => ({
+            exerciseId: String(it.exerciseId || ""),
+            sets: (Array.isArray(it.sets) ? it.sets : []).map(set => ({
+              weight: parseNum(set?.weight),
+              reps: parseNum(set?.reps)
+            }))
+          })).filter(it => it.exerciseId)
+        };
+      });
+
+    s.body = s.body.filter(Boolean).map(m => ({
+      ...m,
+      id: String(m.id || uid()),
+      date: m.date || new Date().toISOString(),
+      createdAt: Number(m.createdAt || 0),
+      weight: parseNum(m.weight),
+      forearm: parseNum(m.forearm),
+      chest: parseNum(m.chest),
+      waist: parseNum(m.waist),
+      legs: parseNum(m.legs)
     }));
+
+    s.favorites = [...new Set(s.favorites.map(String))];
 
     return s;
   }
@@ -466,6 +527,58 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   let rest = { left: state.settings.defaultRestSec, running:false, interval:null };
+
+  function restDefault(){
+    return Math.max(10, parseInt(state.settings.defaultRestSec || 90, 10));
+  }
+
+  function formatRest(sec){
+    const value = Math.max(0, Number(sec) || 0);
+    return `${String(Math.floor(value/60)).padStart(2,"0")}:${String(value%60).padStart(2,"0")}`;
+  }
+
+  function updateRestUI(){
+    const value = $("#restValue");
+    const label = $("#restLabel");
+    const ring = $("#restRing");
+    const toggle = $("#restToggle");
+    if (value) value.textContent = formatRest(rest.left);
+    if (label) label.textContent = rest.left === 0 ? t("timerReady") : t("restTimer");
+    if (toggle) toggle.textContent = rest.running ? `Ⅱ ${t("timerPause")}` : `▶ ${t("timerStart")}`;
+    if (ring){
+      const max = Math.max(restDefault(), rest.left, 1);
+      const pct = Math.max(0, Math.min(100, ((max-rest.left)/max)*100));
+      ring.style.setProperty("--timer-progress", `${pct}%`);
+    }
+  }
+
+  function stopRestTimer(){
+    if (rest.interval) clearInterval(rest.interval);
+    rest.interval = null;
+    rest.running = false;
+    updateRestUI();
+  }
+
+  function startRestTimer(){
+    if (rest.running) return stopRestTimer();
+    if (rest.left <= 0) rest.left = restDefault();
+    rest.running = true;
+    updateRestUI();
+    rest.interval = setInterval(()=>{
+      rest.left = Math.max(0, rest.left - 1);
+      updateRestUI();
+      if (rest.left <= 0){
+        stopRestTimer();
+        if (navigator.vibrate) navigator.vibrate([160,80,160]);
+      }
+    },1000);
+  }
+
+  function resetRestTimer(){
+    stopRestTimer();
+    rest.left = restDefault();
+    updateRestUI();
+  }
 
   // ---------- flatten stats ----------
   function allLogsFlat(){
@@ -690,6 +803,23 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     `));
 
+    el.appendChild(card(`
+      <div class="restPanel">
+        <div class="restRing" id="restRing">
+          <div class="restValue" id="restValue">${formatRest(rest.left)}</div>
+        </div>
+        <div>
+          <div style="font-weight:900;font-size:17px" id="restLabel">${t("restTimer")}</div>
+          <div class="muted" style="margin-top:4px">${state.lang==="en" ? "Stay precise between working sets" : "Тримай точний темп між робочими підходами"}</div>
+        </div>
+        <div class="restActions">
+          <button class="btn primary" id="restToggle">▶ ${t("timerStart")}</button>
+          <button class="btn" id="restPlus">+30</button>
+          <button class="btn" id="restReset">${t("timerReset")}</button>
+        </div>
+      </div>
+    `));
+
     const list = document.createElement("div");
     list.id = "workoutItems";
     el.appendChild(list);
@@ -714,8 +844,20 @@ document.addEventListener("DOMContentLoaded", () => {
       const addBtn = $("#addExToW");
       if (addBtn) addBtn.onclick = ()=> openExercisePickerForWorkout();
 
+      const restToggle = $("#restToggle");
+      const restPlus = $("#restPlus");
+      const restReset = $("#restReset");
+      if (restToggle) restToggle.onclick = startRestTimer;
+      if (restPlus) restPlus.onclick = ()=>{
+        rest.left += 30;
+        updateRestUI();
+      };
+      if (restReset) restReset.onclick = resetRestTimer;
+      updateRestUI();
+
       const clearBtn = $("#clearWorkoutBtn");
       if (clearBtn) clearBtn.onclick = ()=>{
+        resetRestTimer();
         workoutSession = { active:false, startedAt:null, title:"", items:[] };
         render();
       };
@@ -797,6 +939,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const it = workoutSession.items.find(x=>x.id===id);
         if (!it) return;
         it.sets.push({ reps:"8", weight:"0" });
+        resetRestTimer();
         renderWorkoutItems();
       };
     });
@@ -1025,7 +1168,7 @@ document.addEventListener("DOMContentLoaded", () => {
     save();
 
     workoutSession = { active:false, startedAt:null, title:"", items:[] };
-    rest.left = state.settings.defaultRestSec;
+    resetRestTimer();
 
     alert(gotAnyPR ? `${t("saveOk")} 🏆` : t("saveOk"));
     setTab("home");
@@ -2270,6 +2413,13 @@ document.addEventListener("DOMContentLoaded", () => {
         <button class="btn" id="resetBtn">${t("reset")}</button>
         <input id="importFile" type="file" accept="application/json" style="display:none" />
       </div>
+
+      <div class="premiumNote" style="margin-top:16px">
+        <strong>${state.lang==="en" ? "Local-first and compatible" : "Локально та сумісно"}</strong>
+        <div style="margin-top:4px;font-size:13px;opacity:.86">${state.lang==="en"
+          ? "Your existing gymPwaData_v3 export remains supported. Importing restores exercise IDs, workout history, PRs, favorites and body measurements."
+          : "Старий експорт gymPwaData_v3 підтримується. Імпорт відновлює ID вправ, історію тренувань, PR, улюблені вправи та заміри тіла."}</div>
+      </div>
     `));
 
     setTimeout(()=>{
@@ -2306,10 +2456,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!file) return;
         const txt = await file.text();
         try{
-          state = migrate(JSON.parse(txt));
+          const parsed = JSON.parse(txt);
+          const importedState = parsed && typeof parsed === "object" && parsed.data && typeof parsed.data === "object"
+            ? parsed.data
+            : parsed;
+          state = migrate(importedState);
           if (!state.exercises.length) state.exercises = DEFAULT_EXERCISES;
           save();
+          resetRestTimer();
           render();
+          alert(`${t("importOk")}\n${t("importSummary")}`);
         }catch{
           alert(t("importFail"));
         }
@@ -2322,6 +2478,7 @@ document.addEventListener("DOMContentLoaded", () => {
         state = migrate(null);
         state.exercises = DEFAULT_EXERCISES;
         save();
+        resetRestTimer();
         workoutSession = { active:false, startedAt:null, title:"", items:[] };
         selectedStatsExerciseId = null;
         render();
