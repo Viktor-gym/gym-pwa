@@ -1632,7 +1632,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const span = Math.max(1, max-min);
     const coords = pts.map((p,i)=>{
       const x = pts.length===1 ? 50 : 4 + (92*i/(pts.length-1));
-      const y = 84 - ((parseNum(p.value)-min)/span)*66;
+      const y = 88 - ((parseNum(p.value)-min)/span)*56;
       return { ...p, x, y };
     });
     const line = coords.map(p=>`${p.x},${p.y}`).join(" ");
@@ -1669,7 +1669,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (i%labelStep!==0 && i!==coords.length-1) return "";
           const anchor = i===0 ? "start" : i===coords.length-1 ? "end" : "middle";
           const x = i===0 ? p.x+1 : i===coords.length-1 ? p.x-1 : p.x;
-          const y = Math.max(8,p.y-6);
+          const y = Math.max(16,p.y-8);
           return `<text class="pointLabel ${i===coords.length-1?"last":""}" x="${x}" y="${y}" text-anchor="${anchor}">${escapeHtml(labelValue(p.value))}</text>`;
         }).join("")}
       </svg>
@@ -2140,7 +2140,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const span = Math.max(1,max-min);
     const coords = data.map((p,i)=>({
       x:data.length===1?50:3+(94*i/(data.length-1)),
-      y:65-((p.value-min)/span)*50
+      y:72-((p.value-min)/span)*42
     }));
     const line = coords.map(p=>`${p.x},${p.y}`).join(" ");
     const last = values[values.length-1];
@@ -2154,15 +2154,15 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         ${values.length>1?`<div class="chartDelta ${delta<0?"down":""}">${delta>=0?"+":""}${fmtNum(delta)}</div>`:""}
       </div>
-      <svg class="miniTrend" viewBox="0 0 100 74" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M3 66H97" stroke="rgba(255,255,255,.07)" stroke-width=".8" vector-effect="non-scaling-stroke"/>
+      <svg class="miniTrend" viewBox="0 0 100 84" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M3 74H97" stroke="rgba(255,255,255,.07)" stroke-width=".8" vector-effect="non-scaling-stroke"/>
         <polyline points="${line}" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
         ${coords.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="${i===coords.length-1?2.7:1.3}" fill="${stroke}" stroke="#111827" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("")}
         ${coords.map((p,i)=>{
           if (i%labelStep!==0 && i!==coords.length-1) return "";
           const anchor = i===0 ? "start" : i===coords.length-1 ? "end" : "middle";
           const x = i===0 ? p.x+1 : i===coords.length-1 ? p.x-1 : p.x;
-          return `<text class="miniPointLabel" x="${x}" y="${Math.max(8,p.y-6)}" text-anchor="${anchor}">${escapeHtml(fmtNum(values[i]))}</text>`;
+          return `<text class="miniPointLabel" x="${x}" y="${Math.max(14,p.y-7)}" text-anchor="${anchor}">${escapeHtml(fmtNum(values[i]))}</text>`;
         }).join("")}
       </svg>
       <div class="trendLabels"><span>${escapeHtml(data[0].label)}</span><span>${escapeHtml(data[data.length-1].label)}</span></div>`;
