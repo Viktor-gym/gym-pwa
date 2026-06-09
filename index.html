@@ -13,6 +13,7 @@
       color:#e5e7eb;
       background:#0b1220;
     }
+    *,*::before,*::after{box-sizing:border-box}
     body{
       margin:0;
       background:
@@ -327,6 +328,9 @@
     .bodyField .btn{display:block;width:100%;min-width:0;max-width:100%;overflow:hidden}
     .bodyField input[type="date"]{appearance:none;-webkit-appearance:none}
     .bodyActions{margin-top:4px}
+    .bodyMeasureGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .bodyMeasureGrid .bodyDateField{grid-column:1/-1}
+    .bodyMeasureGrid .bodyActions{grid-column:1/-1}
     .chartSurface{
       min-height:230px;padding:16px;border-radius:18px;overflow:visible;
       border:1px solid rgba(255,255,255,.07);
@@ -420,25 +424,64 @@
     .favMetric{padding:8px;border-radius:12px;background:rgba(255,255,255,.045)}
     .favMetric span{display:block;font-size:9px;color:var(--muted)}
     .favMetric strong{display:block;font-size:12px;margin-top:3px}
+    .goalHero{
+      position:relative;overflow:hidden;width:100%;min-width:0;padding:22px;border-radius:26px;border:1px solid rgba(167,139,250,.26);
+      background:
+        radial-gradient(380px 180px at 100% 0%,rgba(34,211,238,.18),transparent 65%),
+        linear-gradient(145deg,rgba(91,33,182,.38),rgba(19,25,42,.9));
+      box-shadow:0 24px 65px rgba(45,20,90,.24),inset 0 1px rgba(255,255,255,.08);
+    }
+    .goalHero:after{content:"";position:absolute;width:180px;height:180px;right:-70px;bottom:-110px;border-radius:50%;background:rgba(139,92,246,.22);filter:blur(4px)}
+    .goalHeroHead{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;min-width:0}
+    .goalHeroHead>div{min-width:0}
+    .goalHeroTitle{font-size:25px;font-weight:950;letter-spacing:-.04em}
+    .goalSpotlight{position:relative;z-index:1;margin-top:16px;padding:16px;border-radius:19px;background:rgba(5,8,16,.36);border:1px solid rgba(255,255,255,.09)}
+    .goalSpotValue{font-size:30px;font-weight:950;letter-spacing:-.045em;margin-top:5px}
+    .periodTabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:14px 0}
+    .periodBtn{min-width:0;padding:10px 6px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.045);color:var(--muted);font-weight:800}
+    .periodBtn.active{color:#fff;border-color:rgba(167,139,250,.42);background:linear-gradient(135deg,rgba(139,92,246,.4),rgba(34,211,238,.12));box-shadow:0 8px 22px rgba(76,29,149,.2)}
+    .insightGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+    .insightCard{padding:14px;border-radius:17px;border:1px solid var(--line);background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.025))}
+    .insightIcon{font-size:18px}.insightValue{font-size:21px;font-weight:950;letter-spacing:-.035em;margin-top:8px}.insightLabel{font-size:10px;color:var(--muted);margin-top:3px}
+    .periodDelta{display:inline-flex;margin-top:6px;padding:4px 7px;border-radius:999px;font-size:10px;font-weight:850;color:#6ee7b7;background:rgba(52,211,153,.1)}
+    .periodDelta.down{color:#fda4af;background:rgba(251,113,133,.1)}
+    .statsExerciseRow{width:100%;min-width:0}
+    .statsExerciseRow .statsExerciseInfo{min-width:0;overflow:hidden}
+    .statsExerciseRow .statsExerciseTitle{white-space:normal;overflow-wrap:anywhere;line-height:1.25}
+    .statsExerciseRow .statsExerciseMeta{white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+    .statsExerciseActions{display:flex;flex:0 0 auto;gap:8px}
     @media(max-width:760px){
       header{height:70px;padding:10px 16px}.brandMark{width:40px;height:40px}.brandTitle{font-size:18px}
       .wrap{padding:16px 16px 112px}.card{padding:16px;border-radius:22px}
       .kpiGrid4{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
       .kpiBox{min-height:118px;padding:15px}.kpiBox .val{font-size:31px}
       .bodyGrid{grid-template-columns:1fr}
+      .bodyGrid.bodyMeasureGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+      .bodyMeasureGrid .bodyField .muted{font-size:10px;line-height:1.25}
+      .bodyMeasureGrid .bodyActions{grid-column:1/-1}
       .bodyCharts{grid-template-columns:1fr}
       .bodyTrendCard.primary{grid-column:auto}
+      .insightGrid{grid-template-columns:1fr 1fr}.insightCard:last-child{grid-column:1/-1}
       .itemRow{align-items:flex-start}.itemRow>.row{justify-content:flex-end}
+      .statsExerciseRow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+      .statsExerciseRow>.left{width:auto;min-width:0}
+      .statsExerciseRow>.statsExerciseActions{width:auto;display:flex}
       .bottomNav{bottom:8px;width:calc(100% - 16px);border-radius:21px;padding:6px 4px}
       .navBtn{padding:7px 1px}.navIcon{width:27px;height:27px}.navLabel{font-size:9px}
     }
     @media(max-width:460px){
-      .bodyGrid{grid-template-columns:1fr}.bodyActions{grid-column:auto}.bodyActions .btn{width:100%}
+      .bodyGrid{grid-template-columns:1fr}.bodyGrid.bodyMeasureGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.bodyActions{grid-column:auto}.bodyActions .btn{width:100%}
+      .bodyMeasureGrid .bodyActions{grid-column:1/-1}
       .chartSurface{padding:14px;min-height:218px}.chartBig{font-size:24px}.distRow{grid-template-columns:76px 1fr 42px}
       .itemRow{flex-direction:column}.itemRow>.left{width:100%}.itemRow>.row{width:100%;display:grid;grid-auto-flow:column;grid-auto-columns:1fr}.itemRow>.row .btn{width:100%}
+      .statsExerciseRow{display:grid;grid-template-columns:1fr;gap:10px}
+      .statsExerciseRow>.statsExerciseActions{width:100%;display:grid;grid-template-columns:52px 1fr}
       .setline{display:grid;grid-template-columns:auto 1fr 1fr auto}.setline input{width:100%;min-width:0}
+      .setline-reps,.setline-time{grid-template-columns:auto 1fr auto}
       .restPanel{grid-template-columns:auto 1fr}.restActions{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr)}
       .brandEyebrow{display:none}
+      .goalHero{padding:17px}.goalHeroHead{flex-wrap:wrap}.goalHeroHead .btn{padding:10px 12px}.goalHeroTitle{font-size:22px}.goalSpotValue{font-size:27px;overflow-wrap:anywhere}
+      .goalMeta{font-size:10px;gap:6px}.goalMeta span{min-width:0}
     }
   </style>
 </head>
@@ -485,7 +528,7 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app-v15.js"></script>
+  <script defer src="app-v16.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
