@@ -159,6 +159,9 @@
       background: rgba(255,255,255,.06);
       color:#e5e7eb;
     }
+    .setField{display:grid;gap:5px;min-width:92px}
+    .setField>span{font-size:9px;font-weight:800;letter-spacing:.03em;color:var(--muted)}
+    .setField input{width:100%}
 
     .chips{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
     .chip{
@@ -473,6 +476,25 @@
     .favMetric{padding:8px;border-radius:12px;background:rgba(255,255,255,.045)}
     .favMetric span{display:block;font-size:9px;color:var(--muted)}
     .favMetric strong{display:block;font-size:12px;margin-top:3px}
+    .workoutLaunch{
+      display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;
+      padding:4px;
+    }
+    .workoutLaunchIcon{display:grid;place-items:center;width:52px;height:52px;border-radius:17px;color:#fff;font-size:19px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 12px 28px rgba(109,40,217,.28)}
+    .workoutLaunchCopy{min-width:0}.workoutLaunchTitle{font-size:19px;font-weight:950;letter-spacing:-.025em;margin:3px 0}
+    .workoutLaunchBtn{min-width:104px}
+    .favoriteRows{display:grid;gap:8px}
+    .favoriteRow{
+      display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:11px;
+      padding:11px 12px;border-radius:17px;border:1px solid var(--line);background:rgba(5,9,18,.4);
+      cursor:pointer;transition:transform .18s ease,border-color .18s ease,background .18s ease;
+    }
+    .favoriteRow:hover{transform:translateY(-1px);border-color:rgba(167,139,250,.32);background:rgba(139,92,246,.07)}
+    .favoriteRow .exIconWrap{width:42px;height:42px;border-radius:14px}
+    .favoriteRowMain{min-width:0}.favoriteRowTitle{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .favoriteRowMeta{margin-top:3px;font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .favoriteRowStats{display:flex;gap:14px;text-align:right}.favoriteRowStats span{display:block;font-size:8px;color:var(--muted)}.favoriteRowStats strong{display:block;margin-top:2px;font-size:12px;white-space:nowrap}
+    .favoriteRowArrow{font-size:24px;color:#a78bfa}
     .goalHero{
       position:relative;overflow:hidden;width:100%;min-width:0;padding:22px;border-radius:26px;border:1px solid rgba(167,139,250,.26);
       background:
@@ -530,6 +552,9 @@
       .statsExerciseRow>.statsExerciseActions{width:100%;display:grid;grid-template-columns:52px 1fr}
       .setline{display:grid;grid-template-columns:auto 1fr 1fr auto}.setline input{width:100%;min-width:0}
       .setline-reps,.setline-time{grid-template-columns:auto 1fr auto}
+      .setField{min-width:0}
+      .workoutLaunch{grid-template-columns:auto minmax(0,1fr)}.workoutLaunchBtn{grid-column:1/-1;width:100%}
+      .favoriteRow{grid-template-columns:auto minmax(0,1fr) auto}.favoriteRowStats{grid-column:2/3;text-align:left;gap:18px}.favoriteRowArrow{grid-column:3;grid-row:1/3}
       .restPanel{grid-template-columns:auto 1fr}.restActions{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr)}
       .brandEyebrow{display:none}
       .goalHero{padding:17px}.goalHeroHead{flex-wrap:wrap}.goalHeroHead .btn{padding:10px 12px}.goalHeroTitle{font-size:22px}.goalSpotValue{font-size:27px;overflow-wrap:anywhere}
@@ -580,7 +605,7 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app-v17.js"></script>
+  <script defer src="app-v18.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {

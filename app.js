@@ -438,6 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------- state ----------
   let state = migrate(load());
   if (!state.exercises.length) state.exercises = DEFAULT_EXERCISES;
+  if (state.settings.derivedDataVersion !== 2) rebuildWorkoutDerivedData();
 
   function t(key){ return i18n[state.lang]?.[key] || key; }
   function allCategories(){
@@ -646,6 +647,7 @@ document.addEventListener("DOMContentLoaded", () => {
     active: false,
     startedAt: null,
     title: "",
+    workoutId: null,
     items: [] // [{id, exerciseId, sets:[{reps:"", weight:""}]}]
   };
 
@@ -937,6 +939,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     const spotlight=[...(state.goals||[])].sort((a,b)=>goalProgress(b)-goalProgress(a))[0];
     const strongest=strongestExercise();
+    const todayWorkout=latestWorkoutToday();
 
     el.appendChild(card(`
       <div class="goalHero">
@@ -956,6 +959,18 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>` : `
           <div class="goalSpotlight"><strong>${state.lang==="en"?"Set your first measurable target":"Постав першу вимірювану ціль"}</strong><div class="muted" style="margin-top:5px">${state.lang==="en"?"For example: 100 kg bench press, 80 kg body weight or 85 cm waist.":"Наприклад: жим 100 кг, вага 80 кг або талія 85 см."}</div></div>`}
         <div class="goalList" id="goalList" style="margin-top:12px"></div>
+      </div>
+    `));
+
+    el.appendChild(card(`
+      <div class="workoutLaunch">
+        <div class="workoutLaunchIcon">${todayWorkout?"↻":"▶"}</div>
+        <div class="workoutLaunchCopy">
+          <div class="muted" style="text-transform:uppercase;letter-spacing:.12em;font-size:9px">${todayWorkout?(state.lang==="en"?"Today is still active":"Сьогоднішній день ще активний"):(state.lang==="en"?"Ready when you are":"Готовий, коли готовий ти")}</div>
+          <div class="workoutLaunchTitle">${todayWorkout?(state.lang==="en"?"Continue today's workout":"Продовжити тренування") : t("startWorkout")}</div>
+          <div class="muted">${todayWorkout?escapeHtml(todayWorkout.title):(state.lang==="en"?"Build the session and track every working set":"Склади заняття та зафіксуй кожен робочий підхід")}</div>
+        </div>
+        <button class="btn primary workoutLaunchBtn" id="homeStart">${todayWorkout?(state.lang==="en"?"Continue":"Продовжити"):(state.lang==="en"?"Start":"Почати")}</button>
       </div>
     `));
 
@@ -1001,21 +1016,17 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="insightCard"><div class="insightIcon">👑</div><div class="insightValue">${strongest?fmtNum(strongest.weight):"—"}</div><div class="insightLabel">${strongest?escapeHtml(exName(strongest.ex)):(state.lang==="en"?"strongest exercise":"найсильніша вправа")}</div></div>
         <div class="insightCard"><div class="insightIcon">🎯</div><div class="insightValue">${spotlight?goalProgress(spotlight):0}%</div><div class="insightLabel">${state.lang==="en"?"closest goal progress":"прогрес найближчої цілі"}</div></div>
       </div>
+    `));
 
-      <div style="margin-top:12px">
-        <button class="btn primary" id="homeStart">${t("startWorkout")}</button>
-      </div>
+    el.appendChild(card(`
+      <div style="font-weight:900; font-size:16px; margin-bottom:10px;">${t("favorites")}</div>
+      <div class="favoriteRows" id="favStrip"></div>
     `));
 
     el.appendChild(card(`
       <div style="font-weight:900; font-size:16px; margin-bottom:10px;">${t("lastWorkouts")}</div>
       <div class="row" style="flex-direction:column; align-items:stretch; gap:10px;" id="recentList"></div>
       <div class="muted" style="margin-top:10px">${t("tapToOpen")}</div>
-    `));
-
-    el.appendChild(card(`
-      <div style="font-weight:900; font-size:16px; margin-bottom:10px;">${t("favorites")}</div>
-      <div class="row" style="gap:10px; flex-wrap:nowrap; overflow:auto; padding-bottom:6px;" id="favStrip"></div>
     `));
 
     if ((state.recommendations||[]).length){
@@ -1028,8 +1039,11 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(()=>{
       const btn = $("#homeStart");
       if (btn) btn.onclick = ()=>{
-        setTab("workout");
-        startWorkoutIfNeeded();
+        if(todayWorkout) continueSavedWorkout(todayWorkout);
+        else{
+          setTab("workout");
+          startWorkoutIfNeeded();
+        }
       };
       renderRecentWorkouts();
       renderFavStrip();
@@ -1098,25 +1112,20 @@ document.addEventListener("DOMContentLoaded", () => {
     box.innerHTML = fav.map(ex=>{
       const logs = flat.filter(l=>l.exerciseId===ex.id).sort((a,b)=>new Date(b.date)-new Date(a.date));
       const cnt = logs.length;
-      const pr = parseNum(state.prs?.[ex.id]?.weight);
-      const totalVolume = logs.reduce((sum,l)=>sum+volumeOfSets(l.sets),0);
+      const pr = exercisePRValue(ex);
       const lastDate = logs[0]?.date ? fmtDate(logs[0].date) : "—";
       return `
-        <div class="card favCard" data-favstats="${ex.id}" role="button" tabindex="0">
-          <div class="row" style="flex-wrap:nowrap">
-            ${exIcon(ex)}
-            <div style="min-width:0">
-              <div style="font-weight:900;font-size:13px;line-height:1.25">${escapeHtml(exName(ex))}</div>
-              <div class="muted" style="margin-top:3px">${escapeHtml(catName(ex.category))}</div>
-            </div>
+        <div class="favoriteRow" data-favstats="${ex.id}" role="button" tabindex="0">
+          ${exIcon(ex)}
+          <div class="favoriteRowMain">
+            <div class="favoriteRowTitle">${escapeHtml(exName(ex))}</div>
+            <div class="favoriteRowMeta">${escapeHtml(catName(ex.category))} · ${trackingLabel(ex)} · ${t("last")}: ${lastDate}</div>
           </div>
-          <div class="favMetrics">
-            <div class="favMetric"><span>PR</span><strong>${fmtNum(pr)} kg</strong></div>
-            <div class="favMetric"><span>${state.lang==="en"?"Trainings":"Тренувань"}</span><strong>${cnt}</strong></div>
-            <div class="favMetric"><span>${state.lang==="en"?"Volume":"Обʼєм"}</span><strong>${fmtVol(totalVolume)} kg</strong></div>
-            <div class="favMetric"><span>${t("last")}</span><strong>${lastDate}</strong></div>
+          <div class="favoriteRowStats">
+            <div><span>PR</span><strong>${fmtNum(pr)} ${primaryUnit(ex)}</strong></div>
+            <div><span>${state.lang==="en"?"Sessions":"Занять"}</span><strong>${cnt}</strong></div>
           </div>
-          <div class="muted" style="margin-top:10px;color:#c4b5fd">${state.lang==="en"?"Open statistics →":"Відкрити статистику →"}</div>
+          <span class="favoriteRowArrow">›</span>
         </div>
       `;
     }).join("");
@@ -1135,6 +1144,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (workoutSession.active) return;
     workoutSession.active = true;
     workoutSession.startedAt = new Date().toISOString();
+    workoutSession.workoutId = null;
     if (!workoutSession.title){
       workoutSession.title = state.lang==="en"
         ? `Workout ${fmtDate(workoutSession.startedAt)}`
@@ -1150,7 +1160,9 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="row" style="justify-content:space-between; align-items:flex-start">
         <div style="min-width:0; flex:1">
           <div style="font-weight:900; font-size:18px">${t("workout")}</div>
-          <div class="muted">${workoutSession.active ? `⏱ ${fmtDate(workoutSession.startedAt)}` : t("noData")}</div>
+          <div class="muted">${workoutSession.workoutId
+            ? `${state.lang==="en"?"Editing saved workout":"Редагування збереженого тренування"} · ${fmtDate(workoutSession.startedAt)}`
+            : workoutSession.active ? `⏱ ${fmtDate(workoutSession.startedAt)}` : t("noData")}</div>
 
           <div style="margin-top:10px">
             <div class="muted" style="margin-bottom:6px">${t("workoutTitle")}</div>
@@ -1189,7 +1201,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     el.appendChild(card(`
       <div class="row" style="justify-content:space-between">
-        <button class="btn primary" id="saveWorkoutBtn">${t("saveWorkout")}</button>
+        <button class="btn primary" id="saveWorkoutBtn">${workoutSession.workoutId?(state.lang==="en"?"💾 Update workout":"💾 Оновити тренування"):t("saveWorkout")}</button>
         <button class="btn" id="clearWorkoutBtn">${t("clearWorkout")}</button>
       </div>
     `));
@@ -1220,8 +1232,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const clearBtn = $("#clearWorkoutBtn");
       if (clearBtn) clearBtn.onclick = ()=>{
+        const message=state.lang==="en"
+          ? "Clear the current workout draft? All entered exercises and sets in this draft will be lost."
+          : "Очистити поточний набір тренування? Усі внесені вправи та підходи в цьому наборі буде втрачено.";
+        if(!confirm(message)) return;
         resetRestTimer();
-        workoutSession = { active:false, startedAt:null, title:"", items:[] };
+        workoutSession = { active:false, startedAt:null, title:"", workoutId:null, items:[] };
         render();
       };
 
@@ -1231,6 +1247,14 @@ document.addEventListener("DOMContentLoaded", () => {
           alert(t("pickExerciseFirst"));
           return;
         }
+        const message=workoutSession.workoutId
+          ? (state.lang==="en"
+            ? "Update this saved workout and recalculate records, statistics and recommendations?"
+            : "Оновити це збережене тренування та перерахувати рекорди, статистику й рекомендації?")
+          : (state.lang==="en"
+            ? "Save and finish this workout? You can continue today's saved workout later from Home."
+            : "Зберегти й завершити це тренування? Сьогодні його можна буде продовжити з головної сторінки.");
+        if(!confirm(message)) return;
         saveWorkoutSession();
       };
     },0);
@@ -1255,18 +1279,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const setsHtml = (it.sets||[]).map((s, idx)=>`
         <div class="setline setline-${type}" style="margin-top:8px">
           <span class="pill">#${idx+1}</span>
-          ${type==="strength" || type==="reps" ? `<input type="text" inputmode="numeric"
+          ${type==="strength" || type==="reps" ? `<label class="setField"><span>${state.lang==="en"?"Reps":"Повтори"}</span><input type="text" inputmode="numeric"
             data-id="${it.id}" data-i="${idx}" data-k="reps"
-            value="${escapeHtml(s.reps ?? "")}" placeholder="${state.lang==="en"?"reps":"повтори"}" />` : ""}
-          ${type==="strength" ? `<input type="text" inputmode="decimal"
+            value="${escapeHtml(s.reps ?? "")}" placeholder="8" /></label>` : ""}
+          ${type==="strength" ? `<label class="setField"><span>${state.lang==="en"?"Weight, kg":"Вага, кг"}</span><input type="text" inputmode="decimal"
             data-id="${it.id}" data-i="${idx}" data-k="weight"
-            value="${escapeHtml(s.weight ?? "")}" placeholder="kg" />` : ""}
-          ${type==="time" || type==="distance" ? `<input type="text" inputmode="decimal"
+            value="${escapeHtml(s.weight ?? "")}" placeholder="80" /></label>` : ""}
+          ${type==="time" || type==="distance" ? `<label class="setField"><span>${state.lang==="en"?"Time, min":"Час, хв"}</span><input type="text" inputmode="decimal"
             data-id="${it.id}" data-i="${idx}" data-k="duration"
-            value="${escapeHtml(s.duration ?? "")}" placeholder="${state.lang==="en"?"minutes":"хвилини"}" />` : ""}
-          ${type==="distance" ? `<input type="text" inputmode="decimal"
+            value="${escapeHtml(s.duration ?? "")}" placeholder="10" /></label>` : ""}
+          ${type==="distance" ? `<label class="setField"><span>${state.lang==="en"?"Distance, km":"Дистанція, км"}</span><input type="text" inputmode="decimal"
             data-id="${it.id}" data-i="${idx}" data-k="distance"
-            value="${escapeHtml(s.distance ?? "")}" placeholder="km" />` : ""}
+            value="${escapeHtml(s.distance ?? "")}" placeholder="2.5" /></label>` : ""}
           <button class="btn" data-delset="${it.id}" data-i="${idx}">✖</button>
         </div>
       `).join("");
@@ -1504,6 +1528,34 @@ document.addEventListener("DOMContentLoaded", () => {
     const qInput = modal.querySelector("#pickQ");
     if (qInput) qInput.oninput = renderList;
   }
+  function isSameLocalDay(a,b=new Date()){
+    const x=new Date(a);
+    const y=new Date(b);
+    return Number.isFinite(x.getTime()) &&
+      x.getFullYear()===y.getFullYear() &&
+      x.getMonth()===y.getMonth() &&
+      x.getDate()===y.getDate();
+  }
+  function latestWorkoutToday(){
+    return [...(state.workouts||[])]
+      .filter(w=>isSameLocalDay(w.date))
+      .sort((a,b)=>new Date(b.date)-new Date(a.date))[0] || null;
+  }
+  function continueSavedWorkout(workout){
+    if(!workout) return;
+    workoutSession={
+      active:true,
+      startedAt:workout.date,
+      title:workout.title || "",
+      workoutId:workout.id,
+      items:(workout.items||[]).map(it=>({
+        id:uid(),
+        exerciseId:it.exerciseId,
+        sets:(it.sets||[]).map(set=>({...set}))
+      }))
+    };
+    setTab("workout");
+  }
 
   function buildWorkoutRecommendations(items){
     return items.map(it=>{
@@ -1547,6 +1599,37 @@ document.addEventListener("DOMContentLoaded", () => {
     }).filter(Boolean);
   }
 
+  function rebuildWorkoutDerivedData(){
+    const rebuilt={};
+    const ordered=[...(state.workouts||[])].sort((a,b)=>new Date(a.date)-new Date(b.date));
+    ordered.forEach(workout=>{
+      (workout.items||[]).forEach(item=>{
+        const ex=state.exercises.find(e=>e.id===item.exerciseId);
+        if(!ex) return;
+        const best=maxPrimaryOfSets(ex,item.sets);
+        const current=parseNum(rebuilt[item.exerciseId]?.value);
+        if(best<=current) return;
+        const prSet=(item.sets||[]).find(set=>primarySetValue(ex,set)===best) || {};
+        rebuilt[item.exerciseId]={
+          type:exerciseTracking(ex),
+          value:best,
+          weight:parseNum(prSet.weight),
+          reps:parseNum(prSet.reps),
+          duration:parseNum(prSet.duration),
+          distance:parseNum(prSet.distance),
+          date:workout.date,
+          workoutId:workout.id
+        };
+      });
+    });
+    state.prs=rebuilt;
+    const latest=[...(state.workouts||[])].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+    state.recommendations=latest
+      ? buildWorkoutRecommendations(latest.items||[]).map(rec=>({...rec,workoutId:latest.id}))
+      : [];
+    state.settings.derivedDataVersion=2;
+  }
+
   function openRecommendationsModal(recommendations,gotAnyPR){
     const overlay=document.createElement("div");
     overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(9px);z-index:180;display:grid;place-items:center;padding:16px";
@@ -1565,7 +1648,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function saveWorkoutSession(){
-    const workoutId = uid();
+    const workoutId = workoutSession.workoutId || uid();
     const date = workoutSession.startedAt || new Date().toISOString();
 
     let gotAnyPR = false;
@@ -1613,17 +1696,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const fallbackTitle = state.lang==="en" ? `Workout ${fmtDate(date)}` : `Тренування ${fmtDate(date)}`;
     const title = (workoutSession.title || "").trim() || fallbackTitle;
-    const recommendations=buildWorkoutRecommendations(items);
-
-    state.workouts.unshift({ id: workoutId, date, title, items });
-    state.recommendations=recommendations;
+    const savedWorkout={ id:workoutId,date,title,items };
+    if(workoutSession.workoutId){
+      state.workouts=state.workouts.map(workout=>workout.id===workoutId?savedWorkout:workout);
+    }else{
+      state.workouts.unshift(savedWorkout);
+    }
+    rebuildWorkoutDerivedData();
     save();
 
-    workoutSession = { active:false, startedAt:null, title:"", items:[] };
+    workoutSession = { active:false, startedAt:null, title:"", workoutId:null, items:[] };
     resetRestTimer();
 
     setTab("home");
-    setTimeout(()=>openRecommendationsModal(recommendations,gotAnyPR),0);
+    setTimeout(()=>openRecommendationsModal(state.recommendations,gotAnyPR),0);
   }
 
   // ---------- workout detail modal (history) ----------
@@ -1717,6 +1803,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (del) del.onclick = ()=>{
       if (!confirm(t("confirmDeleteWorkout"))) return;
       state.workouts = state.workouts.filter(x=>x.id!==workoutId);
+      if(workoutSession.workoutId===workoutId){
+        workoutSession={active:false,startedAt:null,title:"",workoutId:null,items:[]};
+      }
+      rebuildWorkoutDerivedData();
       save();
       close();
       render();
@@ -3031,7 +3121,7 @@ document.addEventListener("DOMContentLoaded", () => {
         state.exercises = DEFAULT_EXERCISES;
         save();
         resetRestTimer();
-        workoutSession = { active:false, startedAt:null, title:"", items:[] };
+        workoutSession = { active:false, startedAt:null, title:"", workoutId:null, items:[] };
         selectedStatsExerciseId = null;
         render();
       };
