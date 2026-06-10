@@ -467,16 +467,24 @@ document.addEventListener("DOMContentLoaded", () => {
       return {
         id:String(profile.id||`profile-${uid()}`),
         name:String(profile.name||`Клієнт ${index+1}`),
+        role:profile.role==="personal" || profile.id==="personal" ? "personal" : "client",
         data
       };
     });
     if(!normalized.profiles.length){
-      normalized.profiles.push({id:"personal",name:"Мій профіль",data:fallbackData});
+      normalized.profiles.push({id:"personal",name:"Мій прогрес",role:"personal",data:fallbackData});
     }
+    if(!normalized.profiles.some(profile=>profile.role==="personal")){
+      normalized.profiles[0].role="personal";
+    }
+    normalized.profiles.forEach(profile=>{
+      if(profile.role==="personal") profile.name="Мій прогрес";
+    });
     normalized.activeProfileId=String(normalized.activeProfileId||normalized.profiles[0].id);
     if(!normalized.profiles.some(profile=>profile.id===normalized.activeProfileId)){
       normalized.activeProfileId=normalized.profiles[0].id;
     }
+    const clientIds=new Set(normalized.profiles.filter(profile=>profile.role==="client").map(profile=>profile.id));
     normalized.appointments=Array.isArray(normalized.appointments)
       ? normalized.appointments.filter(Boolean).map(item=>({
           id:String(item.id||uid()),
@@ -485,7 +493,7 @@ document.addEventListener("DOMContentLoaded", () => {
           time:String(item.time||""),
           note:String(item.note||""),
           notified:Boolean(item.notified)
-        }))
+        })).filter(item=>clientIds.has(item.profileId))
       : [];
     return normalized;
   }
@@ -694,6 +702,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function activeProfile(){
     return appShell.profiles.find(profile=>profile.id===appShell.activeProfileId) || appShell.profiles[0];
+  }
+  function personalProfile(){
+    return appShell.profiles.find(profile=>profile.role==="personal") || appShell.profiles[0];
+  }
+  function clientProfiles(){
+    return appShell.profiles.filter(profile=>profile.role==="client");
+  }
+  function profileDisplayName(profile){
+    if(profile?.role==="personal") return state.lang==="en" ? "My progress" : "Мій прогрес";
+    return profile?.name || (state.lang==="en"?"Client":"Клієнт");
   }
 
   function resetTransientSession(){
@@ -1003,7 +1021,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const profileBtn=$("#profileBtn");
     if(profileBtn){
       profileBtn.style.display=appShell.mode==="trainer" ? "" : "none";
-      profileBtn.textContent=`◉ ${activeProfile()?.name||"Клієнт"}`;
+      profileBtn.textContent=`◉ ${profileDisplayName(activeProfile())}`;
       profileBtn.onclick=()=>setTab("coach");
     }
 
@@ -1042,9 +1060,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const mode=button.getAttribute("data-mode");
         appShell.mode=mode;
         if(mode==="trainer"){
-          if(appShell.profiles.length===1 && appShell.profiles[0].name==="Мій профіль"){
-            appShell.profiles[0].name=state.lang==="en"?"Client 1":"Клієнт 1";
-          }
           currentTab="coach";
         }else{
           currentTab="home";
@@ -1077,7 +1092,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }else{
         const data=freshProfileData();
         data.lang=state.lang;
-        const created={id:`client-${uid()}`,name,data};
+        const created={id:`client-${uid()}`,name,role:"client",data};
         appShell.profiles.push(created);
         appShell.activeProfileId=created.id;
         state=created.data;
@@ -1099,7 +1114,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function openAppointmentModal(){
-    const clients=appShell.profiles;
+    const clients=clientProfiles();
+    if(!clients.length){
+      alert(state.lang==="en"?"Add a real client before planning a session.":"Спочатку додай реального клієнта, а потім плануй заняття.");
+      return;
+    }
     const now=new Date();
     const date=now.toISOString().slice(0,10);
     const overlay=document.createElement("div");
@@ -1157,13 +1176,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function viewCoach(){
     const el=document.createElement("div");
-    const appointments=[...(appShell.appointments||[])].sort((a,b)=>appointmentTimestamp(a)-appointmentTimestamp(b));
+    const personal=personalProfile();
+    const clients=clientProfiles();
+    const clientIds=new Set(clients.map(profile=>profile.id));
+    const appointments=[...(appShell.appointments||[])]
+      .filter(item=>clientIds.has(item.profileId))
+      .sort((a,b)=>appointmentTimestamp(a)-appointmentTimestamp(b));
     const upcoming=appointments.filter(item=>appointmentTimestamp(item)>=Date.now()-60*60*1000).slice(0,12);
+    const personalData=personal?.data||{};
     el.appendChild(card(`
-      <div class="detailHeader"><div class="detailTitle"><div class="brandEyebrow">${state.lang==="en"?"Trainer workspace":"Робочий простір тренера"}</div><h2>${state.lang==="en"?"Clients and schedule":"Клієнти та розклад"}</h2><div class="sub">${appShell.profiles.length} ${state.lang==="en"?"clients":"клієнтів"} · ${upcoming.length} ${state.lang==="en"?"upcoming sessions":"найближчих занять"}</div></div><button class="btn primary" id="addClientBtn">＋ ${state.lang==="en"?"Client":"Клієнт"}</button></div>
-      <div class="coachGrid" style="margin-top:16px">
-        <section>
-          <div class="clientGrid">${appShell.profiles.map(profile=>{
+      <div class="coachHeader"><div class="detailTitle"><div class="brandEyebrow">${state.lang==="en"?"Trainer workspace":"Робочий простір тренера"}</div><h2>${state.lang==="en"?"Clients and schedule":"Клієнти та розклад"}</h2><div class="sub">${clients.length} ${state.lang==="en"?"real clients":"реальних клієнтів"} · ${upcoming.length} ${state.lang==="en"?"upcoming sessions":"найближчих занять"}</div></div><button class="btn primary" id="addClientBtn">＋ ${state.lang==="en"?"Client":"Клієнт"}</button></div>
+      <section class="personalProgressCard">
+        <div class="personalProgressIcon">◎</div>
+        <div class="personalProgressMain"><div class="muted">${state.lang==="en"?"Trainer's own profile":"Особистий профіль тренера"}</div><strong>${state.lang==="en"?"My progress":"Мій прогрес"}</strong><span>${(personalData.workouts||[]).length} ${state.lang==="en"?"workouts":"тренувань"} · ${(personalData.goals||[]).length} ${state.lang==="en"?"goals":"цілей"} · ${state.lang==="en"?"not included in calendar":"не додається до календаря"}</span></div>
+        <button class="btn ${personal?.id===appShell.activeProfileId?"primary":""}" data-open-client="${personal?.id}">${personal?.id===appShell.activeProfileId?(state.lang==="en"?"Open progress":"Відкрити прогрес"):(state.lang==="en"?"Switch":"Перейти")}</button>
+      </section>
+      <div class="coachStack">
+        <section class="coachSection">
+          <div class="coachSectionHead"><div><strong>${state.lang==="en"?"Clients":"Клієнти"}</strong><div class="muted">${state.lang==="en"?"Separate progress for each person":"Окремий прогрес для кожної людини"}</div></div></div>
+          <div class="clientGrid">${clients.length?clients.map(profile=>{
             const data=profile.data||{};
             const next=appointments.find(item=>item.profileId===profile.id && appointmentTimestamp(item)>=Date.now());
             return `<article class="clientCard ${profile.id===appShell.activeProfileId?"active":""}">
@@ -1171,16 +1202,16 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="premiumNote" style="margin-top:11px;font-size:11px">${next?`${state.lang==="en"?"Next":"Далі"}: ${fmtDate(next.date)} · ${next.time}`:(state.lang==="en"?"No planned sessions":"Немає запланованих занять")}</div>
               <button class="btn ${profile.id===appShell.activeProfileId?"primary":""}" data-open-client="${profile.id}" style="width:100%;margin-top:10px">${profile.id===appShell.activeProfileId?(state.lang==="en"?"Open active client":"Відкрити активного клієнта"):(state.lang==="en"?"Switch to client":"Перейти до клієнта")}</button>
             </article>`;
-          }).join("")}</div>
+          }).join(""):`<div class="emptyClients"><strong>${state.lang==="en"?"No clients yet":"Клієнтів поки немає"}</strong><span>${state.lang==="en"?"Add the first person to start tracking and scheduling.":"Додай першу людину, щоб вести прогрес і планувати заняття."}</span></div>`}</div>
         </section>
-        <section>
-          <div class="detailHeader"><div><strong>${state.lang==="en"?"Upcoming calendar":"Найближчий календар"}</strong><div class="muted">${state.lang==="en"?"Local reminders while app is active":"Локальні нагадування, коли застосунок активний"}</div></div><button class="btn" id="addAppointmentBtn">＋</button></div>
+        <section class="coachSection calendarSection">
+          <div class="coachSectionHead"><div><strong>${state.lang==="en"?"Upcoming calendar":"Найближчий календар"}</strong><div class="muted">${state.lang==="en"?"Only real clients · reminders while app is active":"Лише реальні клієнти · нагадування, коли застосунок активний"}</div></div><button class="btn" id="addAppointmentBtn" ${clients.length?"":"disabled"}>＋ ${state.lang==="en"?"Plan":"Запис"}</button></div>
           <div class="appointmentList">${upcoming.length?upcoming.map(item=>{
             const profile=appShell.profiles.find(candidate=>candidate.id===item.profileId);
             const day=new Date(`${item.date}T00:00:00`);
             return `<div class="appointmentRow"><div class="appointmentDate">${day.toLocaleDateString(state.lang==="en"?"en-US":"uk-UA",{month:"short"})}<strong>${day.getDate()}</strong></div><div><strong>${escapeHtml(profile?.name||"Клієнт")} · ${item.time}</strong><div class="muted">${escapeHtml(item.note|| (state.lang==="en"?"Training session":"Тренування"))}</div></div><button class="btn" data-del-appointment="${item.id}">✕</button></div>`;
-          }).join(""):`<div class="muted" style="padding:14px">${state.lang==="en"?"Nothing planned yet.":"Поки нічого не заплановано."}</div>`}</div>
-          <button class="btn" id="notificationBtn" style="width:100%;margin-top:10px">${state.lang==="en"?"Enable calendar notifications":"Увімкнути сповіщення календаря"}</button>
+          }).join(""):`<div class="emptyCalendar">${clients.length?(state.lang==="en"?"Nothing planned yet.":"Поки нічого не заплановано."):(state.lang==="en"?"Calendar becomes available after adding a client.":"Календар стане доступним після додавання клієнта.")}</div>`}</div>
+          ${clients.length?`<button class="btn" id="notificationBtn" style="width:100%;margin-top:10px">${state.lang==="en"?"Enable calendar notifications":"Увімкнути сповіщення календаря"}</button>`:""}
         </section>
       </div>`));
     setTimeout(()=>{
@@ -3543,10 +3574,10 @@ document.addEventListener("DOMContentLoaded", () => {
     ];
     if(appShell.mode==="trainer") steps.push({
       title:en?"8. Manage clients and calendar":"8. Керуй клієнтами й календарем",
-      sub:en?"Each client has fully separate data":"Кожен клієнт має повністю окремі дані",
+      sub:en?"Your progress is separate from real clients":"Твій прогрес відокремлений від реальних клієнтів",
       copy:en
-        ? "Tap the client name in the header to open Trainer workspace. Add clients, switch between them, and plan a date and time. Workouts, exercises, goals, measurements, records and recommendations belong only to the selected client."
-        : "Натисни ім’я клієнта у шапці, щоб відкрити простір тренера. Додавай клієнтів, перемикайся між ними та плануй дату й час. Тренування, вправи, цілі, заміри, рекорди й рекомендації належать лише обраному клієнту.",
+        ? "My progress stores the trainer's own workouts and is not included in the calendar. Add real clients below it, switch between their separate data, and plan dates and times only for those clients."
+        : "«Мій прогрес» зберігає власні тренування тренера й не входить до календаря. Нижче додавай реальних клієнтів, перемикайся між їхніми окремими даними та плануй дати й час лише для них.",
       example:en
         ? "Anna · June 15 · 18:00. With permission enabled, the active app reminds you 15 minutes before."
         : "Анна · 15 червня · 18:00. Якщо дозволити сповіщення, активний застосунок нагадає за 15 хвилин.",

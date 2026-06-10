@@ -372,10 +372,17 @@
     .modeChoice{padding:20px;text-align:left;border:1px solid var(--line);border-radius:22px;color:var(--text);background:rgba(255,255,255,.045);cursor:pointer}
     .modeChoice:hover{border-color:rgba(167,139,250,.45);background:rgba(139,92,246,.1)}
     .modeChoice strong{display:block;margin:10px 0 5px;font-size:20px}.modeChoice span{font-size:12px;color:var(--muted);line-height:1.5}
-    .coachGrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);gap:14px}
+    .coachHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+    .coachStack{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);gap:14px;margin-top:14px}
+    .coachSection{min-width:0;padding:15px;border:1px solid var(--line);border-radius:21px;background:rgba(5,9,18,.3)}
+    .coachSectionHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.coachSectionHead strong{font-size:17px}
     .clientGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    .clientCard{padding:15px;border-radius:19px;border:1px solid var(--line);background:rgba(5,9,18,.42)}
+    .clientCard{min-width:0;padding:15px;border-radius:19px;border:1px solid var(--line);background:rgba(5,9,18,.42)}
     .clientCard.active{border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.07)}
+    .personalProgressCard{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:13px;margin-top:16px;padding:15px;border:1px solid rgba(167,139,250,.24);border-radius:20px;background:linear-gradient(135deg,rgba(91,33,182,.2),rgba(34,211,238,.06))}
+    .personalProgressIcon{display:grid;place-items:center;width:46px;height:46px;border-radius:15px;font-size:23px;background:rgba(139,92,246,.2);border:1px solid rgba(167,139,250,.28)}
+    .personalProgressMain{min-width:0}.personalProgressMain strong{display:block;margin-top:2px;font-size:18px}.personalProgressMain span{display:block;margin-top:4px;font-size:10px;line-height:1.4;color:var(--muted)}
+    .emptyClients,.emptyCalendar{padding:18px;border:1px dashed rgba(255,255,255,.11);border-radius:16px;text-align:center;color:var(--muted)}.emptyClients{grid-column:1/-1}.emptyClients strong{display:block;color:var(--text)}.emptyClients span{display:block;margin-top:5px;font-size:11px}
     .appointmentList{display:grid;gap:8px;margin-top:12px}.appointmentRow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px;border-radius:15px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
     .appointmentDate{min-width:58px;text-align:center;padding:7px;border-radius:11px;background:rgba(139,92,246,.14);font-size:10px}.appointmentDate strong{display:block;font-size:15px;color:#ddd6fe}
     .kpiGrid4{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -560,6 +567,7 @@
       .statsExerciseRow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
       .statsExerciseRow>.left{width:auto;min-width:0}
       .statsExerciseRow>.statsExerciseActions{width:auto;display:flex}
+      .coachStack{grid-template-columns:1fr}.clientGrid{grid-template-columns:1fr}
       .bottomNav{bottom:8px;width:calc(100% - 16px);border-radius:21px;padding:6px 4px}
       .navBtn{padding:7px 1px}.navIcon{width:27px;height:27px}.navLabel{font-size:9px}
     }
@@ -583,7 +591,12 @@
       .brandEyebrow{display:none}
       .goalHero{padding:17px}.goalHeroHead{flex-wrap:wrap}.goalHeroHead .btn{padding:10px 12px}.goalHeroTitle{font-size:22px}.goalSpotValue{font-size:27px;overflow-wrap:anywhere}
       .goalMeta{font-size:10px;gap:6px}.goalMeta span{min-width:0}
-      .modeChoices,.coachGrid,.clientGrid{grid-template-columns:1fr}.profileButton{max-width:125px}
+      .modeChoices{grid-template-columns:1fr}.profileButton{max-width:112px;padding-inline:9px}
+      .coachHeader{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}.coachHeader h2{font-size:22px;margin:2px 0}.coachHeader .sub{font-size:11px}.coachHeader>.btn{padding:9px 10px;min-height:38px}
+      .personalProgressCard{grid-template-columns:auto minmax(0,1fr);padding:13px}.personalProgressCard>.btn{grid-column:1/-1;width:100%}
+      .coachSection{padding:12px;border-radius:18px}.coachSectionHead{align-items:center}.coachSectionHead .muted{font-size:10px}
+      .clientCard{padding:13px}.clientCard .detailHeader{flex-direction:row;align-items:flex-start}.clientCard .detailHeader .btn{width:auto}
+      .appointmentRow{grid-template-columns:50px minmax(0,1fr) 38px;padding:9px;gap:8px}.appointmentDate{min-width:0;padding:6px 4px}.appointmentRow>.btn{min-width:38px;padding:8px}
     }
   </style>
 </head>
@@ -631,7 +644,7 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app-v22.js"></script>
+  <script defer src="app-v23.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
