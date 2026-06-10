@@ -150,7 +150,8 @@
       color:#fff;
     }
 
-    .setline{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .setline{display:grid;grid-template-columns:auto repeat(2,minmax(92px,160px)) auto;gap:8px;align-items:end;justify-content:start}
+    .setline-reps,.setline-time{grid-template-columns:auto minmax(92px,180px) auto}
     .setline input{
       width: 92px;
       padding: 10px;
@@ -550,9 +551,9 @@
       .itemRow{flex-direction:column}.itemRow>.left{width:100%}.itemRow>.row{width:100%;display:grid;grid-auto-flow:column;grid-auto-columns:1fr}.itemRow>.row .btn{width:100%}
       .statsExerciseRow{display:grid;grid-template-columns:1fr;gap:10px}
       .statsExerciseRow>.statsExerciseActions{width:100%;display:grid;grid-template-columns:52px 1fr}
-      .setline{display:grid;grid-template-columns:auto 1fr 1fr auto}.setline input{width:100%;min-width:0}
+      .setline{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr) auto;gap:6px}.setline input{width:100%;min-width:0;padding:10px 8px}
       .setline-reps,.setline-time{grid-template-columns:auto 1fr auto}
-      .setField{min-width:0}
+      .setField{min-width:0}.setField>span{font-size:8px}
       .workoutLaunch{grid-template-columns:auto minmax(0,1fr)}.workoutLaunchBtn{grid-column:1/-1;width:100%}
       .favoriteRow{grid-template-columns:auto minmax(0,1fr) auto}.favoriteRowStats{grid-column:2/3;text-align:left;gap:18px}.favoriteRowArrow{grid-column:3;grid-row:1/3}
       .restPanel{grid-template-columns:auto 1fr}.restActions{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr)}
@@ -605,7 +606,7 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app-v18.js"></script>
+  <script defer src="app-v19.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {

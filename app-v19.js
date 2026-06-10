@@ -652,6 +652,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   let rest = { left: state.settings.defaultRestSec, running:false, interval:null };
+  let restAudioContext = null;
 
   function restDefault(){
     return Math.max(10, parseInt(state.settings.defaultRestSec || 90, 10));
@@ -684,9 +685,39 @@ document.addEventListener("DOMContentLoaded", () => {
     updateRestUI();
   }
 
-  function startRestTimer(){
-    if (rest.running) return stopRestTimer();
-    if (rest.left <= 0) rest.left = restDefault();
+  function primeRestAudio(){
+    try{
+      const AudioCtx=window.AudioContext || window.webkitAudioContext;
+      if(!AudioCtx) return;
+      if(!restAudioContext) restAudioContext=new AudioCtx();
+      if(restAudioContext.state==="suspended") restAudioContext.resume();
+    }catch{}
+  }
+
+  function playRestCompleteSound(){
+    primeRestAudio();
+    if(!restAudioContext) return;
+    const now=restAudioContext.currentTime;
+    [0,0.18,0.36].forEach((delay,index)=>{
+      const oscillator=restAudioContext.createOscillator();
+      const gain=restAudioContext.createGain();
+      oscillator.type="sine";
+      oscillator.frequency.value=index===1 ? 1040 : 880;
+      gain.gain.setValueAtTime(0.0001,now+delay);
+      gain.gain.exponentialRampToValueAtTime(0.22,now+delay+0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001,now+delay+0.14);
+      oscillator.connect(gain);
+      gain.connect(restAudioContext.destination);
+      oscillator.start(now+delay);
+      oscillator.stop(now+delay+0.15);
+    });
+  }
+
+  function runRestTimer(restart=false){
+    primeRestAudio();
+    if (rest.running && !restart) return stopRestTimer();
+    if (rest.interval) clearInterval(rest.interval);
+    if (restart || rest.left <= 0) rest.left = restDefault();
     rest.running = true;
     updateRestUI();
     rest.interval = setInterval(()=>{
@@ -694,15 +725,34 @@ document.addEventListener("DOMContentLoaded", () => {
       updateRestUI();
       if (rest.left <= 0){
         stopRestTimer();
+        playRestCompleteSound();
         if (navigator.vibrate) navigator.vibrate([160,80,160]);
       }
     },1000);
   }
+  function startRestTimer(){ runRestTimer(false); }
+  function startAutomaticRestTimer(){ runRestTimer(true); }
 
   function resetRestTimer(){
     stopRestTimer();
     rest.left = restDefault();
     updateRestUI();
+  }
+
+  function setIsComplete(ex,set){
+    const type=exerciseTracking(ex);
+    if(type==="reps") return parseNum(set?.reps)>0;
+    if(type==="time") return parseNum(set?.duration)>0;
+    if(type==="distance") return parseNum(set?.distance)>0 && parseNum(set?.duration)>0;
+    return parseNum(set?.weight)>0 && parseNum(set?.reps)>0;
+  }
+
+  function maybeStartRestForSet(item,index){
+    const set=item?.sets?.[index];
+    const ex=state.exercises.find(e=>e.id===item?.exerciseId);
+    if(!set || !ex || !setIsComplete(ex,set) || set._restTriggered) return;
+    set._restTriggered=true;
+    startAutomaticRestTimer();
   }
 
   // ---------- flatten stats ----------
@@ -1185,7 +1235,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <div>
           <div style="font-weight:900;font-size:17px" id="restLabel">${t("restTimer")}</div>
-          <div class="muted" style="margin-top:4px">${state.lang==="en" ? "Stay precise between working sets" : "Тримай точний темп між робочими підходами"}</div>
+          <div class="muted" style="margin-top:4px">${state.lang==="en" ? "Starts automatically after a completed set · sound at zero" : "Запускається автоматично після внесеного підходу · сигнал на нулі"}</div>
         </div>
         <div class="restActions">
           <button class="btn primary" id="restToggle">▶ ${t("timerStart")}</button>
@@ -1367,12 +1417,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // input bind (NO rerender on every key)
     box.querySelectorAll("input[data-id]").forEach(inp=>{
       inp.addEventListener("input", (e)=>{
+        primeRestAudio();
         const id = e.target.getAttribute("data-id");
         const idx = Number(e.target.getAttribute("data-i"));
         const k = e.target.getAttribute("data-k");
         const it = workoutSession.items.find(x=>x.id===id);
         if (!it || !it.sets[idx]) return;
         it.sets[idx][k] = e.target.value;
+        it.sets[idx]._restTriggered=false;
       });
 
       inp.addEventListener("blur", (e)=>{
@@ -1391,6 +1443,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const num = parseNum(raw);
         it.sets[idx][k] = fmtNum(num);
         e.target.value = it.sets[idx][k];
+        maybeStartRestForSet(it,idx);
       });
     });
   }
@@ -1551,7 +1604,7 @@ document.addEventListener("DOMContentLoaded", () => {
       items:(workout.items||[]).map(it=>({
         id:uid(),
         exerciseId:it.exerciseId,
-        sets:(it.sets||[]).map(set=>({...set}))
+        sets:(it.sets||[]).map(set=>({...set,_restTriggered:true}))
       }))
     };
     setTab("workout");
@@ -3146,6 +3199,8 @@ document.addEventListener("DOMContentLoaded", () => {
       render();
     };
   }
+
+  document.addEventListener("pointerdown", primeRestAudio, { once:true, passive:true });
 
   // initial
   save();

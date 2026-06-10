@@ -3,8 +3,8 @@
 // - cache bust via CACHE version
 
 // bump version when you publish updates
-const CACHE = "gym-pwa-v18-workout-integrity";
-const ASSETS = ["./index.html", "./app-v18.js", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
+const CACHE = "gym-pwa-v19-auto-rest-audio";
+const ASSETS = ["./index.html", "./app-v19.js", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
