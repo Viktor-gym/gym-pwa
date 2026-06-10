@@ -383,6 +383,16 @@
     .personalProgressIcon{display:grid;place-items:center;width:46px;height:46px;border-radius:15px;font-size:23px;background:rgba(139,92,246,.2);border:1px solid rgba(167,139,250,.28)}
     .personalProgressMain{min-width:0}.personalProgressMain strong{display:block;margin-top:2px;font-size:18px}.personalProgressMain span{display:block;margin-top:4px;font-size:10px;line-height:1.4;color:var(--muted)}
     .emptyClients,.emptyCalendar{padding:18px;border:1px dashed rgba(255,255,255,.11);border-radius:16px;text-align:center;color:var(--muted)}.emptyClients{grid-column:1/-1}.emptyClients strong{display:block;color:var(--text)}.emptyClients span{display:block;margin-top:5px;font-size:11px}
+    .profileRequired{text-align:center;padding:28px 12px}.profileRequiredIcon{display:grid;place-items:center;width:64px;height:64px;margin:0 auto 14px;border-radius:21px;font-size:30px;background:rgba(139,92,246,.16);border:1px solid rgba(167,139,250,.25)}.profileRequired h2{margin:0}.profileRequired p{max-width:520px;margin:8px auto 16px;color:var(--muted);line-height:1.5}
+    .guideModalPanel{max-height:90vh;overflow:auto}
+    .pausedClients{margin-top:12px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.025)}.pausedClients summary{padding:12px 14px;cursor:pointer;font-weight:850;color:#cbd5e1}.pausedList{display:grid;gap:7px;padding:0 10px 10px}.pausedRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,.035)}.pausedRow span{display:block;margin-top:2px;font-size:10px;color:var(--muted)}
+    .calendarToolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 10px}.calendarTabs{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.calendarTabs .periodBtn{padding:8px 12px}.calendarNav{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0}.calendarNav strong{font-size:12px;text-align:center}.calendarNav .btn{min-width:38px;padding:8px}
+    .calendarWeekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-bottom:5px;text-align:center;font-size:9px;color:var(--muted)}
+    .calendarGrid{display:grid;gap:5px}.calendarGrid.month{grid-template-columns:repeat(7,minmax(0,1fr))}.calendarGrid.week{grid-template-columns:repeat(7,minmax(0,1fr))}
+    .calendarDay{min-width:0;min-height:92px;padding:7px;border:1px solid var(--line);border-radius:12px;text-align:left;color:var(--text);background:rgba(255,255,255,.025);cursor:pointer;overflow:hidden}.calendarDay:hover{border-color:rgba(167,139,250,.35);background:rgba(139,92,246,.07)}.calendarDay.outside{opacity:.38}.calendarDay.today{border-color:rgba(34,211,238,.45)}
+    .calendarDayTop{display:flex;justify-content:space-between;gap:4px;font-size:9px;color:var(--muted)}.calendarDayTop strong{font-size:13px;color:var(--text)}.calendarEvents{display:grid;gap:3px;margin-top:7px}.calendarEvent{display:block;padding:3px 4px;border-radius:6px;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#ddd6fe;background:rgba(139,92,246,.16)}.calendarEvents small{font-size:8px;color:var(--muted)}
+    .calendarIntegration{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;padding:12px;border:1px solid rgba(34,211,238,.16);border-radius:15px;background:rgba(34,211,238,.05)}.calendarIntegration strong{display:block}.calendarIntegration span:not(.pill){display:block;margin-top:3px;font-size:10px;line-height:1.4;color:var(--muted)}
+    .comparisonSection{margin-top:14px}.comparisonTable{display:grid;gap:8px}.comparisonRow{display:grid;grid-template-columns:28px minmax(140px,1fr) repeat(4,minmax(64px,auto));align-items:center;gap:9px;padding:11px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.025)}.comparisonRank{display:grid;place-items:center;width:28px;height:28px;border-radius:10px;font-weight:900;background:rgba(139,92,246,.15);color:#ddd6fe}.comparisonMain{min-width:0}.comparisonMain strong{display:block;overflow:hidden;text-overflow:ellipsis}.comparisonMain span,.comparisonMetric span{display:block;margin-top:2px;font-size:8px;color:var(--muted)}.comparisonBar{height:5px;margin-top:6px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}.comparisonBar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8b5cf6,#22d3ee)}.comparisonMetric{text-align:right}.comparisonMetric strong{font-size:13px}
     .appointmentList{display:grid;gap:8px;margin-top:12px}.appointmentRow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px;border-radius:15px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
     .appointmentDate{min-width:58px;text-align:center;padding:7px;border-radius:11px;background:rgba(139,92,246,.14);font-size:10px}.appointmentDate strong{display:block;font-size:15px;color:#ddd6fe}
     .kpiGrid4{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -568,6 +578,7 @@
       .statsExerciseRow>.left{width:auto;min-width:0}
       .statsExerciseRow>.statsExerciseActions{width:auto;display:flex}
       .coachStack{grid-template-columns:1fr}.clientGrid{grid-template-columns:1fr}
+      .comparisonRow{grid-template-columns:28px minmax(120px,1fr) repeat(2,minmax(58px,auto))}.comparisonMetric:nth-last-child(-n+2){display:none}
       .bottomNav{bottom:8px;width:calc(100% - 16px);border-radius:21px;padding:6px 4px}
       .navBtn{padding:7px 1px}.navIcon{width:27px;height:27px}.navLabel{font-size:9px}
     }
@@ -597,6 +608,8 @@
       .coachSection{padding:12px;border-radius:18px}.coachSectionHead{align-items:center}.coachSectionHead .muted{font-size:10px}
       .clientCard{padding:13px}.clientCard .detailHeader{flex-direction:row;align-items:flex-start}.clientCard .detailHeader .btn{width:auto}
       .appointmentRow{grid-template-columns:50px minmax(0,1fr) 38px;padding:9px;gap:8px}.appointmentDate{min-width:0;padding:6px 4px}.appointmentRow>.btn{min-width:38px;padding:8px}
+      .calendarToolbar{display:grid;grid-template-columns:1fr}.calendarNav{justify-content:space-between}.calendarGrid.week{grid-template-columns:1fr}.calendarGrid.week .calendarDay{min-height:66px}.calendarGrid.week .calendarDayTop{font-size:11px}.calendarGrid.month{gap:3px}.calendarGrid.month .calendarDay{min-height:62px;padding:4px;border-radius:9px}.calendarGrid.month .calendarEvent{font-size:0;height:5px;padding:0;border-radius:99px}.calendarWeekdays{gap:3px}.calendarEvents{gap:2px;margin-top:4px}
+      .comparisonRow{grid-template-columns:26px minmax(0,1fr) repeat(2,52px);gap:7px;padding:9px}.comparisonMetric strong{font-size:12px}
     }
   </style>
 </head>
@@ -644,7 +657,7 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app-v23.js"></script>
+  <script defer src="app-v24.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {

@@ -413,6 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(!appShell) return;
     const profile=appShell.profiles.find(item=>item.id===appShell.activeProfileId);
     if(profile) profile.data=state;
+    appShell.uiLang=state.lang;
     localStorage.setItem(APP_STORAGE_KEY,JSON.stringify(appShell));
     if(appShell.mode==="user") localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
   }
@@ -460,6 +461,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const normalized=shell && typeof shell==="object" ? shell : {};
     normalized.version=4;
     normalized.mode=["user","trainer"].includes(normalized.mode) ? normalized.mode : null;
+    normalized.uiLang=normalized.uiLang==="en"?"en":"ua";
     normalized.profiles=Array.isArray(normalized.profiles) ? normalized.profiles : [];
     normalized.profiles=normalized.profiles.filter(Boolean).map((profile,index)=>{
       const data=migrate(profile.data||profile);
@@ -468,6 +470,7 @@ document.addEventListener("DOMContentLoaded", () => {
         id:String(profile.id||`profile-${uid()}`),
         name:String(profile.name||`Клієнт ${index+1}`),
         role:profile.role==="personal" || profile.id==="personal" ? "personal" : "client",
+        status:profile.role==="personal" || profile.id==="personal" ? "active" : (profile.status==="paused"?"paused":"active"),
         data
       };
     });
@@ -480,25 +483,43 @@ document.addEventListener("DOMContentLoaded", () => {
     normalized.profiles.forEach(profile=>{
       if(profile.role==="personal") profile.name="Мій прогрес";
     });
-    normalized.activeProfileId=String(normalized.activeProfileId||normalized.profiles[0].id);
-    if(!normalized.profiles.some(profile=>profile.id===normalized.activeProfileId)){
-      normalized.activeProfileId=normalized.profiles[0].id;
+    normalized.activeProfileId=normalized.activeProfileId==null ? null : String(normalized.activeProfileId);
+    if(normalized.activeProfileId && !normalized.profiles.some(profile=>profile.id===normalized.activeProfileId)){
+      normalized.activeProfileId=null;
     }
     const clientIds=new Set(normalized.profiles.filter(profile=>profile.role==="client").map(profile=>profile.id));
     normalized.appointments=Array.isArray(normalized.appointments)
       ? normalized.appointments.filter(Boolean).map(item=>({
           id:String(item.id||uid()),
-          profileId:String(item.profileId||normalized.activeProfileId),
+          profileId:String(item.profileId||""),
           date:String(item.date||""),
           time:String(item.time||""),
           note:String(item.note||""),
-          notified:Boolean(item.notified)
+          notified:Boolean(item.notified),
+          updatedAt:Number(item.updatedAt||Date.now()),
+          syncStatus:["local","pending","synced","error"].includes(item.syncStatus)?item.syncStatus:"local",
+          externalEventId:item.externalEventId?String(item.externalEventId):null
         })).filter(item=>clientIds.has(item.profileId))
       : [];
+    normalized.integrations={
+      googleCalendar:{
+        enabled:false,
+        calendarId:null,
+        lastSyncAt:null,
+        ...(normalized.integrations?.googleCalendar||{})
+      }
+    };
+    normalized.calendarOutbox=Array.isArray(normalized.calendarOutbox)?normalized.calendarOutbox.filter(Boolean):[];
+    normalized.coachUi={
+      calendarView:normalized.coachUi?.calendarView==="month"?"month":"week",
+      calendarCursor:String(normalized.coachUi?.calendarCursor||new Date().toISOString().slice(0,10))
+    };
     return normalized;
   }
   appShell=normalizeAppShell(loadAppShell(),load());
-  let state=appShell.profiles.find(profile=>profile.id===appShell.activeProfileId).data;
+  if(appShell.mode==="trainer") appShell.activeProfileId=null;
+  let state=(appShell.profiles.find(profile=>profile.id===appShell.activeProfileId)||appShell.profiles[0]).data;
+  if(!appShell.activeProfileId) state.lang=appShell.uiLang;
   if (state.settings.derivedDataVersion !== 4) rebuildWorkoutDerivedData();
 
   function t(key){ return i18n[state.lang]?.[key] || key; }
@@ -701,13 +722,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function activeProfile(){
-    return appShell.profiles.find(profile=>profile.id===appShell.activeProfileId) || appShell.profiles[0];
+    return appShell.profiles.find(profile=>profile.id===appShell.activeProfileId) || null;
   }
   function personalProfile(){
     return appShell.profiles.find(profile=>profile.role==="personal") || appShell.profiles[0];
   }
-  function clientProfiles(){
-    return appShell.profiles.filter(profile=>profile.role==="client");
+  function clientProfiles(status="active"){
+    return appShell.profiles.filter(profile=>profile.role==="client" && (!status || profile.status===status));
   }
   function profileDisplayName(profile){
     if(profile?.role==="personal") return state.lang==="en" ? "My progress" : "Мій прогрес";
@@ -733,6 +754,16 @@ document.addEventListener("DOMContentLoaded", () => {
     next.data=state;
     resetTransientSession();
     currentTab=targetTab;
+    save();
+    render();
+  }
+
+  function clearProfileSelection(){
+    const current=activeProfile();
+    if(current) current.data=state;
+    appShell.activeProfileId=null;
+    resetTransientSession();
+    currentTab="coach";
     save();
     render();
   }
@@ -1015,14 +1046,27 @@ document.addEventListener("DOMContentLoaded", () => {
     render();
   }
 
+  function viewProfileRequired(){
+    const el=document.createElement("div");
+    el.appendChild(card(`
+      <div class="profileRequired">
+        <div class="profileRequiredIcon">◇</div>
+        <h2>${state.lang==="en"?"Choose whose data to open":"Оберіть, чиї дані відкрити"}</h2>
+        <p>${state.lang==="en"?"No trainer or client profile is selected, so this section is intentionally empty.":"Профіль тренера або клієнта не вибрано, тому цей розділ навмисно порожній."}</p>
+        <button class="btn primary" id="chooseProfileBtn">${state.lang==="en"?"Open trainer dashboard":"Відкрити панель тренера"}</button>
+      </div>`));
+    setTimeout(()=>$("#chooseProfileBtn")?.addEventListener("click",()=>setTab("coach")),0);
+    return el;
+  }
+
   function render(){
     const langBtn = $("#langBtn");
     if (langBtn) langBtn.textContent = state.lang.toUpperCase();
     const profileBtn=$("#profileBtn");
     if(profileBtn){
       profileBtn.style.display=appShell.mode==="trainer" ? "" : "none";
-      profileBtn.textContent=`◉ ${profileDisplayName(activeProfile())}`;
-      profileBtn.onclick=()=>setTab("coach");
+      profileBtn.textContent=activeProfile()?`◉ ${profileDisplayName(activeProfile())}`:(state.lang==="en"?"Choose profile":"Обрати профіль");
+      profileBtn.onclick=clearProfileSelection;
     }
 
     const app = $("#app");
@@ -1030,13 +1074,14 @@ document.addEventListener("DOMContentLoaded", () => {
     app.innerHTML = "";
 
     if (currentTab==="coach") app.appendChild(viewCoach());
-    if (currentTab==="home") app.appendChild(viewHome());
-    if (currentTab==="workout") app.appendChild(viewWorkout());
-    if (currentTab==="exercises") app.appendChild(viewExercises());
-    if (currentTab==="stats") app.appendChild(viewStats());
-    if (currentTab==="body") app.appendChild(viewBody());
-    if (currentTab==="records") app.appendChild(viewRecords());
-    if (currentTab==="settings") app.appendChild(viewSettings());
+    else if(appShell.mode==="trainer" && !activeProfile() && currentTab!=="settings") app.appendChild(viewProfileRequired());
+    else if (currentTab==="home") app.appendChild(viewHome());
+    else if (currentTab==="workout") app.appendChild(viewWorkout());
+    else if (currentTab==="exercises") app.appendChild(viewExercises());
+    else if (currentTab==="stats") app.appendChild(viewStats());
+    else if (currentTab==="body") app.appendChild(viewBody());
+    else if (currentTab==="records") app.appendChild(viewRecords());
+    else if (currentTab==="settings") app.appendChild(viewSettings());
   }
 
   function openModeSetup(force=false){
@@ -1052,6 +1097,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <button class="modeChoice" data-mode="user"><div style="font-size:30px">◎</div><strong>${state.lang==="en"?"User":"Користувач"}</strong><span>${state.lang==="en"?"Your personal workouts, goals, body metrics and statistics.":"Особисті тренування, цілі, показники тіла та статистика, як зараз."}</span></button>
           <button class="modeChoice" data-mode="trainer"><div style="font-size:30px">◇</div><strong>${state.lang==="en"?"Trainer":"Тренер"}</strong><span>${state.lang==="en"?"Multiple independent clients, session planning and a shared calendar.":"Кілька незалежних клієнтів, планування занять і спільний календар."}</span></button>
         </div>
+        <button class="btn" id="modeGuideBtn" style="width:100%;margin-top:12px">▤ ${state.lang==="en"?"How it works":"Як це працює"}</button>
         ${force?`<button class="btn" data-close style="width:100%;margin-top:12px">${state.lang==="en"?"Cancel":"Скасувати"}</button>`:""}
       </div>`;
     document.body.appendChild(overlay);
@@ -1060,8 +1106,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const mode=button.getAttribute("data-mode");
         appShell.mode=mode;
         if(mode==="trainer"){
+          appShell.activeProfileId=null;
           currentTab="coach";
         }else{
+          appShell.activeProfileId=personalProfile().id;
+          state=personalProfile().data;
           currentTab="home";
         }
         save();
@@ -1069,7 +1118,16 @@ document.addEventListener("DOMContentLoaded", () => {
         render();
       };
     });
+    overlay.querySelector("#modeGuideBtn")?.addEventListener("click",openQuickGuide);
     overlay.querySelector("[data-close]")?.addEventListener("click",()=>overlay.remove());
+  }
+
+  function openQuickGuide(){
+    const overlay=document.createElement("div");
+    overlay.className="modeOverlay";
+    overlay.innerHTML=`<div class="modePanel guideModalPanel"><div class="detailHeader"><div><div class="brandEyebrow">${state.lang==="en"?"GymTracker guide":"Інструкція GymTracker"}</div><h2 style="margin:6px 0">${state.lang==="en"?"How the app works":"Як працює застосунок"}</h2></div><button class="btn" data-close>✕</button></div><div style="margin-top:14px">${usageGuideMarkup()}</div></div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector("[data-close]").onclick=()=>overlay.remove();
   }
 
   function openClientModal(profile=null){
@@ -1079,6 +1137,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="detailHeader"><div><div class="brandEyebrow">${profile?(state.lang==="en"?"Edit client":"Редагування клієнта"):(state.lang==="en"?"New client":"Новий клієнт")}</div><h2 style="margin:6px 0">${profile?escapeHtml(profile.name):(state.lang==="en"?"Add a client":"Додати клієнта")}</h2></div><button class="btn" data-close>✕</button></div>
       <label class="bodyField" style="margin-top:16px"><span class="muted">${state.lang==="en"?"Client name":"Ім’я клієнта"}</span><input class="btn" id="clientName" maxlength="60" value="${escapeHtml(profile?.name||"")}" placeholder="${state.lang==="en"?"For example: Anna":"Наприклад: Анна"}"></label>
       <button class="btn primary" id="clientSave" style="width:100%;margin-top:14px">${state.lang==="en"?"Save client":"Зберегти клієнта"}</button>
+      ${profile?`<button class="btn" id="clientPause" style="width:100%;margin-top:8px">${profile.status==="paused"?(state.lang==="en"?"Restore active client":"Повернути до активних"):(state.lang==="en"?"Put client on pause":"Поставити клієнта на паузу")}</button>`:""}
       ${profile&&appShell.profiles.length>1?`<button class="btn" id="clientDelete" style="width:100%;margin-top:8px;color:#fda4af">${state.lang==="en"?"Delete client":"Видалити клієнта"}</button>`:""}
     </div>`;
     document.body.appendChild(overlay);
@@ -1092,35 +1151,40 @@ document.addEventListener("DOMContentLoaded", () => {
       }else{
         const data=freshProfileData();
         data.lang=state.lang;
-        const created={id:`client-${uid()}`,name,role:"client",data};
+        const created={id:`client-${uid()}`,name,role:"client",status:"active",data};
         appShell.profiles.push(created);
-        appShell.activeProfileId=created.id;
-        state=created.data;
-        resetTransientSession();
       }
       save();close();render();
     };
+    overlay.querySelector("#clientPause")?.addEventListener("click",()=>{
+      profile.status=profile.status==="paused"?"active":"paused";
+      if(profile.status==="paused" && appShell.activeProfileId===profile.id){
+        appShell.activeProfileId=null;
+        resetTransientSession();
+      }
+      save();close();render();
+    });
     overlay.querySelector("#clientDelete")?.addEventListener("click",()=>{
       if(!confirm(state.lang==="en"?"Delete this client and all their local data?":"Видалити цього клієнта та всі його локальні дані?")) return;
+      appShell.appointments.filter(item=>item.profileId===profile.id).forEach(item=>queueCalendarChange("delete",item));
       appShell.profiles=appShell.profiles.filter(item=>item.id!==profile.id);
       appShell.appointments=appShell.appointments.filter(item=>item.profileId!==profile.id);
       if(appShell.activeProfileId===profile.id){
-        appShell.activeProfileId=appShell.profiles[0].id;
-        state=appShell.profiles[0].data;
+        appShell.activeProfileId=null;
         resetTransientSession();
       }
       save();close();render();
     });
   }
 
-  function openAppointmentModal(){
+  function openAppointmentModal(initialDate=null){
     const clients=clientProfiles();
     if(!clients.length){
       alert(state.lang==="en"?"Add a real client before planning a session.":"Спочатку додай реального клієнта, а потім плануй заняття.");
       return;
     }
     const now=new Date();
-    const date=now.toISOString().slice(0,10);
+    const date=initialDate||now.toISOString().slice(0,10);
     const overlay=document.createElement("div");
     overlay.className="modeOverlay";
     overlay.innerHTML=`<div class="modePanel" style="max-width:520px">
@@ -1140,7 +1204,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const plannedDate=overlay.querySelector("#appointmentDate").value;
       const plannedTime=overlay.querySelector("#appointmentTime").value;
       if(!plannedDate||!plannedTime) return;
-      appShell.appointments.push({
+      addAppointment({
         id:`appointment-${uid()}`,
         profileId:overlay.querySelector("#appointmentClient").value,
         date:plannedDate,
@@ -1154,6 +1218,112 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function appointmentTimestamp(item){
     return new Date(`${item.date}T${item.time||"00:00"}`).getTime();
+  }
+
+  function queueCalendarChange(operation,appointment){
+    appShell.calendarOutbox.push({
+      id:`sync-${uid()}`,
+      operation,
+      appointmentId:appointment.id,
+      payload:operation==="delete"?null:{...appointment},
+      createdAt:Date.now()
+    });
+  }
+
+  function addAppointment(appointment){
+    const item={...appointment,updatedAt:Date.now(),syncStatus:"pending",externalEventId:null};
+    appShell.appointments.push(item);
+    queueCalendarChange("upsert",item);
+  }
+
+  function deleteAppointment(appointmentId){
+    const item=appShell.appointments.find(appointment=>appointment.id===appointmentId);
+    if(!item) return;
+    queueCalendarChange("delete",item);
+    appShell.appointments=appShell.appointments.filter(appointment=>appointment.id!==appointmentId);
+  }
+
+  function dateKey(date){
+    const y=date.getFullYear();
+    const m=String(date.getMonth()+1).padStart(2,"0");
+    const d=String(date.getDate()).padStart(2,"0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function calendarPeriod(){
+    const view=appShell.coachUi.calendarView;
+    const cursor=new Date(`${appShell.coachUi.calendarCursor}T12:00:00`);
+    if(view==="month"){
+      const first=new Date(cursor.getFullYear(),cursor.getMonth(),1);
+      const start=new Date(first);
+      start.setDate(start.getDate()-((start.getDay()+6)%7));
+      const days=Array.from({length:42},(_,index)=>{
+        const day=new Date(start);day.setDate(start.getDate()+index);return day;
+      });
+      return {view,cursor,days,title:cursor.toLocaleDateString(state.lang==="en"?"en-US":"uk-UA",{month:"long",year:"numeric"})};
+    }
+    const start=startOfWeek(cursor);
+    const days=Array.from({length:7},(_,index)=>{
+      const day=new Date(start);day.setDate(start.getDate()+index);return day;
+    });
+    const end=days[6];
+    return {view,cursor,days,title:`${days[0].toLocaleDateString(state.lang==="en"?"en-US":"uk-UA",{day:"numeric",month:"short"})} — ${end.toLocaleDateString(state.lang==="en"?"en-US":"uk-UA",{day:"numeric",month:"short",year:"numeric"})}`};
+  }
+
+  function calendarMarkup(appointments){
+    const period=calendarPeriod();
+    const byDate=new Map();
+    appointments.forEach(item=>{
+      const list=byDate.get(item.date)||[];
+      list.push(item);byDate.set(item.date,list);
+    });
+    const weekNames=(state.lang==="en"?["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]:["Пн","Вт","Ср","Чт","Пт","Сб","Нд"]);
+    const weekdayHead=period.view==="month"?`<div class="calendarWeekdays">${weekNames.map(name=>`<span>${name}</span>`).join("")}</div>`:"";
+    return `<div class="calendarToolbar">
+      <div class="calendarTabs"><button class="periodBtn ${period.view==="week"?"active":""}" data-calendar-view="week">${state.lang==="en"?"Week":"Тиждень"}</button><button class="periodBtn ${period.view==="month"?"active":""}" data-calendar-view="month">${state.lang==="en"?"Month":"Місяць"}</button></div>
+      <div class="calendarNav"><button class="btn" data-calendar-shift="-1">‹</button><strong>${escapeHtml(period.title)}</strong><button class="btn" data-calendar-shift="1">›</button></div>
+    </div>${weekdayHead}<div class="calendarGrid ${period.view}">${period.days.map(day=>{
+      const key=dateKey(day);
+      const events=(byDate.get(key)||[]).sort((a,b)=>a.time.localeCompare(b.time));
+      const outside=period.view==="month" && day.getMonth()!==period.cursor.getMonth();
+      const today=key===dateKey(new Date());
+      return `<button class="calendarDay ${outside?"outside":""} ${today?"today":""}" data-calendar-date="${key}">
+        <span class="calendarDayTop">${period.view==="week"?weekNames[(day.getDay()+6)%7]:""}<strong>${day.getDate()}</strong></span>
+        <span class="calendarEvents">${events.slice(0,3).map(item=>{
+          const profile=appShell.profiles.find(candidate=>candidate.id===item.profileId);
+          return `<span class="calendarEvent">${item.time} · ${escapeHtml(profile?.name||"")}</span>`;
+        }).join("")}${events.length>3?`<small>+${events.length-3}</small>`:""}</span>
+      </button>`;
+    }).join("")}</div>`;
+  }
+
+  function clientComparisonMarkup(clients){
+    if(!clients.length) return `<div class="emptyCalendar">${state.lang==="en"?"Add clients to see comparison statistics.":"Додай клієнтів, щоб побачити порівняльну статистику."}</div>`;
+    const since=Date.now()-30*24*60*60*1000;
+    const rows=clients.map(profile=>{
+      const data=profile.data||{};
+      const recent=(data.workouts||[]).filter(workout=>new Date(workout.date).getTime()>=since);
+      const sets=countSetsInWorkouts(recent);
+      const volume=volumeInWorkouts(recent);
+      const goals=(data.goals||[]);
+      const goalAvg=goals.length?Math.round(goals.reduce((sum,goal)=>{
+        const oldState=state;state=data;
+        const value=goalProgress(goal);
+        state=oldState;
+        return sum+value;
+      },0)/goals.length):0;
+      return {profile,recent:recent.length,sets,volume,goalAvg};
+    });
+    const maxWorkouts=Math.max(1,...rows.map(row=>row.recent));
+    return `<div class="comparisonTable">${rows.sort((a,b)=>b.recent-a.recent).map((row,index)=>`
+      <div class="comparisonRow">
+        <div class="comparisonRank">${index+1}</div>
+        <div class="comparisonMain"><strong>${escapeHtml(row.profile.name)}</strong><span>${state.lang==="en"?"Last 30 days":"Останні 30 днів"}</span><div class="comparisonBar"><i style="width:${Math.round(row.recent/maxWorkouts*100)}%"></i></div></div>
+        <div class="comparisonMetric"><strong>${row.recent}</strong><span>${state.lang==="en"?"sessions":"занять"}</span></div>
+        <div class="comparisonMetric"><strong>${row.sets}</strong><span>${state.lang==="en"?"sets":"підходів"}</span></div>
+        <div class="comparisonMetric"><strong>${fmtVol(row.volume)}</strong><span>${state.lang==="en"?"volume":"обʼєм"}</span></div>
+        <div class="comparisonMetric"><strong>${row.goalAvg}%</strong><span>${state.lang==="en"?"goals":"цілі"}</span></div>
+      </div>`).join("")}</div>`;
   }
 
   function checkAppointmentReminders(){
@@ -1178,11 +1348,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const el=document.createElement("div");
     const personal=personalProfile();
     const clients=clientProfiles();
+    const pausedClients=clientProfiles("paused");
     const clientIds=new Set(clients.map(profile=>profile.id));
     const appointments=[...(appShell.appointments||[])]
       .filter(item=>clientIds.has(item.profileId))
       .sort((a,b)=>appointmentTimestamp(a)-appointmentTimestamp(b));
     const upcoming=appointments.filter(item=>appointmentTimestamp(item)>=Date.now()-60*60*1000).slice(0,12);
+    const visibleDateKeys=new Set(calendarPeriod().days.map(dateKey));
+    const periodAppointments=appointments.filter(item=>visibleDateKeys.has(item.date));
     const personalData=personal?.data||{};
     el.appendChild(card(`
       <div class="coachHeader"><div class="detailTitle"><div class="brandEyebrow">${state.lang==="en"?"Trainer workspace":"Робочий простір тренера"}</div><h2>${state.lang==="en"?"Clients and schedule":"Клієнти та розклад"}</h2><div class="sub">${clients.length} ${state.lang==="en"?"real clients":"реальних клієнтів"} · ${upcoming.length} ${state.lang==="en"?"upcoming sessions":"найближчих занять"}</div></div><button class="btn primary" id="addClientBtn">＋ ${state.lang==="en"?"Client":"Клієнт"}</button></div>
@@ -1203,17 +1376,24 @@ document.addEventListener("DOMContentLoaded", () => {
               <button class="btn ${profile.id===appShell.activeProfileId?"primary":""}" data-open-client="${profile.id}" style="width:100%;margin-top:10px">${profile.id===appShell.activeProfileId?(state.lang==="en"?"Open active client":"Відкрити активного клієнта"):(state.lang==="en"?"Switch to client":"Перейти до клієнта")}</button>
             </article>`;
           }).join(""):`<div class="emptyClients"><strong>${state.lang==="en"?"No clients yet":"Клієнтів поки немає"}</strong><span>${state.lang==="en"?"Add the first person to start tracking and scheduling.":"Додай першу людину, щоб вести прогрес і планувати заняття."}</span></div>`}</div>
+          ${pausedClients.length?`<details class="pausedClients"><summary>${state.lang==="en"?"On pause":"На паузі"} · ${pausedClients.length}</summary><div class="pausedList">${pausedClients.map(profile=>`<div class="pausedRow"><div><strong>${escapeHtml(profile.name)}</strong><span>${(profile.data?.workouts||[]).length} ${state.lang==="en"?"workouts":"тренувань"}</span></div><button class="btn" data-restore-client="${profile.id}">${state.lang==="en"?"Restore":"Відновити"}</button></div>`).join("")}</div></details>`:""}
         </section>
         <section class="coachSection calendarSection">
-          <div class="coachSectionHead"><div><strong>${state.lang==="en"?"Upcoming calendar":"Найближчий календар"}</strong><div class="muted">${state.lang==="en"?"Only real clients · reminders while app is active":"Лише реальні клієнти · нагадування, коли застосунок активний"}</div></div><button class="btn" id="addAppointmentBtn" ${clients.length?"":"disabled"}>＋ ${state.lang==="en"?"Plan":"Запис"}</button></div>
-          <div class="appointmentList">${upcoming.length?upcoming.map(item=>{
+          <div class="coachSectionHead"><div><strong>${state.lang==="en"?"Planning calendar":"Календар планування"}</strong><div class="muted">${state.lang==="en"?"Week or month view · active clients only":"Перегляд тижня або місяця · лише активні клієнти"}</div></div><button class="btn" id="addAppointmentBtn" ${clients.length?"":"disabled"}>＋ ${state.lang==="en"?"Plan":"Запис"}</button></div>
+          ${clients.length?calendarMarkup(appointments):`<div class="emptyCalendar">${state.lang==="en"?"Calendar becomes available after adding an active client.":"Календар стане доступним після додавання активного клієнта."}</div>`}
+          <div class="appointmentList">${periodAppointments.length?periodAppointments.map(item=>{
             const profile=appShell.profiles.find(candidate=>candidate.id===item.profileId);
             const day=new Date(`${item.date}T00:00:00`);
             return `<div class="appointmentRow"><div class="appointmentDate">${day.toLocaleDateString(state.lang==="en"?"en-US":"uk-UA",{month:"short"})}<strong>${day.getDate()}</strong></div><div><strong>${escapeHtml(profile?.name||"Клієнт")} · ${item.time}</strong><div class="muted">${escapeHtml(item.note|| (state.lang==="en"?"Training session":"Тренування"))}</div></div><button class="btn" data-del-appointment="${item.id}">✕</button></div>`;
-          }).join(""):`<div class="emptyCalendar">${clients.length?(state.lang==="en"?"Nothing planned yet.":"Поки нічого не заплановано."):(state.lang==="en"?"Calendar becomes available after adding a client.":"Календар стане доступним після додавання клієнта.")}</div>`}</div>
+          }).join(""):`<div class="muted" style="padding:10px">${state.lang==="en"?"No entries in this period.":"У цьому періоді записів немає."}</div>`}</div>
           ${clients.length?`<button class="btn" id="notificationBtn" style="width:100%;margin-top:10px">${state.lang==="en"?"Enable calendar notifications":"Увімкнути сповіщення календаря"}</button>`:""}
+          <div class="calendarIntegration"><div><strong>Google Calendar</strong><span>${state.lang==="en"?"Data structure is ready; account connection will be added later.":"Структура даних підготовлена; підключення акаунта буде додано пізніше."}</span></div><span class="pill">${state.lang==="en"?"Prepared":"Підготовлено"}</span></div>
         </section>
-      </div>`));
+      </div>
+      <section class="coachSection comparisonSection">
+        <div class="coachSectionHead"><div><strong>${state.lang==="en"?"Client comparison":"Порівняння клієнтів"}</strong><div class="muted">${state.lang==="en"?"Training activity, sets, volume and goal progress":"Активність, підходи, обʼєм і прогрес цілей"}</div></div></div>
+        ${clientComparisonMarkup(clients)}
+      </section>`));
     setTimeout(()=>{
       $("#addClientBtn")?.addEventListener("click",()=>openClientModal());
       $("#addAppointmentBtn")?.addEventListener("click",openAppointmentModal);
@@ -1222,8 +1402,26 @@ document.addEventListener("DOMContentLoaded", () => {
         const profile=appShell.profiles.find(item=>item.id===button.getAttribute("data-edit-client"));
         if(profile) openClientModal(profile);
       });
+      el.querySelectorAll("[data-restore-client]").forEach(button=>button.onclick=()=>{
+        const profile=appShell.profiles.find(item=>item.id===button.getAttribute("data-restore-client"));
+        if(profile){profile.status="active";save();render();}
+      });
+      el.querySelectorAll("[data-calendar-view]").forEach(button=>button.onclick=()=>{
+        appShell.coachUi.calendarView=button.getAttribute("data-calendar-view");
+        save();render();
+      });
+      el.querySelectorAll("[data-calendar-shift]").forEach(button=>button.onclick=()=>{
+        const cursor=new Date(`${appShell.coachUi.calendarCursor}T12:00:00`);
+        const direction=Number(button.getAttribute("data-calendar-shift"));
+        if(appShell.coachUi.calendarView==="month") cursor.setMonth(cursor.getMonth()+direction);
+        else cursor.setDate(cursor.getDate()+7*direction);
+        appShell.coachUi.calendarCursor=dateKey(cursor);
+        save();render();
+      });
+      el.querySelectorAll("[data-calendar-date]").forEach(button=>button.onclick=()=>openAppointmentModal(button.getAttribute("data-calendar-date")));
       el.querySelectorAll("[data-del-appointment]").forEach(button=>button.onclick=()=>{
-        appShell.appointments=appShell.appointments.filter(item=>item.id!==button.getAttribute("data-del-appointment"));
+        if(!confirm(state.lang==="en"?"Delete this calendar entry?":"Видалити цей запис із календаря?")) return;
+        deleteAppointment(button.getAttribute("data-del-appointment"));
         save();render();
       });
       $("#notificationBtn")?.addEventListener("click",async()=>{
@@ -3572,16 +3770,16 @@ document.addEventListener("DOMContentLoaded", () => {
         mini:`<div class="miniTitle">${en?"Backup":"Резервна копія"}</div><div class="miniRow"><div class="miniButton">${en?"Export JSON":"Експорт JSON"}</div><div class="miniField">${en?"Import JSON":"Імпорт JSON"}</div></div><div class="miniField" style="margin-top:6px">gym-tracker-data.json</div>`
       }
     ];
-    if(appShell.mode==="trainer") steps.push({
+    if(appShell.mode!=="user") steps.push({
       title:en?"8. Manage clients and calendar":"8. Керуй клієнтами й календарем",
       sub:en?"Your progress is separate from real clients":"Твій прогрес відокремлений від реальних клієнтів",
       copy:en
-        ? "My progress stores the trainer's own workouts and is not included in the calendar. Add real clients below it, switch between their separate data, and plan dates and times only for those clients."
-        : "«Мій прогрес» зберігає власні тренування тренера й не входить до календаря. Нижче додавай реальних клієнтів, перемикайся між їхніми окремими даними та плануй дати й час лише для них.",
+        ? "The trainer dashboard starts with no selected profile, so regular tabs stay empty until you explicitly open My progress or a client. My progress is never included in the calendar. Use Week or Month to plan sessions, pause inactive clients, restore them later, and compare active clients over the last 30 days. Calendar records already contain sync metadata for a future Google Calendar connection, but no Google account is connected yet."
+        : "Панель тренера відкривається без вибраного профілю, тому звичайні вкладки порожні, доки ти явно не відкриєш «Мій прогрес» або клієнта. «Мій прогрес» ніколи не входить до календаря. Плануй заняття у режимі «Тиждень» або «Місяць», став неактивних клієнтів на паузу, відновлюй їх і порівнюй активних клієнтів за останні 30 днів. Записи вже мають службові поля для майбутнього підключення Google Calendar, але Google-акаунт зараз ще не під’єднується.",
       example:en
-        ? "Anna · June 15 · 18:00. With permission enabled, the active app reminds you 15 minutes before."
-        : "Анна · 15 червня · 18:00. Якщо дозволити сповіщення, активний застосунок нагадає за 15 хвилин.",
-      mini:`<div class="miniTitle">${en?"Trainer calendar":"Календар тренера"}</div><div class="miniRow"><div class="miniField">${en?"Anna":"Анна"}</div><div class="miniField">15.06 · 18:00</div></div><div class="miniButton" style="margin-top:6px;text-align:center">＋ ${en?"Plan session":"Запланувати заняття"}</div>`
+        ? "Anna · June 15 · 18:00. Deleting the entry asks for confirmation. A paused client disappears from active planning but remains recoverable."
+        : "Анна · 15 червня · 18:00. Видалення запису потребує підтвердження. Клієнт на паузі зникає з активного планування, але його можна відновити.",
+      mini:`<div class="miniTitle">${en?"Trainer calendar":"Календар тренера"} · ${en?"Month":"Місяць"}</div><div class="miniRow"><div class="miniField">${en?"Active":"Активні"}: 4</div><div class="miniField">${en?"Paused":"На паузі"}: 1</div></div><div class="miniRow"><div class="miniField">${en?"Anna":"Анна"} · 18:00</div><div class="miniField">${en?"Compare":"Порівняння"}</div></div>`
     });
     return `
       <div class="guideHero">
@@ -3619,8 +3817,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       <div class="row" style="margin-top:12px">
         <span class="pill">${t("defaultRest")}</span>
-        <input id="defRest" class="btn" type="number" min="10" step="5" style="width:180px" value="${state.settings.defaultRestSec}">
-        <button class="btn primary" id="saveSettings">${t("save")}</button>
+        <input id="defRest" class="btn" type="number" min="10" step="5" style="width:180px" value="${state.settings.defaultRestSec}" ${appShell.mode==="trainer"&&!activeProfile()?"disabled":""}>
+        <button class="btn primary" id="saveSettings" ${appShell.mode==="trainer"&&!activeProfile()?"disabled":""}>${t("save")}</button>
       </div>
       <div class="row" style="margin-top:12px">
         <span class="pill">${state.lang==="en"?"Mode":"Режим"}</span>
@@ -3632,7 +3830,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="settingsActions">
         <button class="btn" id="exportBtn">${t("export")}</button>
         <button class="btn" id="importBtn">${t("import")}</button>
-        <button class="btn" id="resetBtn">${t("reset")}</button>
+        <button class="btn" id="resetBtn" ${appShell.mode==="trainer"&&!activeProfile()?"disabled":""}>${t("reset")}</button>
         <input id="importFile" type="file" accept="application/json" style="display:none" />
       </div>
 
@@ -3669,7 +3867,7 @@ document.addEventListener("DOMContentLoaded", () => {
         render();
       };
       $("#changeModeBtn")?.addEventListener("click",()=>openModeSetup(true));
-      $("#openCoachBtn")?.addEventListener("click",()=>setTab("coach"));
+      $("#openCoachBtn")?.addEventListener("click",clearProfileSelection);
 
       const exportBtn = $("#exportBtn");
       if (exportBtn) exportBtn.onclick = ()=>{
@@ -3694,9 +3892,15 @@ document.addEventListener("DOMContentLoaded", () => {
           const parsed = JSON.parse(txt);
           if(parsed?.format==="gymPwaApp_v4" && parsed.app){
             appShell=normalizeAppShell(parsed.app,null);
-            state=activeProfile().data;
+            if(appShell.mode==="trainer") appShell.activeProfileId=null;
+            state=(activeProfile()||personalProfile()).data;
+            state.lang=appShell.uiLang;
             currentTab=appShell.mode==="trainer"?"coach":"home";
           }else{
+            if(appShell.mode==="trainer" && !activeProfile()){
+              alert(state.lang==="en"?"Choose My progress or a client before importing an old backup.":"Перед імпортом старої резервної копії обери «Мій прогрес» або клієнта.");
+              return;
+            }
             const importedState = parsed && typeof parsed === "object" && parsed.data && typeof parsed.data === "object"
               ? parsed.data
               : parsed;
@@ -3716,6 +3920,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const resetBtn = $("#resetBtn");
       if (resetBtn) resetBtn.onclick = ()=>{
+        if(appShell.mode==="trainer" && !activeProfile()) return;
         const message=appShell.mode==="trainer"
           ? (state.lang==="en"?"Clear all data for the active client? Other clients and calendar remain.":"Очистити всі дані активного клієнта? Інші клієнти й календар залишаться.")
           : t("confirmReset");
