@@ -438,7 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------- state ----------
   let state = migrate(load());
   if (!state.exercises.length) state.exercises = DEFAULT_EXERCISES;
-  if (state.settings.derivedDataVersion !== 3) rebuildWorkoutDerivedData();
+  if (state.settings.derivedDataVersion !== 4) rebuildWorkoutDerivedData();
 
   function t(key){ return i18n[state.lang]?.[key] || key; }
   function allCategories(){
@@ -652,7 +652,6 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   let rest = { left: state.settings.defaultRestSec, running:false, interval:null };
-  let restAudioContext = null;
 
   function restDefault(){
     return Math.max(10, parseInt(state.settings.defaultRestSec || 90, 10));
@@ -685,38 +684,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateRestUI();
   }
 
-  async function primeRestAudio(){
-    try{
-      const AudioCtx=window.AudioContext || window.webkitAudioContext;
-      if(!AudioCtx) return false;
-      if(!restAudioContext) restAudioContext=new AudioCtx();
-      if(restAudioContext.state!=="running") await restAudioContext.resume();
-      return restAudioContext.state==="running";
-    }catch{return false;}
-  }
-
-  async function playRestCompleteSound(){
-    const ready=await primeRestAudio();
-    if(!ready || !restAudioContext) return false;
-    const now=restAudioContext.currentTime;
-    [0,0.28,0.56].forEach((delay,index)=>{
-      const oscillator=restAudioContext.createOscillator();
-      const gain=restAudioContext.createGain();
-      oscillator.type=index===1 ? "square" : "sine";
-      oscillator.frequency.value=[880,1175,1568][index];
-      gain.gain.setValueAtTime(0.0001,now+delay);
-      gain.gain.exponentialRampToValueAtTime(index===1?0.22:0.42,now+delay+0.025);
-      gain.gain.exponentialRampToValueAtTime(0.0001,now+delay+0.24);
-      oscillator.connect(gain);
-      gain.connect(restAudioContext.destination);
-      oscillator.start(now+delay);
-      oscillator.stop(now+delay+0.25);
-    });
-    return true;
-  }
-
   function runRestTimer(restart=false){
-    primeRestAudio();
     if (rest.running && !restart) return stopRestTimer();
     if (rest.interval) clearInterval(rest.interval);
     if (restart || rest.left <= 0) rest.left = restDefault();
@@ -727,7 +695,6 @@ document.addEventListener("DOMContentLoaded", () => {
       updateRestUI();
       if (rest.left <= 0){
         stopRestTimer();
-        void playRestCompleteSound();
         if (navigator.vibrate) navigator.vibrate([160,80,160]);
       }
     },1000);
@@ -1261,13 +1228,12 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <div>
           <div style="font-weight:900;font-size:17px" id="restLabel">${t("restTimer")}</div>
-          <div class="muted" style="margin-top:4px">${state.lang==="en" ? "Starts automatically after a completed set · sound at zero" : "Запускається автоматично після внесеного підходу · сигнал на нулі"}</div>
+          <div class="muted" style="margin-top:4px">${state.lang==="en" ? "Starts automatically after a completed set · vibration at zero" : "Запускається автоматично після внесеного підходу · вібрація на нулі"}</div>
         </div>
         <div class="restActions">
           <button class="btn primary" id="restToggle">▶ ${t("timerStart")}</button>
           <button class="btn" id="restPlus">+30</button>
           <button class="btn" id="restReset">${t("timerReset")}</button>
-          <button class="btn" id="restSoundTest">♪ ${state.lang==="en"?"Test sound":"Перевірити звук"}</button>
         </div>
       </div>
     `));
@@ -1299,19 +1265,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const restToggle = $("#restToggle");
       const restPlus = $("#restPlus");
       const restReset = $("#restReset");
-      const restSoundTest = $("#restSoundTest");
       if (restToggle) restToggle.onclick = startRestTimer;
       if (restPlus) restPlus.onclick = ()=>{
         rest.left += 30;
         updateRestUI();
       };
       if (restReset) restReset.onclick = resetRestTimer;
-      if (restSoundTest) restSoundTest.onclick = async ()=>{
-        const played=await playRestCompleteSound();
-        restSoundTest.textContent=played
-          ? `✓ ${state.lang==="en"?"Sound enabled":"Звук увімкнено"}`
-          : `! ${state.lang==="en"?"Sound blocked":"Звук заблоковано"}`;
-      };
       updateRestUI();
 
       const clearBtn = $("#clearWorkoutBtn");
@@ -1451,7 +1410,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // input bind (NO rerender on every key)
     box.querySelectorAll("input[data-id]").forEach(inp=>{
       inp.addEventListener("input", (e)=>{
-        primeRestAudio();
         const id = e.target.getAttribute("data-id");
         const idx = Number(e.target.getAttribute("data-i"));
         const k = e.target.getAttribute("data-k");
@@ -1644,50 +1602,119 @@ document.addEventListener("DOMContentLoaded", () => {
     setTab("workout");
   }
 
-  function workoutTemplateKey(workout){
+  function normalizedWorkoutTitle(workout){
     const title=String(workout?.title||"")
       .toLowerCase()
       .replace(/\d{1,4}([./-]\d{1,2}){1,2}/g,"")
+      .replace(/\b\d+\b/g,"")
       .replace(/\b(тренування|workout)\b/g,"")
       .replace(/[^\p{L}\p{N}]+/gu," ")
       .trim();
-    if(title.length>=3) return `title:${title}`;
-    return `items:${(workout?.items||[]).map(item=>item.exerciseId).filter(Boolean).sort().join("|")}`;
+    return title.length>=3 ? title : "";
+  }
+
+  function workoutExerciseSet(workout){
+    return new Set((workout?.items||[]).map(item=>item.exerciseId).filter(Boolean));
+  }
+
+  function setSimilarity(a,b){
+    const union=new Set([...a,...b]);
+    if(!union.size) return 0;
+    let common=0;
+    a.forEach(value=>{if(b.has(value)) common+=1;});
+    return common/union.size;
+  }
+
+  function clusterWorkoutTemplates(workouts){
+    const ordered=[...workouts].sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const clusters=[];
+    const sequence=[];
+    ordered.forEach(workout=>{
+      const title=normalizedWorkoutTitle(workout);
+      const exercises=workoutExerciseSet(workout);
+      let best=null;
+      clusters.forEach(cluster=>{
+        const titleMatch=title && cluster.title && title===cluster.title;
+        const similarity=Math.max(0,...cluster.exerciseSets.map(set=>setSimilarity(exercises,set)));
+        const score=titleMatch ? 1.5 : similarity;
+        if((titleMatch || similarity>=0.55) && (!best || score>best.score)) best={cluster,score};
+      });
+      if(!best){
+        const cluster={id:`template-${clusters.length+1}`,title,exerciseSets:[],workouts:[]};
+        clusters.push(cluster);
+        best={cluster,score:1};
+      }
+      const cluster=best.cluster;
+      cluster.workouts.push(workout);
+      cluster.exerciseSets.push(exercises);
+      if(!cluster.title && title) cluster.title=title;
+      sequence.push({workout,cluster});
+    });
+    return {ordered,clusters,sequence};
   }
 
   function inferNextWorkoutTemplate(workouts){
-    const ordered=[...workouts].sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const {ordered,clusters,sequence}=clusterWorkoutTemplates(workouts);
     if(ordered.length<5) return null;
-    const latest=ordered[ordered.length-1];
-    const latestKey=workoutTemplateKey(latest);
+    const latestEntry=sequence[sequence.length-1];
+    const latestCluster=latestEntry.cluster;
     const transitions=new Map();
-    for(let i=0;i<ordered.length-1;i++){
-      if(workoutTemplateKey(ordered[i])!==latestKey) continue;
-      const nextKey=workoutTemplateKey(ordered[i+1]);
-      const entry=transitions.get(nextKey)||{count:0,lastIndex:0};
+    for(let i=0;i<sequence.length-1;i++){
+      if(sequence[i].cluster.id!==latestCluster.id) continue;
+      const nextCluster=sequence[i+1].cluster;
+      const entry=transitions.get(nextCluster.id)||{cluster:nextCluster,count:0,lastIndex:0};
       entry.count+=1;
       entry.lastIndex=i+1;
-      transitions.set(nextKey,entry);
+      transitions.set(nextCluster.id,entry);
     }
-    let predictedKey=null;
+    let predictedCluster=null;
     if(transitions.size){
-      predictedKey=[...transitions.entries()]
-        .sort((a,b)=>b[1].count-a[1].count || b[1].lastIndex-a[1].lastIndex)[0][0];
-    }else{
-      const lastSeen=new Map();
-      ordered.forEach((workout,index)=>lastSeen.set(workoutTemplateKey(workout),index));
-      predictedKey=[...lastSeen.entries()]
-        .filter(([key])=>key!==latestKey)
-        .sort((a,b)=>a[1]-b[1])[0]?.[0] || latestKey;
+      predictedCluster=[...transitions.values()]
+        .filter(entry=>entry.cluster.id!==latestCluster.id)
+        .sort((a,b)=>b.count-a.count || b.lastIndex-a.lastIndex)[0]?.cluster || null;
     }
-    const template=[...ordered].reverse().find(workout=>workoutTemplateKey(workout)===predictedKey);
+    if(!predictedCluster){
+      const lastSeen=new Map();
+      sequence.forEach((entry,index)=>lastSeen.set(entry.cluster.id,{cluster:entry.cluster,index}));
+      predictedCluster=[...lastSeen.values()]
+        .filter(entry=>entry.cluster.id!==latestCluster.id)
+        .sort((a,b)=>a.index-b.index)[0]?.cluster || null;
+    }
+    let strategy=predictedCluster ? (transitions.has(predictedCluster.id)?"transition":"least-recent") : "single";
+    if(!predictedCluster){
+      const latestSet=workoutExerciseSet(latestEntry.workout);
+      const distinct=[...sequence.slice(0,-1)]
+        .map((entry,index)=>({
+          entry,
+          index,
+          similarity:setSimilarity(latestSet,workoutExerciseSet(entry.workout))
+        }))
+        .filter(candidate=>candidate.similarity<0.999)
+        .sort((a,b)=>a.similarity-b.similarity || b.index-a.index)[0];
+      if(distinct){
+        predictedCluster=distinct.entry.cluster;
+        strategy="different-history";
+        const template=distinct.entry.workout;
+        return {
+          template,
+          programLength:Math.max(2,clusters.length),
+          confidence:Math.max(35,Math.round((1-distinct.similarity)*100)),
+          repeatsLatest:false,
+          strategy
+        };
+      }
+    }
+    if(!predictedCluster) predictedCluster=latestCluster;
+    const template=[...predictedCluster.workouts].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
     if(!template) return null;
-    const matchingTransitions=transitions.get(predictedKey)?.count||0;
-    const latestOccurrences=ordered.filter(workout=>workoutTemplateKey(workout)===latestKey).length;
+    const matchingTransitions=transitions.get(predictedCluster.id)?.count||0;
+    const latestOccurrences=latestCluster.workouts.length;
     return {
       template,
-      programLength:new Set(ordered.map(workoutTemplateKey)).size,
-      confidence:latestOccurrences>1 ? Math.round(matchingTransitions/Math.max(1,latestOccurrences-1)*100) : 50
+      programLength:clusters.length,
+      confidence:clusters.length===1 ? 25 : latestOccurrences>1 ? Math.round(matchingTransitions/Math.max(1,latestOccurrences-1)*100) : 50,
+      repeatsLatest:predictedCluster.id===latestCluster.id,
+      strategy
     };
   }
 
@@ -1817,13 +1844,23 @@ document.addEventListener("DOMContentLoaded", () => {
     if(goalAdjustment) recommendations.push(goalAdjustment);
     return [{
       kind:"summary",
-      title:template.title || (state.lang==="en"?"Predicted session":"Прогнозоване заняття"),
+      title:prediction.repeatsLatest
+        ? (state.lang==="en"?"Rotation not detected":"Ротацію ще не визначено")
+        : template.title || (state.lang==="en"?"Predicted session":"Прогнозоване заняття"),
       prescription:state.lang==="en"
-        ? `${(template.items||[]).length} exercises · ${prediction.programLength}-session rotation`
-        : `${(template.items||[]).length} вправ · ротація з ${prediction.programLength} типів занять`,
+        ? prediction.repeatsLatest
+          ? `${(template.items||[]).length} exercises · one repeated session type`
+          : `${(template.items||[]).length} exercises · ${prediction.programLength}-session rotation`
+        : prediction.repeatsLatest
+          ? `${(template.items||[]).length} вправ · один повторюваний тип заняття`
+          : `${(template.items||[]).length} вправ · ротація з ${prediction.programLength} типів занять`,
       text:state.lang==="en"
-        ? `Suggested from the sequence of ${state.workouts.length} workouts. Pattern confidence: ${prediction.confidence}%.`
-        : `Запропоновано за послідовністю ${state.workouts.length} тренувань. Впевненість у патерні: ${prediction.confidence}%.`,
+        ? prediction.repeatsLatest
+          ? `The ${state.workouts.length} saved workouts do not yet show a distinct exercise rotation. The app will adjust load, but will not invent a different program day.`
+          : `Suggested from the sequence of ${state.workouts.length} workouts. Pattern confidence: ${prediction.confidence}%.`
+        : prediction.repeatsLatest
+          ? `У ${state.workouts.length} збережених тренуваннях ще не видно окремого чергування вправ. Додаток скоригує навантаження, але не вигадуватиме інший день програми.`
+          : `Запропоновано за послідовністю ${state.workouts.length} тренувань. Впевненість у патерні: ${prediction.confidence}%.`,
       templateWorkoutId:template.id
     },...recommendations].slice(0,8);
   }
@@ -1853,7 +1890,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     state.prs=rebuilt;
     state.recommendations=buildProgramRecommendations();
-    state.settings.derivedDataVersion=3;
+    state.settings.derivedDataVersion=4;
   }
 
   function openRecommendationsModal(recommendations,gotAnyPR){
@@ -3194,16 +3231,16 @@ document.addEventListener("DOMContentLoaded", () => {
         copy:en
           ? "Add a set and enter the actual result. Strength uses reps and kg; bodyweight uses reps; timed exercises use minutes; cardio uses distance and minutes. When all required fields are filled, the rest timer starts automatically."
           : "Додай підхід і внеси фактичний результат. Силова вправа має повтори та кг; власна вага — повтори; вправа на час — хвилини; кардіо — дистанцію та хвилини. Коли всі потрібні поля заповнені, таймер відпочинку запускається автоматично.",
-        example:en?"80 kg × 8 starts the timer. At zero you hear a signal and feel vibration; use Test sound if needed.":"80 кг × 8 запускає таймер. На нулі буде сигнал і вібрація; за потреби натисни «Перевірити звук».",
+        example:en?"80 kg × 8 starts the timer. At zero the phone vibrates if vibration is supported and enabled.":"80 кг × 8 запускає таймер. На нулі телефон вібрує, якщо пристрій підтримує вібрацію і вона дозволена.",
         mini:`<div class="miniTitle">${en?"Sets":"Підходи"}</div><div class="miniRow"><div class="miniField">#1</div><div class="miniField">8 ${en?"reps":"повт."}</div><div class="miniField">80 kg</div></div><div class="miniRow"><div class="miniField">2.5 km</div><div class="miniField">30 ${en?"min":"хв"}</div></div>`
       },
       {
         title:en?"4. Save and review advice":"4. Збережи й переглянь пораду",
         sub:en?"The workout enters history and updates PRs":"Тренування потрапить в історію та оновить рекорди",
         copy:en
-          ? "After the final set tap Save workout. Records and statistics update immediately. After at least 5 sessions, the app learns your A/B/C rotation and predicts the next program day from the full history, not only yesterday."
-          : "Після останнього підходу натисни «Зберегти тренування». Рекорди й статистика оновляться одразу. Після щонайменше 5 занять додаток вивчить твою ротацію A/B/C і прогнозуватиме наступний день програми з усієї історії, а не лише з учорашнього заняття.",
-        example:en?"A → B → C → A means the next forecast is B. Suggested sets and load use the recent history of each exercise.":"A → B → C → A означає, що наступним прогнозується B. Підходи й навантаження беруться з останніх виконань кожної вправи.",
+          ? "After the final set tap Save workout. Records and statistics update immediately. After at least 5 sessions, the app compares exercise combinations, learns your A/B/C rotation, and predicts the next program day from the full history."
+          : "Після останнього підходу натисни «Зберегти тренування». Рекорди й статистика оновляться одразу. Після щонайменше 5 занять додаток порівнює поєднання вправ, вивчає ротацію A/B/C і прогнозує наступний день з усієї історії.",
+        example:en?"A → B → C → A means the next forecast is B. If every saved workout has the same exercises, the app says that no rotation is visible instead of inventing one.":"A → B → C → A означає, що наступним прогнозується B. Якщо всі збережені заняття мають однакові вправи, додаток повідомить, що ротації ще не видно, а не вигадуватиме її.",
         mini:`<div class="miniButton" style="text-align:center">💾 ${en?"Save workout":"Зберегти тренування"}</div><div class="miniRow"><div class="miniStat">${en?"Calories":"Калорії"}<strong>≈ 420</strong></div><div class="miniStat">PR<strong>+2.5 kg</strong></div></div>`
       },
       {
@@ -3382,8 +3419,6 @@ document.addEventListener("DOMContentLoaded", () => {
       render();
     };
   }
-
-  document.addEventListener("pointerdown", primeRestAudio, { once:true, passive:true });
 
   // initial
   save();
