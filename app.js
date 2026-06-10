@@ -438,7 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------- state ----------
   let state = migrate(load());
   if (!state.exercises.length) state.exercises = DEFAULT_EXERCISES;
-  if (state.settings.derivedDataVersion !== 2) rebuildWorkoutDerivedData();
+  if (state.settings.derivedDataVersion !== 3) rebuildWorkoutDerivedData();
 
   function t(key){ return i18n[state.lang]?.[key] || key; }
   function allCategories(){
@@ -685,32 +685,34 @@ document.addEventListener("DOMContentLoaded", () => {
     updateRestUI();
   }
 
-  function primeRestAudio(){
+  async function primeRestAudio(){
     try{
       const AudioCtx=window.AudioContext || window.webkitAudioContext;
-      if(!AudioCtx) return;
+      if(!AudioCtx) return false;
       if(!restAudioContext) restAudioContext=new AudioCtx();
-      if(restAudioContext.state==="suspended") restAudioContext.resume();
-    }catch{}
+      if(restAudioContext.state!=="running") await restAudioContext.resume();
+      return restAudioContext.state==="running";
+    }catch{return false;}
   }
 
-  function playRestCompleteSound(){
-    primeRestAudio();
-    if(!restAudioContext) return;
+  async function playRestCompleteSound(){
+    const ready=await primeRestAudio();
+    if(!ready || !restAudioContext) return false;
     const now=restAudioContext.currentTime;
-    [0,0.18,0.36].forEach((delay,index)=>{
+    [0,0.28,0.56].forEach((delay,index)=>{
       const oscillator=restAudioContext.createOscillator();
       const gain=restAudioContext.createGain();
-      oscillator.type="sine";
-      oscillator.frequency.value=index===1 ? 1040 : 880;
+      oscillator.type=index===1 ? "square" : "sine";
+      oscillator.frequency.value=[880,1175,1568][index];
       gain.gain.setValueAtTime(0.0001,now+delay);
-      gain.gain.exponentialRampToValueAtTime(0.22,now+delay+0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001,now+delay+0.14);
+      gain.gain.exponentialRampToValueAtTime(index===1?0.22:0.42,now+delay+0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001,now+delay+0.24);
       oscillator.connect(gain);
       gain.connect(restAudioContext.destination);
       oscillator.start(now+delay);
-      oscillator.stop(now+delay+0.15);
+      oscillator.stop(now+delay+0.25);
     });
+    return true;
   }
 
   function runRestTimer(restart=false){
@@ -725,7 +727,7 @@ document.addEventListener("DOMContentLoaded", () => {
       updateRestUI();
       if (rest.left <= 0){
         stopRestTimer();
-        playRestCompleteSound();
+        void playRestCompleteSound();
         if (navigator.vibrate) navigator.vibrate([160,80,160]);
       }
     },1000);
@@ -1068,6 +1070,37 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     `));
 
+    if ((state.recommendations||[]).length){
+      const summary=state.recommendations[0];
+      const details=state.recommendations.slice(1);
+      el.appendChild(card(`
+        <div class="recommendationHero">
+          <div>
+            <div class="muted" style="text-transform:uppercase;letter-spacing:.12em;font-size:9px">${state.lang==="en"?"Program forecast":"Прогноз програми"}</div>
+            <div class="recommendationHeroTitle">${t("nextWorkout")}</div>
+            <div class="recommendationSession">${escapeHtml(summary.title)}</div>
+            <div class="muted">${escapeHtml(summary.prescription||"")}</div>
+          </div>
+          <div class="recommendationConfidence">${state.lang==="en"?"Analysis":"Аналіз"}<br><strong>${state.workouts.length}</strong> ${state.lang==="en"?"sessions":"занять"}</div>
+        </div>
+        <div class="recommendationReason">${escapeHtml(summary.text||"")}</div>
+        <div class="recommendationPlan">${details.map(rec=>`
+          <div class="recommendationPlanRow">
+            <div class="recommendationPlanMain"><strong>${escapeHtml(rec.title)}</strong><span>${escapeHtml(rec.text||"")}</span></div>
+            <div class="recommendationPrescription">${escapeHtml(rec.prescription||"")}</div>
+          </div>`).join("")}</div>
+      `));
+    }else if(state.workouts.length>0 && state.workouts.length<5){
+      el.appendChild(card(`
+        <div class="recommendationLearning">
+          <div class="recommendationLearningIcon">◌</div>
+          <div><strong>${state.lang==="en"?"Learning your program":"Вивчаю твою програму"}</strong><div class="muted" style="margin-top:4px">${state.lang==="en"
+            ? `Complete ${5-state.workouts.length} more workout(s). Recommendations will start after at least 5 sessions reveal your rotation.`
+            : `Проведи ще ${5-state.workouts.length} заняття. Рекомендації з’являться після щонайменше 5 тренувань, коли буде видно чергування.`}</div></div>
+        </div>
+      `));
+    }
+
     el.appendChild(card(`
       <div style="font-weight:900; font-size:16px; margin-bottom:10px;">${t("favorites")}</div>
       <div class="favoriteRows" id="favStrip"></div>
@@ -1078,13 +1111,6 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="row" style="flex-direction:column; align-items:stretch; gap:10px;" id="recentList"></div>
       <div class="muted" style="margin-top:10px">${t("tapToOpen")}</div>
     `));
-
-    if ((state.recommendations||[]).length){
-      el.appendChild(card(`
-        <div style="font-weight:900;font-size:16px">${t("nextWorkout")}</div>
-        <div>${state.recommendations.slice(0,6).map(r=>`<div class="recommendation"><strong>${escapeHtml(r.title)}</strong><div class="muted" style="margin-top:4px">${escapeHtml(r.text)}</div></div>`).join("")}</div>
-      `));
-    }
 
     setTimeout(()=>{
       const btn = $("#homeStart");
@@ -1241,6 +1267,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <button class="btn primary" id="restToggle">▶ ${t("timerStart")}</button>
           <button class="btn" id="restPlus">+30</button>
           <button class="btn" id="restReset">${t("timerReset")}</button>
+          <button class="btn" id="restSoundTest">♪ ${state.lang==="en"?"Test sound":"Перевірити звук"}</button>
         </div>
       </div>
     `));
@@ -1272,12 +1299,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const restToggle = $("#restToggle");
       const restPlus = $("#restPlus");
       const restReset = $("#restReset");
+      const restSoundTest = $("#restSoundTest");
       if (restToggle) restToggle.onclick = startRestTimer;
       if (restPlus) restPlus.onclick = ()=>{
         rest.left += 30;
         updateRestUI();
       };
       if (restReset) restReset.onclick = resetRestTimer;
+      if (restSoundTest) restSoundTest.onclick = async ()=>{
+        const played=await playRestCompleteSound();
+        restSoundTest.textContent=played
+          ? `✓ ${state.lang==="en"?"Sound enabled":"Звук увімкнено"}`
+          : `! ${state.lang==="en"?"Sound blocked":"Звук заблоковано"}`;
+      };
       updateRestUI();
 
       const clearBtn = $("#clearWorkoutBtn");
@@ -1610,46 +1644,188 @@ document.addEventListener("DOMContentLoaded", () => {
     setTab("workout");
   }
 
-  function buildWorkoutRecommendations(items){
-    return items.map(it=>{
-      const ex=state.exercises.find(e=>e.id===it.exerciseId);
-      if (!ex || !(it.sets||[]).length) return null;
-      const type=exerciseTracking(ex);
-      if(type!=="strength"){
-        const best=maxPrimaryOfSets(ex,it.sets);
-        const unit=primaryUnit(ex);
-        const next=type==="reps" ? best+1 : type==="time" ? best+1 : Math.round((best+0.1)*10)/10;
-        const text=state.lang==="en"
-          ? `Current best: ${fmtNum(best)} ${unit}. Next time aim for ${fmtNum(next)} ${unit} while keeping a comfortable pace and clean technique.`
-          : `Поточний максимум: ${fmtNum(best)} ${unit}. Наступного разу спробуй ${fmtNum(next)} ${unit}, зберігаючи комфортний темп і якісну техніку.`;
-        return {exerciseId:it.exerciseId,title:exName(ex),text};
-      }
-      const maxWeight=maxWeightOfSets(it.sets);
-      const repsAtMax=Math.max(0,...it.sets.filter(s=>parseNum(s.weight)===maxWeight).map(s=>parseNum(s.reps)));
-      const previous=allLogsFlat()
-        .filter(l=>l.exerciseId===it.exerciseId)
-        .sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
-      const previousMax=previous ? maxWeightOfSets(previous.sets) : 0;
+  function workoutTemplateKey(workout){
+    const title=String(workout?.title||"")
+      .toLowerCase()
+      .replace(/\d{1,4}([./-]\d{1,2}){1,2}/g,"")
+      .replace(/\b(тренування|workout)\b/g,"")
+      .replace(/[^\p{L}\p{N}]+/gu," ")
+      .trim();
+    if(title.length>=3) return `title:${title}`;
+    return `items:${(workout?.items||[]).map(item=>item.exerciseId).filter(Boolean).sort().join("|")}`;
+  }
+
+  function inferNextWorkoutTemplate(workouts){
+    const ordered=[...workouts].sort((a,b)=>new Date(a.date)-new Date(b.date));
+    if(ordered.length<5) return null;
+    const latest=ordered[ordered.length-1];
+    const latestKey=workoutTemplateKey(latest);
+    const transitions=new Map();
+    for(let i=0;i<ordered.length-1;i++){
+      if(workoutTemplateKey(ordered[i])!==latestKey) continue;
+      const nextKey=workoutTemplateKey(ordered[i+1]);
+      const entry=transitions.get(nextKey)||{count:0,lastIndex:0};
+      entry.count+=1;
+      entry.lastIndex=i+1;
+      transitions.set(nextKey,entry);
+    }
+    let predictedKey=null;
+    if(transitions.size){
+      predictedKey=[...transitions.entries()]
+        .sort((a,b)=>b[1].count-a[1].count || b[1].lastIndex-a[1].lastIndex)[0][0];
+    }else{
+      const lastSeen=new Map();
+      ordered.forEach((workout,index)=>lastSeen.set(workoutTemplateKey(workout),index));
+      predictedKey=[...lastSeen.entries()]
+        .filter(([key])=>key!==latestKey)
+        .sort((a,b)=>a[1]-b[1])[0]?.[0] || latestKey;
+    }
+    const template=[...ordered].reverse().find(workout=>workoutTemplateKey(workout)===predictedKey);
+    if(!template) return null;
+    const matchingTransitions=transitions.get(predictedKey)?.count||0;
+    const latestOccurrences=ordered.filter(workout=>workoutTemplateKey(workout)===latestKey).length;
+    return {
+      template,
+      programLength:new Set(ordered.map(workoutTemplateKey)).size,
+      confidence:latestOccurrences>1 ? Math.round(matchingTransitions/Math.max(1,latestOccurrences-1)*100) : 50
+    };
+  }
+
+  function exerciseHistory(exerciseId){
+    return allLogsFlat()
+      .filter(log=>log.exerciseId===exerciseId)
+      .sort((a,b)=>new Date(a.date)-new Date(b.date));
+  }
+
+  function averageSetCount(logs){
+    if(!logs.length) return 0;
+    return Math.max(1,Math.round(logs.reduce((sum,log)=>sum+(log.sets?.length||0),0)/logs.length));
+  }
+
+  function goalForExercise(exerciseId){
+    return (state.goals||[])
+      .filter(goal=>goal.type==="exercise" && goal.exerciseId===exerciseId && goalProgress(goal)<100)
+      .sort((a,b)=>goalProgress(b)-goalProgress(a))[0] || null;
+  }
+
+  function recommendExerciseFromHistory(item){
+    const ex=state.exercises.find(exercise=>exercise.id===item.exerciseId);
+    if(!ex) return null;
+    const logs=exerciseHistory(ex.id);
+    const recent=logs.slice(-4);
+    const last=recent[recent.length-1] || {sets:item.sets||[]};
+    const previous=recent[recent.length-2];
+    const setCount=averageSetCount(recent) || Math.max(1,item.sets?.length||1);
+    const type=exerciseTracking(ex);
+    const goal=goalForExercise(ex.id);
+    const goalNote=goal
+      ? (state.lang==="en"
+        ? ` Goal: ${fmtNum(goal.target)} ${primaryUnit(ex)} (${goalProgress(goal)}%).`
+        : ` Ціль: ${fmtNum(goal.target)} ${primaryUnit(ex)} (${goalProgress(goal)}%).`)
+      : "";
+    if(type==="strength"){
+      const weight=maxWeightOfSets(last.sets);
+      const reps=Math.max(0,...(last.sets||[]).filter(set=>parseNum(set.weight)===weight).map(set=>parseNum(set.reps)));
+      const previousWeight=previous?maxWeightOfSets(previous.sets):0;
       const increment=["legs","back"].includes(ex.category)?5:2.5;
-      let text;
-      if (repsAtMax>=8){
-        text=state.lang==="en"
-          ? `Try ${fmtNum(maxWeight+increment)} kg for 6–8 reps. You completed ${fmtNum(maxWeight)} kg for ${fmtNum(repsAtMax)} reps.`
-          : `Спробуй ${fmtNum(maxWeight+increment)} кг на 6–8 повторень. Зараз виконано ${fmtNum(maxWeight)} кг × ${fmtNum(repsAtMax)}.`;
-      }else if(repsAtMax>=6){
-        text=state.lang==="en"
-          ? `Keep ${fmtNum(maxWeight)} kg and aim for ${fmtNum(repsAtMax+1)} reps before increasing weight.`
-          : `Залиши ${fmtNum(maxWeight)} кг і спробуй ${fmtNum(repsAtMax+1)} повторень перед підвищенням ваги.`;
-      }else{
-        text=state.lang==="en"
-          ? `Repeat ${fmtNum(maxWeight)} kg and stabilize technique at 6 reps. Reduce by 2.5–5 kg if form breaks down.`
-          : `Повтори ${fmtNum(maxWeight)} кг і закріпи техніку на 6 повтореннях. Якщо техніка погіршується — зменш вагу на 2.5–5 кг.`;
+      let targetWeight=weight;
+      let targetReps=Math.max(6,reps||8);
+      let reason=state.lang==="en"?"stabilize the current working load":"закріпити поточну робочу вагу";
+      if(reps>=8 && recent.length>=2){
+        targetWeight=weight+increment;
+        targetReps=6;
+        reason=state.lang==="en"?"recent sessions show room to progress":"останні заняття дають запас для прогресії";
+      }else if(reps>=6){
+        targetReps=reps+1;
+        reason=state.lang==="en"?"add one clean rep before increasing weight":"додати одне чисте повторення перед підвищенням ваги";
+      }else if(previousWeight>0 && weight<previousWeight){
+        targetWeight=weight;
+        targetReps=6;
+        reason=state.lang==="en"?"return to stable technique after a load reduction":"повернути стабільну техніку після зниження ваги";
       }
-      if (maxWeight>previousMax && previousMax>0){
-        text += state.lang==="en" ? " New working-weight progress." : " Є прогрес робочої ваги.";
+      if(goal && parseNum(goal.target)>weight && reps>=7){
+        targetWeight=Math.min(parseNum(goal.target),Math.max(targetWeight,weight+increment));
+        reason=state.lang==="en"?"the active strength goal raises priority for gradual overload":"активна силова ціль підвищує пріоритет поступового навантаження";
       }
-      return {exerciseId:it.exerciseId,title:exName(ex),text};
-    }).filter(Boolean);
+      return {
+        kind:"exercise",exerciseId:ex.id,title:exName(ex),
+        prescription:`${setCount} × ${targetReps} · ${fmtNum(targetWeight)} kg`,
+        text:(state.lang==="en"?`Based on ${recent.length} recent performances: ${reason}.`:`На основі ${recent.length} останніх виконань: ${reason}.`)+goalNote
+      };
+    }
+    const best=maxPrimaryOfSets(ex,last.sets);
+    let target=best;
+    if(type==="reps") target=best+1;
+    if(type==="time") target=Math.round((best+1)*10)/10;
+    if(type==="distance") target=Math.round((best+0.1)*10)/10;
+    if(goal) target=Math.min(parseNum(goal.target),Math.max(target,best));
+    return {
+      kind:"exercise",exerciseId:ex.id,title:exName(ex),
+      prescription:`${setCount} × ${fmtNum(target)} ${primaryUnit(ex)}`,
+      text:(state.lang==="en"
+        ? `Progress from the recent ${fmtNum(best)} ${primaryUnit(ex)} without breaking pace or technique.`
+        : `Прогресуй від останніх ${fmtNum(best)} ${primaryUnit(ex)}, не втрачаючи темп і техніку.`)+goalNote
+    };
+  }
+
+  function bodyGoalRecommendation(){
+    const goal=(state.goals||[])
+      .filter(goal=>goal.type==="body" && goalProgress(goal)<100)
+      .sort((a,b)=>goalProgress(b)-goalProgress(a))[0];
+    if(!goal) return null;
+    const current=goalCurrent(goal);
+    const reducing=parseNum(goal.target)<parseNum(goal.start||current);
+    if(["weight","waist"].includes(goal.metric) && reducing){
+      return {
+        kind:"goal",title:state.lang==="en"?"Goal adjustment":"Корекція під ціль",
+        prescription:state.lang==="en"?"10–20 min easy cardio":"10–20 хв легкого кардіо",
+        text:state.lang==="en"
+          ? `${goalLabel(goal)}: ${fmtNum(current)} → ${fmtNum(goal.target)}. Keep strength work, add moderate cardio only if recovery is good.`
+          : `${goalLabel(goal)}: ${fmtNum(current)} → ${fmtNum(goal.target)}. Збережи силову частину й додай помірне кардіо лише за нормального відновлення.`
+      };
+    }
+    return {
+      kind:"goal",title:state.lang==="en"?"Goal adjustment":"Корекція під ціль",
+      prescription:state.lang==="en"?"Add 1 set to the priority movement":"Додай 1 підхід до пріоритетної вправи",
+      text:state.lang==="en"
+        ? `${goalLabel(goal)}: ${fmtNum(current)} → ${fmtNum(goal.target)}. Increase weekly volume gradually, without changing the program rotation.`
+        : `${goalLabel(goal)}: ${fmtNum(current)} → ${fmtNum(goal.target)}. Поступово збільшуй тижневий обсяг, не ламаючи чергування програми.`
+    };
+  }
+
+  function buildProgramRecommendations(){
+    const prediction=inferNextWorkoutTemplate(state.workouts||[]);
+    if(!prediction) return [];
+    const template=prediction.template;
+    const recommendations=(template.items||[])
+      .map(recommendExerciseFromHistory)
+      .filter(Boolean);
+    const activeExerciseGoal=(state.goals||[])
+      .filter(goal=>goal.type==="exercise" && goalProgress(goal)<100)
+      .sort((a,b)=>goalProgress(b)-goalProgress(a))[0];
+    if(activeExerciseGoal && !(template.items||[]).some(item=>item.exerciseId===activeExerciseGoal.exerciseId)){
+      const goalEx=state.exercises.find(ex=>ex.id===activeExerciseGoal.exerciseId);
+      if(goalEx) recommendations.push({
+        kind:"goal",title:state.lang==="en"?"Goal stays in rotation":"Ціль залишається в ротації",
+        prescription:`${exName(goalEx)}: ${fmtNum(goalCurrent(activeExerciseGoal))} → ${fmtNum(activeExerciseGoal.target)} ${primaryUnit(goalEx)}`,
+        text:state.lang==="en"
+          ? "This exercise is not part of the predicted next session, so it is not added artificially. Progress it on its regular program day."
+          : "Цієї вправи немає у прогнозованому наступному занятті, тому вона не додається штучно. Прогресуй її у звичний день програми."
+      });
+    }
+    const goalAdjustment=bodyGoalRecommendation();
+    if(goalAdjustment) recommendations.push(goalAdjustment);
+    return [{
+      kind:"summary",
+      title:template.title || (state.lang==="en"?"Predicted session":"Прогнозоване заняття"),
+      prescription:state.lang==="en"
+        ? `${(template.items||[]).length} exercises · ${prediction.programLength}-session rotation`
+        : `${(template.items||[]).length} вправ · ротація з ${prediction.programLength} типів занять`,
+      text:state.lang==="en"
+        ? `Suggested from the sequence of ${state.workouts.length} workouts. Pattern confidence: ${prediction.confidence}%.`
+        : `Запропоновано за послідовністю ${state.workouts.length} тренувань. Впевненість у патерні: ${prediction.confidence}%.`,
+      templateWorkoutId:template.id
+    },...recommendations].slice(0,8);
   }
 
   function rebuildWorkoutDerivedData(){
@@ -1676,23 +1852,25 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
     state.prs=rebuilt;
-    const latest=[...(state.workouts||[])].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
-    state.recommendations=latest
-      ? buildWorkoutRecommendations(latest.items||[]).map(rec=>({...rec,workoutId:latest.id}))
-      : [];
-    state.settings.derivedDataVersion=2;
+    state.recommendations=buildProgramRecommendations();
+    state.settings.derivedDataVersion=3;
   }
 
   function openRecommendationsModal(recommendations,gotAnyPR){
+    if(!recommendations?.length) return;
+    const summary=recommendations[0];
+    const details=recommendations.slice(1);
     const overlay=document.createElement("div");
     overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(9px);z-index:180;display:grid;place-items:center;padding:16px";
     const modal=document.createElement("div");
     modal.className="card";
     modal.style.cssText="width:min(680px,96vw);max-height:84vh;overflow:auto";
     modal.innerHTML=`
-      <div class="detailHeader"><div class="detailTitle"><h2>${gotAnyPR?"🏆 ":""}${t("saveOk")}</h2><div class="sub">${t("nextWorkout")}</div></div><button class="btn" id="recClose">✕</button></div>
-      <div style="margin-top:12px">${recommendations.map(r=>`<div class="recommendation"><strong>${escapeHtml(r.title)}</strong><div class="muted" style="margin-top:5px">${escapeHtml(r.text)}</div></div>`).join("")}</div>
-      <div class="premiumNote" style="margin-top:14px">${state.lang==="en"?"Recommendations use your completed weight and reps. Adjust them if technique or recovery is poor.":"Рекомендації враховують виконану вагу й повторення. Коригуй їх, якщо техніка або відновлення недостатні."}</div>
+      <div class="detailHeader"><div class="detailTitle"><h2>${gotAnyPR?"🏆 ":""}${t("saveOk")}</h2><div class="sub">${state.lang==="en"?"Program forecast updated":"Прогноз програми оновлено"}</div></div><button class="btn" id="recClose">✕</button></div>
+      <div class="recommendationHero" style="margin-top:12px"><div><div class="recommendationSession">${escapeHtml(summary.title)}</div><div class="muted">${escapeHtml(summary.prescription||"")}</div></div></div>
+      <div class="recommendationReason">${escapeHtml(summary.text||"")}</div>
+      <div class="recommendationPlan">${details.map(rec=>`<div class="recommendationPlanRow"><div class="recommendationPlanMain"><strong>${escapeHtml(rec.title)}</strong><span>${escapeHtml(rec.text||"")}</span></div><div class="recommendationPrescription">${escapeHtml(rec.prescription||"")}</div></div>`).join("")}</div>
+      <div class="premiumNote" style="margin-top:14px">${state.lang==="en"?"The forecast follows your workout rotation and recent performance. Adjust it if recovery or technique is poor.":"Прогноз враховує чергування твоїх занять та останні результати. Коригуй його, якщо відновлення або техніка недостатні."}</div>
       <button class="btn primary" id="recOk" style="width:100%;margin-top:14px">${t("ok")}</button>`;
     overlay.appendChild(modal);document.body.appendChild(overlay);
     const close=()=>overlay.remove();
@@ -1762,7 +1940,7 @@ document.addEventListener("DOMContentLoaded", () => {
     resetRestTimer();
 
     setTab("home");
-    setTimeout(()=>openRecommendationsModal(state.recommendations,gotAnyPR),0);
+    if(state.recommendations.length) setTimeout(()=>openRecommendationsModal(state.recommendations,gotAnyPR),0);
   }
 
   // ---------- workout detail modal (history) ----------
@@ -2208,8 +2386,9 @@ document.addEventListener("DOMContentLoaded", () => {
     box.querySelectorAll("[data-delgoal]").forEach(btn=>{
       btn.onclick=()=>{
         state.goals=state.goals.filter(g=>g.id!==btn.getAttribute("data-delgoal"));
+        state.recommendations=buildProgramRecommendations();
         save();
-        renderGoals();
+        render();
       };
     });
   }
@@ -2246,7 +2425,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const metric=modal.querySelector("#goalMetric").value;
       const start=isExercise ? exercisePRValue(state.exercises.find(ex=>ex.id===exerciseId)) : latestBodyMetric(metric);
       state.goals.unshift({id:uid(),type:isExercise?"exercise":"body",exerciseId:isExercise?exerciseId:null,metric:isExercise?null:metric,target,start,createdAt:Date.now()});
-      save();close();renderGoals();
+      state.recommendations=buildProgramRecommendations();
+      save();close();render();
     };
   }
 
@@ -2714,6 +2894,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // allow saving even if only weight is filled
         if (!(entry.weight>0 || entry.forearm>0 || entry.chest>0 || entry.waist>0 || entry.legs>0)) return;
         state.body.unshift(entry);
+        state.recommendations=buildProgramRecommendations();
         save();
         render();
       };
@@ -2783,6 +2964,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!id) return;
         if (!confirm(t("confirmDeleteMeasure"))) return;
         state.body = (state.body||[]).filter(x=>x.id!==id);
+        state.recommendations=buildProgramRecommendations();
         save();
         render();
       };
@@ -3010,18 +3192,18 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"3. Enter sets correctly":"3. Правильно внеси підходи",
         sub:en?"Fields change automatically by exercise type":"Поля змінюються за типом вправи",
         copy:en
-          ? "Add a set and enter the actual result. Strength uses reps and kg; bodyweight uses reps; timed exercises use minutes; cardio uses distance and minutes."
-          : "Додай підхід і внеси фактичний результат. Силова вправа має повтори та кг; власна вага — повтори; вправа на час — хвилини; кардіо — дистанцію та хвилини.",
-        example:en?"80 kg × 8 · 12 pull-ups · plank 2 min · treadmill 2.5 km / 30 min.":"80 кг × 8 · 12 підтягувань · планка 2 хв · доріжка 2,5 км / 30 хв.",
+          ? "Add a set and enter the actual result. Strength uses reps and kg; bodyweight uses reps; timed exercises use minutes; cardio uses distance and minutes. When all required fields are filled, the rest timer starts automatically."
+          : "Додай підхід і внеси фактичний результат. Силова вправа має повтори та кг; власна вага — повтори; вправа на час — хвилини; кардіо — дистанцію та хвилини. Коли всі потрібні поля заповнені, таймер відпочинку запускається автоматично.",
+        example:en?"80 kg × 8 starts the timer. At zero you hear a signal and feel vibration; use Test sound if needed.":"80 кг × 8 запускає таймер. На нулі буде сигнал і вібрація; за потреби натисни «Перевірити звук».",
         mini:`<div class="miniTitle">${en?"Sets":"Підходи"}</div><div class="miniRow"><div class="miniField">#1</div><div class="miniField">8 ${en?"reps":"повт."}</div><div class="miniField">80 kg</div></div><div class="miniRow"><div class="miniField">2.5 km</div><div class="miniField">30 ${en?"min":"хв"}</div></div>`
       },
       {
         title:en?"4. Save and review advice":"4. Збережи й переглянь пораду",
         sub:en?"The workout enters history and updates PRs":"Тренування потрапить в історію та оновить рекорди",
         copy:en
-          ? "After the final set tap Save workout. The app updates personal records, estimated calories, statistics, and suggestions for the next session."
-          : "Після останнього підходу натисни «Зберегти тренування». Додаток оновить особисті рекорди, приблизні калорії, статистику та рекомендації на наступне заняття.",
-        example:en?"Increase weight only when the suggested reps are completed with good technique.":"Підвищуй вагу лише тоді, коли рекомендовані повтори виконані з якісною технікою.",
+          ? "After the final set tap Save workout. Records and statistics update immediately. After at least 5 sessions, the app learns your A/B/C rotation and predicts the next program day from the full history, not only yesterday."
+          : "Після останнього підходу натисни «Зберегти тренування». Рекорди й статистика оновляться одразу. Після щонайменше 5 занять додаток вивчить твою ротацію A/B/C і прогнозуватиме наступний день програми з усієї історії, а не лише з учорашнього заняття.",
+        example:en?"A → B → C → A means the next forecast is B. Suggested sets and load use the recent history of each exercise.":"A → B → C → A означає, що наступним прогнозується B. Підходи й навантаження беруться з останніх виконань кожної вправи.",
         mini:`<div class="miniButton" style="text-align:center">💾 ${en?"Save workout":"Зберегти тренування"}</div><div class="miniRow"><div class="miniStat">${en?"Calories":"Калорії"}<strong>≈ 420</strong></div><div class="miniStat">PR<strong>+2.5 kg</strong></div></div>`
       },
       {
@@ -3037,9 +3219,9 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"6. Set goals and read progress":"6. Постав цілі й аналізуй прогрес",
         sub:en?"Goals appear first on Home":"Цілі відображаються першими на головній",
         copy:en
-          ? "Create a strength, repetition, time, distance, weight, or body measurement target. Use Home for a quick overview and Statistics for exercise details."
-          : "Створи ціль для ваги, повторів, часу, дистанції або показника тіла. «Головна» дає короткий огляд, а «Статистика» — деталі конкретної вправи.",
-        example:en?"Bench 100 kg · 20 pull-ups · treadmill 5 km · waist 85 cm.":"Жим 100 кг · 20 підтягувань · доріжка 5 км · талія 85 см.",
+          ? "Create a strength, repetition, time, distance, weight, or body measurement target. The forecast keeps your program rotation but changes progression priority, volume, or cardio advice to match the active goal."
+          : "Створи ціль для ваги, повторів, часу, дистанції або показника тіла. Прогноз зберігає чергування програми, але змінює пріоритет прогресії, обсяг або пораду щодо кардіо відповідно до активної цілі.",
+        example:en?"Bench 100 kg raises overload priority on bench day; waist 85 cm may add 10–20 min easy cardio without replacing strength work.":"Жим 100 кг підвищує пріоритет навантаження у день жиму; талія 85 см може додати 10–20 хв легкого кардіо без заміни силової частини.",
         mini:`<div class="miniTitle">${en?"Goal":"Ціль"} · ${en?"Bench press":"Жим лежачи"}</div><div style="font-size:17px;font-weight:950">92 → 100 kg</div><div class="miniBar"><span></span></div><div class="miniRow"><div class="miniStat">${en?"Progress":"Прогрес"}<strong>60%</strong></div><div class="miniStat">${en?"Period":"Період"}<strong>${en?"Month":"Місяць"}</strong></div></div>`
       },
       {
@@ -3157,6 +3339,7 @@ document.addEventListener("DOMContentLoaded", () => {
             : parsed;
           state = migrate(importedState);
           if (!state.exercises.length) state.exercises = DEFAULT_EXERCISES;
+          rebuildWorkoutDerivedData();
           save();
           resetRestTimer();
           render();
