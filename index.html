@@ -346,6 +346,16 @@
     .guideMasterTitle{min-width:0;flex:1}.guideMasterTitle strong{display:block;font-size:16px}.guideMasterTitle span{display:block;margin-top:3px;font-size:11px;color:var(--muted)}
     .guideMasterChevron{color:#c4b5fd;transition:transform .2s}.guideMaster[open] .guideMasterChevron{transform:rotate(180deg)}
     .guideMasterBody{padding:0 12px 12px}
+    .guideRole{margin-top:12px;border:1px solid rgba(103,232,249,.16);border-radius:20px;background:linear-gradient(145deg,rgba(15,23,42,.72),rgba(7,11,22,.76));overflow:hidden}
+    .guideRole>summary{display:flex;align-items:center;gap:12px;padding:15px;cursor:pointer;list-style:none}
+    .guideRole>summary::-webkit-details-marker{display:none}
+    .guideRole>summary>span:nth-child(2){min-width:0;flex:1}
+    .guideRole>summary strong{display:block;font-size:17px}
+    .guideRole>summary small{display:block;margin-top:3px;color:var(--muted);font-size:11px;line-height:1.35}
+    .guideRoleIcon{display:grid;place-items:center;width:42px;height:42px;flex:0 0 auto;border-radius:14px;color:#67e8f9;background:rgba(34,211,238,.12);border:1px solid rgba(103,232,249,.22)}
+    .guideRoleIcon.trainer{color:#c4b5fd;background:rgba(139,92,246,.15);border-color:rgba(196,181,253,.24)}
+    .guideRoleChevron{color:var(--muted);transition:transform .2s}.guideRole[open] .guideRoleChevron{transform:rotate(180deg)}
+    .guideRoleBody{padding:0 10px 10px}
     .guideStep{border:1px solid var(--line);border-radius:19px;background:rgba(5,8,15,.42);overflow:hidden}
     .guideStep summary{display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer;list-style:none}
     .guideStep summary::-webkit-details-marker{display:none}
@@ -657,7 +667,7 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app-v24.js"></script>
+  <script defer src="app-v25.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {

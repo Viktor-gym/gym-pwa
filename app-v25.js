@@ -1040,9 +1040,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------- safe setTab/render ----------
   function setTab(tab){
     currentTab = tab;
-    $$(".navBtn").forEach(b=>{
-      b.classList.toggle("active", b.getAttribute("data-tab")===tab);
-    });
     render();
   }
 
@@ -1060,6 +1057,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function render(){
+    $$(".navBtn").forEach(b=>{
+      b.classList.toggle("active", b.getAttribute("data-tab")===currentTab);
+    });
     const langBtn = $("#langBtn");
     if (langBtn) langBtn.textContent = state.lang.toUpperCase();
     const profileBtn=$("#profileBtn");
@@ -3703,7 +3703,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---------- SETTINGS ----------
-  function usageGuideMarkup(){
+  function legacyUsageGuideMarkup(){
     const en=state.lang==="en";
     const steps=[
       {
@@ -3798,6 +3798,195 @@ document.addEventListener("DOMContentLoaded", () => {
         </details>`).join("")}</div>`;
   }
 
+  function usageGuideMarkup(){
+    const en=state.lang==="en";
+    const userSteps=[
+      {
+        title:en?"Choose User mode":"Обери режим «Користувач»",
+        sub:en?"Your personal training space":"Особистий простір для тренувань",
+        copy:en
+          ?"Choose User on the first screen. Your workouts, measurements, goals and records stay in one personal profile. Changing modes does not delete existing information."
+          :"На першому екрані обери «Користувач». Тренування, заміри, цілі та рекорди зберігаються в одному особистому профілі. Зміна режиму не видаляє наявні дані.",
+        example:en?"Use Settings → Change mode whenever you need to switch.":"Перемикатися можна через «Налаштування» → «Змінити режим».",
+        mini:`<div class="miniTitle">${en?"Workspace":"Режим роботи"}</div><div class="miniButton">${en?"User":"Користувач"}</div>`
+      },
+      {
+        title:en?"Prepare exercises":"Підготуй вправи",
+        sub:en?"Category and tracking type control the fields":"Категорія і тип обліку визначають поля",
+        copy:en
+          ?"Open Exercises, use an existing exercise or tap +. Choose a category or create a new one, then select weight + reps, reps only, duration, or distance + time."
+          :"Відкрий «Вправи», обери наявну вправу або натисни +. Вкажи категорію чи створи нову, а також тип обліку: вага + повтори, лише повтори, тривалість або дистанція + час.",
+        example:en?"Bench press: weight + reps. Pull-ups: reps only. Treadmill: distance + time.":"Жим лежачи: вага + повтори. Підтягування: лише повтори. Доріжка: дистанція + час.",
+        mini:`<div class="miniTitle">＋ ${en?"Exercise":"Вправа"}</div><div class="miniField">${en?"Pull-ups":"Підтягування"}</div><div class="miniRow"><div class="miniField">${en?"Back":"Спина"}</div><div class="miniField">${en?"Reps":"Повтори"}</div></div>`
+      },
+      {
+        title:en?"Start or continue a workout":"Почни або продовж тренування",
+        sub:en?"Build today's list and keep unfinished work":"Склади план дня і не втрачай незавершене",
+        copy:en
+          ?"Start from Home or Workout, add exercises and enter a title. A workout from the current day can be continued. Saving and clearing require confirmation to prevent accidental taps."
+          :"Почни з «Головної» або «Тренування», додай вправи та назву. Тренування поточного дня можна продовжити. Збереження й очищення потребують підтвердження, щоб уникнути випадкового натискання.",
+        example:en?"Chest day: bench press, incline press, push-ups.":"День грудей: жим лежачи, жим під кутом, віджимання.",
+        mini:`<div class="miniTitle">${en?"Today's workout":"Сьогоднішнє тренування"}</div><div class="miniField">${en?"Chest day":"Груди"}</div><div class="miniButton">＋ ${en?"Add exercise":"Додати вправу"}</div>`
+      },
+      {
+        title:en?"Record sets and rest":"Внось підходи та відпочинок",
+        sub:en?"The form adapts to each exercise":"Форма підлаштовується під тип вправи",
+        copy:en
+          ?"Enter the actual result in the labeled fields. When the required values are filled, the rest timer starts automatically. At zero the app can vibrate on supported devices."
+          :"Внось фактичний результат у підписані поля. Після заповнення потрібних значень таймер відпочинку запускається автоматично. Після завершення телефон може вібрувати, якщо пристрій це підтримує.",
+        example:en?"Strength: 80 kg × 8. Cardio: 2.5 km in 30 min.":"Силова: 80 кг × 8. Кардіо: 2,5 км за 30 хв.",
+        mini:`<div class="miniTitle">${en?"Set 1":"Підхід 1"}</div><div class="miniRow"><div class="miniField">80 kg</div><div class="miniField">8 ${en?"reps":"повт."}</div></div><div class="miniField">01:30 ${en?"rest":"відпочинок"}</div>`
+      },
+      {
+        title:en?"Save, edit or delete correctly":"Зберігай, редагуй і видаляй правильно",
+        sub:en?"All derived results are recalculated":"Усі похідні результати перераховуються",
+        copy:en
+          ?"After the last set save the workout. Statistics, records, favorites and recommendations update from saved history. If a workout is deleted, its records and traces are removed as well."
+          :"Після останнього підходу збережи тренування. Статистика, рекорди, улюблені вправи й рекомендації оновлюються зі збереженої історії. Якщо тренування видалити, його рекорди та сліди також прибираються.",
+        example:en?"A deleted test workout no longer affects the maximum weight.":"Видалене тестове тренування більше не впливає на максимальну вагу.",
+        mini:`<div class="miniButton">${en?"Save workout":"Зберегти тренування"}</div><div class="miniRow"><div class="miniField">${en?"Edit":"Редагувати"}</div><div class="miniField">${en?"Delete":"Видалити"}</div></div>`
+      },
+      {
+        title:en?"Set goals and use recommendations":"Постав цілі та користуйся рекомендаціями",
+        sub:en?"Advice learns from history and workout rotation":"Поради враховують історію й чергування програми",
+        copy:en
+          ?"Create strength, reps, time, distance, weight or body goals. After at least 5 saved sessions, recommendations analyze the full history, exercise rotation, workload and active goals."
+          :"Створи ціль для сили, повторів, часу, дистанції, ваги або замірів тіла. Після щонайменше 5 збережених занять рекомендації аналізують усю історію, чергування вправ, навантаження й активні цілі.",
+        example:en?"Bench 105 kg and body weight 90 kg may produce different priorities without replacing your program.":"Жим 105 кг і вага тіла 90 кг можуть змінювати пріоритети, не підміняючи твою програму.",
+        mini:`<div class="miniTitle">${en?"Goal":"Ціль"} · ${en?"Bench press":"Жим лежачи"}</div><div style="font-weight:950">92 → 105 kg</div><div class="miniBar"><span></span></div>`
+      },
+      {
+        title:en?"Read Home, Statistics and Body":"Аналізуй головну, статистику й тіло",
+        sub:en?"Choose a period and open exercise details":"Обирай період і відкривай деталі вправ",
+        copy:en
+          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Tap a favorite to open its statistics. Body stores partial measurements, while charts, records and estimated calories show trends."
+          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. Натисни улюблену вправу, щоб відкрити її статистику. «Тіло» зберігає навіть частково заповнені заміри, а графіки, рекорди й приблизні калорії показують тенденції.",
+        example:en?"Enter only weight and waist today; empty body fields are allowed.":"Сьогодні можна внести лише вагу й талію; порожні поля дозволені.",
+        mini:`<div class="miniRow"><div class="miniStat">${en?"Month":"Місяць"}<strong>12</strong></div><div class="miniStat">${en?"Calories":"Калорії"}<strong>≈420</strong></div></div>`
+      },
+      {
+        title:en?"Back up and restore data":"Створюй резервну копію та відновлюй дані",
+        sub:en?"JSON keeps your local data portable":"JSON дозволяє перенести локальні дані",
+        copy:en
+          ?"Data is stored on this device. Use Export JSON regularly and Import JSON after reinstalling or changing phones. Older gymPwaData_v3 exports remain supported."
+          :"Дані зберігаються на цьому пристрої. Регулярно використовуй «Експорт JSON», а після перевстановлення чи зміни телефона — «Імпорт JSON». Старі експорти gymPwaData_v3 надалі підтримуються.",
+        example:en?"Make a backup after important changes or at least monthly.":"Роби копію після важливих змін або щонайменше раз на місяць.",
+        mini:`<div class="miniTitle">${en?"Backup":"Резервна копія"}</div><div class="miniRow"><div class="miniButton">${en?"Export":"Експорт"}</div><div class="miniField">${en?"Import":"Імпорт"}</div></div>`
+      }
+    ];
+    const trainerSteps=[
+      {
+        title:en?"Choose Trainer mode":"Обери режим «Тренер»",
+        sub:en?"The dashboard opens without selecting anyone":"Панель відкривається без вибраного профілю",
+        copy:en
+          ?"Trainer mode manages several independent people. Until you explicitly select My progress or a client, the regular tabs intentionally show no personal data."
+          :"Режим тренера веде кількох незалежних людей. Поки ти явно не обереш «Мій прогрес» або клієнта, звичайні вкладки навмисно не показують чиїсь персональні дані.",
+        example:en?"This prevents accidentally entering a workout for the wrong person.":"Це захищає від випадкового внесення тренування не тій людині.",
+        mini:`<div class="miniTitle">${en?"Trainer dashboard":"Панель тренера"}</div><div class="miniField">${en?"No profile selected":"Профіль не вибрано"}</div>`
+      },
+      {
+        title:en?"Use My progress":"Використовуй «Мій прогрес»",
+        sub:en?"The trainer's own diary is separate":"Особистий щоденник тренера відокремлений",
+        copy:en
+          ?"Open My progress when you want to record your own workouts. It has the complete user workflow but is not treated as a client and never appears in the appointment calendar."
+          :"Відкрий «Мій прогрес», коли хочеш вести власні тренування. Тут доступний весь звичайний функціонал користувача, але цей профіль не вважається клієнтом і не потрапляє до календаря записів.",
+        example:en?"Your bench session stays separate from every client's history.":"Твоє тренування жиму не змішується з історією клієнтів.",
+        mini:`<div class="miniButton">${en?"My progress":"Мій прогрес"}</div><div class="miniField">${en?"Personal data only":"Лише особисті дані"}</div>`
+      },
+      {
+        title:en?"Add and open a client":"Додай і відкрий клієнта",
+        sub:en?"Every client has independent data":"Кожен клієнт має незалежні дані",
+        copy:en
+          ?"Create a client by name, then tap the client card to open the profile. Exercises, workouts, goals, body measurements, records and recommendations are stored separately for that client."
+          :"Створи клієнта за ім’ям, а потім натисни його картку, щоб відкрити профіль. Вправи, тренування, цілі, заміри тіла, рекорди й рекомендації зберігаються окремо для цього клієнта.",
+        example:en?"Anna and Viktor can have different exercises, goals and rest settings.":"Анна й Віктор можуть мати різні вправи, цілі та налаштування відпочинку.",
+        mini:`<div class="miniTitle">＋ ${en?"New client":"Новий клієнт"}</div><div class="miniField">${en?"Anna":"Анна"}</div><div class="miniButton">${en?"Open profile":"Відкрити профіль"}</div>`
+      },
+      {
+        title:en?"Work inside the selected profile":"Працюй у вибраному профілі",
+        sub:en?"The standard tabs now belong to that person":"Звичайні вкладки тепер належать цій людині",
+        copy:en
+          ?"After choosing a profile, use Home, Workout, Exercises, Statistics, Body and Records exactly as in User mode. The profile button in the header returns to the trainer dashboard and clears the selection."
+          :"Після вибору профілю використовуй «Головну», «Тренування», «Вправи», «Статистику», «Тіло» й «Рекорди» так само, як у режимі користувача. Кнопка профілю у шапці повертає до панелі тренера та скидає вибір.",
+        example:en?"Always check the profile name before entering a set.":"Перед внесенням підходу перевір ім’я активного профілю.",
+        mini:`<div class="miniTitle">◉ ${en?"Anna":"Анна"}</div><div class="miniRow"><div class="miniField">${en?"Workout":"Тренування"}</div><div class="miniField">${en?"Stats":"Статистика"}</div></div>`
+      },
+      {
+        title:en?"Plan appointments in the calendar":"Плануй записи в календарі",
+        sub:en?"Week and month views show the schedule":"Тиждень і місяць показують розклад",
+        copy:en
+          ?"Use Week for the near schedule and Month for broader planning. Move between periods, tap a date, then choose an active client, time and optional note."
+          :"Використовуй «Тиждень» для найближчого розкладу, а «Місяць» — для довшого планування. Перемикай періоди, натисни дату, обери активного клієнта, час і за потреби примітку.",
+        example:en?"Anna · June 15 · 18:00 · Leg day.":"Анна · 15 червня · 18:00 · Ноги.",
+        mini:`<div class="miniTitle">${en?"Calendar":"Календар"} · ${en?"Month":"Місяць"}</div><div class="miniField">15 · ${en?"Anna":"Анна"} · 18:00</div>`
+      },
+      {
+        title:en?"Manage appointments safely":"Керуй записами безпечно",
+        sub:en?"Reminders work locally while the app is active":"Нагадування працюють локально, поки застосунок активний",
+        copy:en
+          ?"Planned sessions are shown in the trainer calendar. Deleting an appointment always asks for confirmation. Local notifications depend on browser permission and the app being able to run."
+          :"Заплановані заняття відображаються в календарі тренера. Видалення запису завжди потребує підтвердження. Локальні сповіщення залежать від дозволу браузера та можливості застосунку працювати.",
+        example:en?"Confirm deletion only after checking the client, date and time.":"Підтверджуй видалення лише після перевірки клієнта, дати й часу.",
+        mini:`<div class="miniTitle">${en?"Appointment":"Запис"}</div><div class="miniField">${en?"Delete this appointment?":"Видалити цей запис?"}</div><div class="miniButton">${en?"Confirm":"Підтвердити"}</div>`
+      },
+      {
+        title:en?"Pause and restore clients":"Став клієнтів на паузу та відновлюй",
+        sub:en?"Data remains stored during a break":"Дані зберігаються під час перерви",
+        copy:en
+          ?"Put an inactive client on pause. The client disappears from the active list, new planning and comparison, but the profile is not deleted. Restore it later from the Paused section."
+          :"Постав неактивного клієнта на паузу. Він зникне з активного списку, нового планування й порівняння, але профіль не видаляється. Пізніше віднови його в розділі «На паузі».",
+        example:en?"A one-month break does not erase workout history.":"Місячна перерва не стирає історію тренувань.",
+        mini:`<div class="miniRow"><div class="miniField">${en?"Active":"Активні"} · 4</div><div class="miniField">${en?"Paused":"На паузі"} · 1</div></div><div class="miniButton">${en?"Restore":"Відновити"}</div>`
+      },
+      {
+        title:en?"Compare active clients":"Порівнюй активних клієнтів",
+        sub:en?"See the last 30 days in one place":"Переглядай останні 30 днів в одному місці",
+        copy:en
+          ?"The comparison block summarizes sessions, sets, volume and goal progress for active clients. Use it as context; different programs and exercise types are not a direct competition."
+          :"Блок порівняння підсумовує заняття, підходи, обсяг і прогрес цілей активних клієнтів. Використовуй це як контекст: різні програми й типи вправ не є прямим змаганням.",
+        example:en?"Compare attendance consistency before comparing training volume.":"Спочатку порівнюй регулярність відвідувань, а вже потім обсяг роботи.",
+        mini:`<div class="miniTitle">${en?"Last 30 days":"Останні 30 днів"}</div><div class="miniRow"><div class="miniStat">${en?"Anna":"Анна"}<strong>8</strong></div><div class="miniStat">${en?"Viktor":"Віктор"}<strong>6</strong></div></div>`
+      },
+      {
+        title:en?"Export the whole trainer workspace":"Експортуй увесь простір тренера",
+        sub:en?"Version 4 includes profiles and calendar":"Версія 4 містить профілі та календар",
+        copy:en
+          ?"Trainer export v4 includes the mode, My progress, all clients and appointments. Import v4 to restore the whole workspace. A legacy v3 file imports into the currently selected profile."
+          :"Експорт тренера v4 містить режим, «Мій прогрес», усіх клієнтів і записи календаря. Імпорт v4 відновлює весь простір. Старий файл v3 імпортується в поточний вибраний профіль.",
+        example:en?"Select the intended client before importing an old v3 backup.":"Перед імпортом старої копії v3 обов’язково обери потрібного клієнта.",
+        mini:`<div class="miniTitle">${en?"Trainer backup v4":"Копія тренера v4"}</div><div class="miniField">${en?"Profiles + calendar":"Профілі + календар"}</div>`
+      },
+      {
+        title:en?"Google Calendar status":"Стан Google Calendar",
+        sub:en?"Prepared for future sync, not connected yet":"Підготовлено до майбутньої синхронізації, але ще не підключено",
+        copy:en
+          ?"Appointments already have technical sync metadata and an outbox for a future integration. No Google account authorization or live two-way synchronization is active in this version."
+          :"Записи вже мають технічні поля синхронізації та чергу для майбутньої інтеграції. У цій версії ще немає авторизації Google-акаунта чи живої двосторонньої синхронізації.",
+        example:en?"For now, the in-app calendar is the source of truth.":"Наразі основним є календар усередині застосунку.",
+        mini:`<div class="miniTitle">Google Calendar</div><div class="miniField">${en?"Prepared · not connected":"Підготовлено · не підключено"}</div>`
+      }
+    ];
+    const renderSteps=(steps)=>`<div class="guideList">${steps.map((step,i)=>`
+      <details class="guideStep" ${i===0?"open":""}>
+        <summary><span class="guideNumber">${i+1}</span><span class="guideSummaryText"><strong>${step.title}</strong><span>${step.sub}</span></span><span class="guideChevron">⌄</span></summary>
+        <div class="guideContent"><div class="guideCopy">${step.copy}<div class="guideExample"><strong>${en?"Example":"Приклад"}:</strong> ${step.example}</div></div><div class="miniScreen"><div class="miniTop"></div>${step.mini}</div></div>
+      </details>`).join("")}</div>`;
+    return `
+      <div class="guideHero">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:#67e8f9">${en?"Complete guide":"Повна інструкція"}</div>
+        <div style="font-size:22px;font-weight:950;margin-top:5px">${en?"Two modes, two clear workflows":"Два режими — два зрозумілі сценарії"}</div>
+        <div class="muted" style="margin-top:6px">${en?"Open the route you need. Every step includes an example and a small visual cue.":"Відкрий потрібний маршрут. Кожен крок має приклад і невелику візуальну підказку."}</div>
+      </div>
+      <details class="guideRole" open>
+        <summary><span class="guideRoleIcon">◉</span><span><strong>${en?"For the user":"Для користувача"}</strong><small>${en?"Personal workouts, goals, body and statistics":"Особисті тренування, цілі, тіло та статистика"}</small></span><span class="guideRoleChevron">⌄</span></summary>
+        <div class="guideRoleBody">${renderSteps(userSteps)}</div>
+      </details>
+      <details class="guideRole">
+        <summary><span class="guideRoleIcon trainer">◇</span><span><strong>${en?"For the trainer":"Для тренера"}</strong><small>${en?"Profiles, clients, calendar and comparison":"Профілі, клієнти, календар і порівняння"}</small></span><span class="guideRoleChevron">⌄</span></summary>
+        <div class="guideRoleBody">${renderSteps(trainerSteps)}</div>
+      </details>`;
+  }
+
   function viewSettings(){
     const el = document.createElement("div");
 
@@ -3845,7 +4034,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <details class="guideMaster">
         <summary>
           <span class="guideMasterIcon">📖</span>
-          <span class="guideMasterTitle"><strong>${state.lang==="en"?"User guide":"Інструкція з користування"}</strong><span>${state.lang==="en"?"Steps, examples and mini screens":"Кроки, приклади та мініскріни"}</span></span>
+          <span class="guideMasterTitle"><strong>${state.lang==="en"?"User and trainer guide":"Інструкція для користувача і тренера"}</strong><span>${state.lang==="en"?"All workflows, examples and mini screens":"Усі сценарії, приклади та мініскріни"}</span></span>
           <span class="guideMasterChevron">⌄</span>
         </summary>
         <div class="guideMasterBody">${usageGuideMarkup()}</div>
