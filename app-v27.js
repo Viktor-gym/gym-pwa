@@ -1677,10 +1677,10 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="val">${periodDays}</div>
           <div class="lbl">${t("activeDays")}</div>
         </div>
-        <div class="kpiBox kpiTeal">
+        <div class="kpiBox kpiTeal kpiClickable" id="homeTrainingsKpi" role="button" tabindex="0">
           <div class="ico">🏋️</div>
           <div class="val">${periodTrainings}</div>
-          <div class="lbl">${t("trainings")}</div>
+          <div class="lbl">${t("trainings")} · ${state.lang==="en"?"tap list":"до списку"}</div>
         </div>
         <div class="kpiBox kpiPink">
           <div class="ico">🧱</div>
@@ -1704,37 +1704,6 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     `));
 
-    if ((state.recommendations||[]).length){
-      const summary=state.recommendations[0];
-      const details=state.recommendations.slice(1);
-      el.appendChild(card(`
-        <div class="recommendationHero">
-          <div>
-            <div class="muted" style="text-transform:uppercase;letter-spacing:.12em;font-size:9px">${state.lang==="en"?"Program forecast":"Прогноз програми"}</div>
-            <div class="recommendationHeroTitle">${t("nextWorkout")}</div>
-            <div class="recommendationSession">${escapeHtml(summary.title)}</div>
-            <div class="muted">${escapeHtml(summary.prescription||"")}</div>
-          </div>
-          <div class="recommendationConfidence">${state.lang==="en"?"Analysis":"Аналіз"}<br><strong>${state.workouts.length}</strong> ${state.lang==="en"?"sessions":"занять"}</div>
-        </div>
-        <div class="recommendationReason">${escapeHtml(summary.text||"")}</div>
-        <div class="recommendationPlan">${details.map(rec=>`
-          <div class="recommendationPlanRow">
-            <div class="recommendationPlanMain"><strong>${escapeHtml(rec.title)}</strong><span>${escapeHtml(rec.text||"")}</span></div>
-            <div class="recommendationPrescription">${escapeHtml(rec.prescription||"")}</div>
-          </div>`).join("")}</div>
-      `));
-    }else if(state.workouts.length>0 && state.workouts.length<5){
-      el.appendChild(card(`
-        <div class="recommendationLearning">
-          <div class="recommendationLearningIcon">◌</div>
-          <div><strong>${state.lang==="en"?"Learning your program":"Вивчаю твою програму"}</strong><div class="muted" style="margin-top:4px">${state.lang==="en"
-            ? `Complete ${5-state.workouts.length} more workout(s). Recommendations will start after at least 5 sessions reveal your rotation.`
-            : `Проведи ще ${5-state.workouts.length} заняття. Рекомендації з’являться після щонайменше 5 тренувань, коли буде видно чергування.`}</div></div>
-        </div>
-      `));
-    }
-
     el.appendChild(card(`
       <div style="font-weight:900; font-size:16px; margin-bottom:10px;">${t("favorites")}</div>
       <div class="favoriteRows" id="favStrip"></div>
@@ -1744,7 +1713,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div style="font-weight:900; font-size:16px; margin-bottom:10px;">${t("lastWorkouts")}</div>
       <div class="row" style="flex-direction:column; align-items:stretch; gap:10px;" id="recentList"></div>
       <div class="muted" style="margin-top:10px">${t("tapToOpen")}</div>
-    `));
+    `)).id = "recentWorkoutsCard";
 
     setTimeout(()=>{
       const btn = $("#homeStart");
@@ -1768,9 +1737,53 @@ document.addEventListener("DOMContentLoaded", () => {
           render();
         };
       });
+      const homeTrainingsKpi=$("#homeTrainingsKpi");
+      const scrollToRecent=()=>{
+        $("#recentWorkoutsCard")?.scrollIntoView({behavior:"smooth",block:"start"});
+      };
+      homeTrainingsKpi?.addEventListener("click",scrollToRecent);
+      homeTrainingsKpi?.addEventListener("keydown",(event)=>{
+        if(event.key==="Enter" || event.key===" "){
+          event.preventDefault();
+          scrollToRecent();
+        }
+      });
     },0);
 
     return el;
+  }
+
+  function recommendationCardMarkup(){
+    if ((state.recommendations||[]).length){
+      const summary=state.recommendations[0];
+      const details=state.recommendations.slice(1);
+      return `
+        <div class="recommendationHero">
+          <div>
+            <div class="muted" style="text-transform:uppercase;letter-spacing:.12em;font-size:9px">${state.lang==="en"?"Program forecast":"Прогноз програми"}</div>
+            <div class="recommendationHeroTitle">${t("nextWorkout")}</div>
+            <div class="recommendationSession">${escapeHtml(summary.title)}</div>
+            <div class="muted">${escapeHtml(summary.prescription||"")}</div>
+          </div>
+          <div class="recommendationConfidence">${state.lang==="en"?"Analysis":"Аналіз"}<br><strong>${state.workouts.length}</strong> ${state.lang==="en"?"sessions":"занять"}</div>
+        </div>
+        <div class="recommendationReason">${escapeHtml(summary.text||"")}</div>
+        <div class="recommendationPlan">${details.map(rec=>`
+          <div class="recommendationPlanRow">
+            <div class="recommendationPlanMain"><strong>${escapeHtml(rec.title)}</strong><span>${escapeHtml(rec.text||"")}</span></div>
+            <div class="recommendationPrescription">${escapeHtml(rec.prescription||"")}</div>
+          </div>`).join("")}</div>`;
+    }
+    if(state.workouts.length>0 && state.workouts.length<5){
+      return `
+        <div class="recommendationLearning">
+          <div class="recommendationLearningIcon">◌</div>
+          <div><strong>${state.lang==="en"?"Learning your program":"Вивчаю твою програму"}</strong><div class="muted" style="margin-top:4px">${state.lang==="en"
+            ? `Complete ${5-state.workouts.length} more workout(s). Recommendations will start after at least 5 sessions reveal your rotation.`
+            : `Проведи ще ${5-state.workouts.length} заняття. Рекомендації з’являться після щонайменше 5 тренувань, коли буде видно чергування.`}</div></div>
+        </div>`;
+    }
+    return "";
   }
 
   function renderRecentWorkouts(){
@@ -1865,6 +1878,11 @@ document.addEventListener("DOMContentLoaded", () => {
   function viewWorkout(){
     const el = document.createElement("div");
     startWorkoutIfNeeded();
+
+    const recommendationMarkup=recommendationCardMarkup();
+    if(recommendationMarkup){
+      el.appendChild(card(recommendationMarkup));
+    }
 
     el.appendChild(card(`
       <div class="row" style="justify-content:space-between; align-items:flex-start">
@@ -2843,7 +2861,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const lastTs = lastBy[ex.id] || 0;
       const lastTxt = lastTs ? fmtDate(new Date(lastTs)) : "—";
       return `
-        <div class="itemRow">
+        <div class="itemRow recordRow" data-open-record-stat="${x.ex.id}">
           <div class="left">
             ${exIcon(ex)}
             <div style="min-width:0">
@@ -3531,7 +3549,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       </div>
 
-      <div class="sectionCard" style="margin-top:12px">
+      <div class="sectionCard bodyMeasureCard">
         <div class="sectionTitle">${t("addMeasure")}</div>
         <div class="bodyGrid bodyMeasureGrid">
           <div class="bodyField bodyDateField">
@@ -3857,7 +3875,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }).join("");
 
     box.querySelectorAll("[data-delpr]").forEach(b=>{
-      b.onclick = ()=>{
+      b.onclick = (event)=>{
+        event.stopPropagation();
         const id = b.getAttribute("data-delpr");
         if (!id) return;
         if (!confirm(t("confirmDeleteMeasure"))) return;
@@ -3866,6 +3885,12 @@ document.addEventListener("DOMContentLoaded", () => {
         state.prs = copy;
         save();
         renderRecList();
+      };
+    });
+    box.querySelectorAll("[data-open-record-stat]").forEach(row=>{
+      row.onclick = ()=>{
+        selectedStatsExerciseId = row.getAttribute("data-open-record-stat");
+        setTab("stats");
       };
     });
   }
@@ -4018,17 +4043,17 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Set goals and use recommendations":"Постав цілі та користуйся рекомендаціями",
         sub:en?"Advice learns from history and workout rotation":"Поради враховують історію й чергування програми",
         copy:en
-          ?"Create strength, reps, time, distance, weight or body goals. After at least 5 saved sessions, recommendations analyze the full history, exercise rotation, workload and active goals."
-          :"Створи ціль для сили, повторів, часу, дистанції, ваги або замірів тіла. Після щонайменше 5 збережених занять рекомендації аналізують усю історію, чергування вправ, навантаження й активні цілі.",
-        example:en?"Bench 105 kg and body weight 90 kg may produce different priorities without replacing your program.":"Жим 105 кг і вага тіла 90 кг можуть змінювати пріоритети, не підміняючи твою програму.",
+          ?"Create strength, reps, time, distance, weight or body goals. After at least 5 saved sessions, recommendations appear in Workout above the current session, so they are available right before training."
+          :"Створи ціль для сили, повторів, часу, дистанції, ваги або замірів тіла. Після щонайменше 5 збережених занять рекомендації показуються в розділі «Тренування» над поточним заняттям, щоб вони були під рукою перед роботою.",
+        example:en?"Bench 105 kg and body weight 90 kg may change priorities without replacing your program.":"Жим 105 кг і вага тіла 90 кг можуть змінювати пріоритети, не підміняючи твою програму.",
         mini:`<div class="miniTitle">${en?"Goal":"Ціль"} · ${en?"Bench press":"Жим лежачи"}</div><div style="font-weight:950">92 → 105 kg</div><div class="miniBar"><span></span></div>`
       },
       {
         title:en?"Read Home, Statistics and Body":"Аналізуй головну, статистику й тіло",
         sub:en?"Choose a period and open exercise details":"Обирай період і відкривай деталі вправ",
         copy:en
-          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Tap a favorite to open its statistics. Body stores partial measurements, while charts, records and estimated calories show trends."
-          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. Натисни улюблену вправу, щоб відкрити її статистику. «Тіло» зберігає навіть частково заповнені заміри, а графіки, рекорди й приблизні калорії показують тенденції.",
+          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Tap the workout count to jump to the workout list. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
+          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. Натисни кількість тренувань, щоб перейти до списку. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
         example:en?"Enter only weight and waist today; empty body fields are allowed.":"Сьогодні можна внести лише вагу й талію; порожні поля дозволені.",
         mini:`<div class="miniRow"><div class="miniStat">${en?"Month":"Місяць"}<strong>12</strong></div><div class="miniStat">${en?"Calories":"Калорії"}<strong>≈420</strong></div></div>`
       },

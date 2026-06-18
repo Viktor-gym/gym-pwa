@@ -111,6 +111,9 @@
     .kpiTeal{ background: rgba(6,182,212,.45); }
     .kpiPink{ background: rgba(244,114,182,.45); }
     .kpiGold{ background: rgba(255,200,87,.55); }
+    .kpiClickable,.recordRow{cursor:pointer;transition:transform .16s ease,border-color .16s ease}
+    .kpiClickable:active,.recordRow:active{transform:scale(.985)}
+    .recordRow:hover{border-color:rgba(167,139,250,.26)}
 
     .itemRow{
       display:flex; justify-content:space-between; align-items:center; gap:12px;
@@ -421,9 +424,15 @@
     .bodyField .btn{display:block;width:100%;min-width:0;max-width:100%;overflow:hidden}
     .bodyField input[type="date"]{appearance:none;-webkit-appearance:none}
     .bodyActions{margin-top:4px}
-    .bodyMeasureGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .bodyMeasureGrid .bodyDateField{grid-column:1/-1}
-    .bodyMeasureGrid .bodyActions{grid-column:1/-1}
+    .bodyMeasureCard{padding:12px;margin-top:10px}
+    .bodyMeasureCard .sectionTitle{margin-bottom:8px;font-size:15px}
+    .bodyMeasureGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .bodyMeasureGrid .bodyDateField{grid-column:span 2}
+    .bodyMeasureGrid .bodyField{gap:4px}
+    .bodyMeasureGrid .bodyField .muted{font-size:10px;line-height:1.15}
+    .bodyMeasureGrid .bodyField .btn{padding:8px 9px;border-radius:12px;min-height:38px}
+    .bodyMeasureGrid .bodyActions{grid-column:span 1;align-self:end;margin-top:0}
+    .bodyMeasureGrid .bodyActions .btn{width:100%;min-height:38px;padding:8px 10px}
     .chartSurface{
       min-height:230px;padding:16px;border-radius:18px;overflow:visible;
       border:1px solid rgba(255,255,255,.07);
@@ -577,8 +586,9 @@
       .kpiGrid4{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
       .kpiBox{min-height:118px;padding:15px}.kpiBox .val{font-size:31px}
       .bodyGrid{grid-template-columns:1fr}
-      .bodyGrid.bodyMeasureGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+      .bodyGrid.bodyMeasureGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
       .bodyMeasureGrid .bodyField .muted{font-size:10px;line-height:1.25}
+      .bodyMeasureGrid .bodyDateField{grid-column:1/-1}
       .bodyMeasureGrid .bodyActions{grid-column:1/-1}
       .bodyCharts{grid-template-columns:1fr}
       .bodyTrendCard.primary{grid-column:auto}
@@ -667,7 +677,7 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app-v26.js"></script>
+  <script defer src="app-v27.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
