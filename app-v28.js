@@ -1879,11 +1879,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const el = document.createElement("div");
     startWorkoutIfNeeded();
 
-    const recommendationMarkup=recommendationCardMarkup();
-    if(recommendationMarkup){
-      el.appendChild(card(recommendationMarkup));
-    }
-
     el.appendChild(card(`
       <div class="row" style="justify-content:space-between; align-items:flex-start">
         <div style="min-width:0; flex:1">
@@ -1933,6 +1928,11 @@ document.addEventListener("DOMContentLoaded", () => {
         <button class="btn" id="clearWorkoutBtn">${t("clearWorkout")}</button>
       </div>
     `));
+
+    const recommendationMarkup=recommendationCardMarkup();
+    if(recommendationMarkup){
+      el.appendChild(card(recommendationMarkup));
+    }
 
     setTimeout(()=>{
       renderWorkoutItems();
@@ -2861,7 +2861,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const lastTs = lastBy[ex.id] || 0;
       const lastTxt = lastTs ? fmtDate(new Date(lastTs)) : "—";
       return `
-        <div class="itemRow recordRow" data-open-record-stat="${x.ex.id}">
+        <div class="itemRow">
           <div class="left">
             ${exIcon(ex)}
             <div style="min-width:0">
@@ -3853,7 +3853,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `${reps} ${state.lang==="en" ? "reps" : "повт."}`
         : trackingLabel(x.ex);
       return `
-        <div class="itemRow">
+        <div class="itemRow recordRow" data-open-record-stat="${x.ex.id}" role="button" tabindex="0">
           <div class="left">
             <div class="exIconWrap" style="background: rgba(167,139,250,.12); border-color: rgba(167,139,250,.18);">
               <div style="font-weight:900; color: rgba(167,139,250,.95)">#${idx+1}</div>
@@ -3888,9 +3888,17 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     });
     box.querySelectorAll("[data-open-record-stat]").forEach(row=>{
-      row.onclick = ()=>{
+      const open=()=>{
         selectedStatsExerciseId = row.getAttribute("data-open-record-stat");
         setTab("stats");
+        setTimeout(()=>$("#detailBox")?.scrollIntoView?.({ behavior:"smooth", block:"start" }),40);
+      };
+      row.onclick = open;
+      row.onkeydown = (event)=>{
+        if(event.key==="Enter" || event.key===" "){
+          event.preventDefault();
+          open();
+        }
       };
     });
   }
