@@ -418,6 +418,174 @@ document.addEventListener("DOMContentLoaded", () => {
     if(appShell.mode==="user") localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
   }
 
+  function downloadJson(filename,payload){
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function safeFilePart(value){
+    return String(value||"profile").trim().toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu,"-")
+      .replace(/^-+|-+$/g,"")
+      .slice(0,48) || "profile";
+  }
+
+  function activeExportProfile(){
+    if(appShell.mode==="trainer") return activeProfile();
+    return personalProfile();
+  }
+
+  function makeProfileExport(profile){
+    const data=migrate(profile?.data || state);
+    return {
+      format:"gymPwaProfile_v1",
+      exportedAt:new Date().toISOString(),
+      profile:{
+        id:profile?.id || "personal",
+        role:profile?.role || "personal",
+        name:profileDisplayName(profile),
+        status:profile?.status || "active"
+      },
+      data
+    };
+  }
+
+  function extractImportProfileData(parsed){
+    if(parsed?.format==="gymPwaProfile_v1" && parsed.data) return parsed.data;
+    if(parsed?.format==="gymPwaApp_v4" && parsed.app){
+      const profiles=Array.isArray(parsed.app.profiles) ? parsed.app.profiles : [];
+      if(profiles.length===1) return profiles[0].data;
+      if(parsed.app.mode==="user"){
+        const personal=profiles.find(profile=>profile.role==="personal") || profiles[0];
+        if(personal?.data) return personal.data;
+      }
+      return null;
+    }
+    if(parsed && typeof parsed==="object" && parsed.data && typeof parsed.data==="object") return parsed.data;
+    return parsed;
+  }
+
+  function exMergeKey(ex){
+    return [
+      String(ex?.name_ua||"").trim().toLowerCase(),
+      String(ex?.name_en||"").trim().toLowerCase(),
+      String(ex?.category||""),
+      String(exerciseTracking(ex)||"strength")
+    ].join("|");
+  }
+
+  function setFingerprint(set){
+    return [parseNum(set?.weight),parseNum(set?.reps),parseNum(set?.duration),parseNum(set?.distance)].join(":");
+  }
+
+  function workoutFingerprint(workout){
+    const items=(workout?.items||[]).map(item=>
+      `${item.exerciseId}:${(item.sets||[]).map(setFingerprint).join(",")}`
+    ).sort().join("|");
+    return `${new Date(workout?.date||0).toISOString().slice(0,10)}|${String(workout?.title||"").trim().toLowerCase()}|${items}`;
+  }
+
+  function bodyFingerprint(measure){
+    const day=new Date(measure?.date||0).toISOString().slice(0,10);
+    return [day,parseNum(measure?.weight),parseNum(measure?.forearm),parseNum(measure?.chest),parseNum(measure?.waist),parseNum(measure?.legs)].join("|");
+  }
+
+  function goalFingerprint(goal){
+    return [goal?.type,goal?.exerciseId||"",goal?.metric||"",parseNum(goal?.target),parseNum(goal?.start),Number(goal?.createdAt||0)].join("|");
+  }
+
+  function mergeProfileData(targetRaw,incomingRaw){
+    const target=migrate(targetRaw);
+    const incoming=migrate(incomingRaw);
+    const stats={exercises:0,workouts:0,body:0,goals:0,categories:0};
+    const exerciseIdMap=new Map();
+    const byId=new Map(target.exercises.map(ex=>[ex.id,ex]));
+    const byKey=new Map(target.exercises.map(ex=>[exMergeKey(ex),ex]));
+
+    incoming.exercises.forEach(ex=>{
+      const existing=byId.get(ex.id) || byKey.get(exMergeKey(ex));
+      if(existing){
+        exerciseIdMap.set(ex.id,existing.id);
+        existing.trackingType=existing.trackingType || ex.trackingType;
+        return;
+      }
+      const copy={...ex};
+      if(byId.has(copy.id)) copy.id=uid();
+      target.exercises.push(copy);
+      byId.set(copy.id,copy);
+      byKey.set(exMergeKey(copy),copy);
+      exerciseIdMap.set(ex.id,copy.id);
+      stats.exercises++;
+    });
+
+    const categoryIds=new Set(target.customCategories.map(cat=>cat.id));
+    incoming.customCategories.forEach(cat=>{
+      if(categoryIds.has(cat.id)) return;
+      target.customCategories.push({...cat});
+      categoryIds.add(cat.id);
+      stats.categories++;
+    });
+
+    const workoutIds=new Set(target.workouts.map(workout=>workout.id));
+    const workoutKeys=new Set(target.workouts.map(workoutFingerprint));
+    incoming.workouts.forEach(workout=>{
+      const copy={
+        ...workout,
+        items:(workout.items||[]).map(item=>({
+          ...item,
+          exerciseId:exerciseIdMap.get(item.exerciseId) || item.exerciseId,
+          sets:(item.sets||[]).map(set=>({...set}))
+        }))
+      };
+      const key=workoutFingerprint(copy);
+      if(workoutKeys.has(key)) return;
+      if(workoutIds.has(copy.id)) copy.id=uid();
+      target.workouts.push(copy);
+      workoutIds.add(copy.id);
+      workoutKeys.add(key);
+      stats.workouts++;
+    });
+
+    const bodyIds=new Set(target.body.map(measure=>measure.id));
+    const bodyKeys=new Set(target.body.map(bodyFingerprint));
+    incoming.body.forEach(measure=>{
+      const copy={...measure};
+      const key=bodyFingerprint(copy);
+      if(bodyKeys.has(key)) return;
+      if(bodyIds.has(copy.id)) copy.id=uid();
+      target.body.push(copy);
+      bodyIds.add(copy.id);
+      bodyKeys.add(key);
+      stats.body++;
+    });
+
+    const goalIds=new Set(target.goals.map(goal=>goal.id));
+    const goalKeys=new Set(target.goals.map(goalFingerprint));
+    incoming.goals.forEach(goal=>{
+      const copy={...goal};
+      if(copy.exerciseId) copy.exerciseId=exerciseIdMap.get(copy.exerciseId) || copy.exerciseId;
+      const key=goalFingerprint(copy);
+      if(goalKeys.has(key)) return;
+      if(goalIds.has(copy.id)) copy.id=uid();
+      target.goals.push(copy);
+      goalIds.add(copy.id);
+      goalKeys.add(key);
+      stats.goals++;
+    });
+
+    target.favorites=[...new Set([...(target.favorites||[]),...(incoming.favorites||[]).map(id=>exerciseIdMap.get(id)||id)])]
+      .filter(id=>target.exercises.some(ex=>ex.id===id));
+
+    target.lang=state.lang;
+    target.workouts.sort((a,b)=>new Date(b.date)-new Date(a.date));
+    target.body.sort((a,b)=>new Date(b.date)-new Date(a.date));
+    return {data:target,stats};
+  }
+
   // ---------- default exercises ----------
   const DEFAULT_EXERCISES = [
     { id: uid(), name_ua:"Жим штанги лежачи", name_en:"Bench Press", category:"chest" },
@@ -3868,10 +4036,10 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Back up and restore data":"Створюй резервну копію та відновлюй дані",
         sub:en?"JSON keeps your local data portable":"JSON дозволяє перенести локальні дані",
         copy:en
-          ?"Data is stored on this device. Use Export JSON regularly and Import JSON after reinstalling or changing phones. Older gymPwaData_v3 exports remain supported."
-          :"Дані зберігаються на цьому пристрої. Регулярно використовуй «Експорт JSON», а після перевстановлення чи зміни телефона — «Імпорт JSON». Старі експорти gymPwaData_v3 надалі підтримуються.",
-        example:en?"Make a backup after important changes or at least monthly.":"Роби копію після важливих змін або щонайменше раз на місяць.",
-        mini:`<div class="miniTitle">${en?"Backup":"Резервна копія"}</div><div class="miniRow"><div class="miniButton">${en?"Export":"Експорт"}</div><div class="miniField">${en?"Import":"Імпорт"}</div></div>`
+          ?"Data is stored on this device. Use Export all for a complete backup, or Export active profile when you need only one client or My progress. Merge into active profile adds new workouts, body records, goals and exercises without replacing existing history."
+          :"Дані зберігаються на цьому пристрої. Використовуй «Експорт всього» для повної копії або «Експорт активного профілю», коли потрібен лише один клієнт чи «Мій прогрес». «Доповнити активний профіль» додає нові тренування, заміри, цілі та вправи без затирання наявної історії.",
+        example:en?"A client can receive their own JSON file, train alone, then send it back so the trainer merges the new progress.":"Клієнт може отримати свій JSON, займатись самостійно, а потім надіслати файл назад, щоб тренер доповнив новий прогрес.",
+        mini:`<div class="miniTitle">${en?"Backup":"Резервна копія"}</div><div class="miniRow"><div class="miniButton">${en?"Export profile":"Експорт профілю"}</div><div class="miniField">${en?"Merge":"Доповнити"}</div></div>`
       }
     ];
     const trainerSteps=[
@@ -3951,10 +4119,10 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Export the whole trainer workspace":"Експортуй увесь простір тренера",
         sub:en?"Version 4 includes profiles and calendar":"Версія 4 містить профілі та календар",
         copy:en
-          ?"Trainer export v4 includes the mode, My progress, all clients and appointments. Import v4 to restore the whole workspace. A legacy v3 file imports into the currently selected profile."
-          :"Експорт тренера v4 містить режим, «Мій прогрес», усіх клієнтів і записи календаря. Імпорт v4 відновлює весь простір. Старий файл v3 імпортується в поточний вибраний профіль.",
-        example:en?"Select the intended client before importing an old v3 backup.":"Перед імпортом старої копії v3 обов’язково обери потрібного клієнта.",
-        mini:`<div class="miniTitle">${en?"Trainer backup v4":"Копія тренера v4"}</div><div class="miniField">${en?"Profiles + calendar":"Профілі + календар"}</div>`
+          ?"Export all includes mode, My progress, all clients and appointments. Export active profile creates a separate file for only the selected client or My progress. Merge into active profile is for returning clients: it compares the file with existing data and adds what is missing."
+          :"«Експорт всього» містить режим, «Мій прогрес», усіх клієнтів і записи календаря. «Експорт активного профілю» створює окремий файл лише для вибраного клієнта або «Мій прогрес». «Доповнити активний профіль» потрібне для клієнтів, які повертаються: файл порівнюється з наявними даними й додається те, чого бракує.",
+        example:en?"If one of 20 clients leaves, export only that client. If they return later with their own JSON, open their profile and merge it back.":"Якщо з 20 клієнтів один завершує, експортуй лише його. Якщо він згодом повертається зі своїм JSON, відкрий його профіль і доповни дані.",
+        mini:`<div class="miniTitle">${en?"Trainer backup":"Копія тренера"}</div><div class="miniRow"><div class="miniField">${en?"All clients":"Усі клієнти"}</div><div class="miniField">${en?"One client":"Один клієнт"}</div></div>`
       },
       {
         title:en?"Google Calendar status":"Стан Google Calendar",
@@ -4017,17 +4185,20 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
 
       <div class="settingsActions">
-        <button class="btn" id="exportBtn">${t("export")}</button>
-        <button class="btn" id="importBtn">${t("import")}</button>
+        <button class="btn" id="exportBtn">${state.lang==="en"?"Export all":"Експорт всього"}</button>
+        <button class="btn" id="importBtn">${state.lang==="en"?"Import all":"Імпорт всього"}</button>
+        <button class="btn" id="exportProfileBtn" ${appShell.mode==="trainer"&&!activeProfile()?"disabled":""}>${state.lang==="en"?"Export active profile":"Експорт активного профілю"}</button>
+        <button class="btn" id="mergeProfileBtn" ${appShell.mode==="trainer"&&!activeProfile()?"disabled":""}>${state.lang==="en"?"Merge into active profile":"Доповнити активний профіль"}</button>
         <button class="btn" id="resetBtn" ${appShell.mode==="trainer"&&!activeProfile()?"disabled":""}>${t("reset")}</button>
         <input id="importFile" type="file" accept="application/json" style="display:none" />
+        <input id="mergeProfileFile" type="file" accept="application/json" style="display:none" />
       </div>
 
       <div class="premiumNote" style="margin-top:16px">
         <strong>${state.lang==="en" ? "Local-first and compatible" : "Локально та сумісно"}</strong>
         <div style="margin-top:4px;font-size:13px;opacity:.86">${state.lang==="en"
-          ? "Version 4 export includes mode, all clients and calendar. Existing gymPwaData_v3 files remain supported and import into the active profile."
-          : "Експорт v4 містить режим, усіх клієнтів і календар. Старі файли gymPwaData_v3 підтримуються та імпортуються в активний профіль."}</div>
+          ? "Full export keeps all clients and calendar. Profile export gives one client or My progress as a separate file. Merge import adds new data to the active profile without replacing existing history."
+          : "Повний експорт зберігає всіх клієнтів і календар. Експорт профілю віддає одного клієнта або «Мій прогрес» окремим файлом. Імпорт з доповненням додає нові дані в активний профіль без заміни наявної історії."}</div>
       </div>
     `));
     el.appendChild(card(`
@@ -4061,17 +4232,34 @@ document.addEventListener("DOMContentLoaded", () => {
       const exportBtn = $("#exportBtn");
       if (exportBtn) exportBtn.onclick = ()=>{
         save();
-        const blob = new Blob([JSON.stringify({format:"gymPwaApp_v4",app:appShell}, null, 2)], { type: "application/json" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "gym-tracker-v4-backup.json";
-        a.click();
-        URL.revokeObjectURL(a.href);
+        downloadJson("gym-tracker-v4-backup.json",{format:"gymPwaApp_v4",app:appShell});
+      };
+
+      const exportProfileBtn = $("#exportProfileBtn");
+      if (exportProfileBtn) exportProfileBtn.onclick = ()=>{
+        const profile=activeExportProfile();
+        if(!profile){
+          alert(state.lang==="en"?"Choose My progress or a client first.":"Спочатку обери «Мій прогрес» або клієнта.");
+          return;
+        }
+        save();
+        const payload=makeProfileExport(profile);
+        downloadJson(`gym-tracker-profile-${safeFilePart(payload.profile.name)}.json`,payload);
       };
 
       const importBtn = $("#importBtn");
       const importFile = $("#importFile");
       if (importBtn && importFile) importBtn.onclick = ()=> importFile.click();
+
+      const mergeProfileBtn = $("#mergeProfileBtn");
+      const mergeProfileFile = $("#mergeProfileFile");
+      if (mergeProfileBtn && mergeProfileFile) mergeProfileBtn.onclick = ()=>{
+        if(appShell.mode==="trainer" && !activeProfile()){
+          alert(state.lang==="en"?"Choose My progress or a client before merging profile data.":"Перед доповненням даних обери «Мій прогрес» або клієнта.");
+          return;
+        }
+        mergeProfileFile.click();
+      };
 
       if (importFile) importFile.onchange = async (e)=>{
         const file = e.target.files?.[0];
@@ -4104,6 +4292,42 @@ document.addEventListener("DOMContentLoaded", () => {
           alert(`${t("importOk")}\n${t("importSummary")}`);
         }catch{
           alert(t("importFail"));
+        }
+      };
+
+      if (mergeProfileFile) mergeProfileFile.onchange = async (e)=>{
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const txt = await file.text();
+        try{
+          const parsed = JSON.parse(txt);
+          const importedData = extractImportProfileData(parsed);
+          if(!importedData){
+            alert(state.lang==="en"
+              ? "This looks like a full multi-client backup. Open the source app, export only the needed profile, then merge it here."
+              : "Схоже, це повна копія з кількома клієнтами. Відкрий вихідний додаток, експортуй лише потрібний профіль і тоді доповни його тут.");
+            return;
+          }
+          const targetProfile=activeExportProfile();
+          if(!targetProfile){
+            alert(state.lang==="en"?"Choose My progress or a client first.":"Спочатку обери «Мій прогрес» або клієнта.");
+            return;
+          }
+          const merged=mergeProfileData(targetProfile.data,importedData);
+          state=merged.data;
+          targetProfile.data=state;
+          rebuildWorkoutDerivedData();
+          save();
+          resetRestTimer();
+          render();
+          const s=merged.stats;
+          alert(state.lang==="en"
+            ? `Profile merged: +${s.workouts} workouts, +${s.body} body records, +${s.goals} goals, +${s.exercises} exercises.`
+            : `Профіль доповнено: +${s.workouts} тренувань, +${s.body} замірів тіла, +${s.goals} цілей, +${s.exercises} вправ.`);
+        }catch{
+          alert(t("importFail"));
+        }finally{
+          mergeProfileFile.value="";
         }
       };
 
