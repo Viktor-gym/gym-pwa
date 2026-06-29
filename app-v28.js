@@ -294,8 +294,10 @@ document.addEventListener("DOMContentLoaded", () => {
       customCategories: [],
       body: [],         // {id, date, weight, forearm, chest, waist, legs}
       goals: [],
+      plannedWorkouts: [],
+      workoutTemplates: [],
       recommendations: [],
-      ui: { exCat:"all", exQ:"", statsRange:"week", homeRange:"week", recordsCat:"all" }
+      ui: { exCat:"all", exQ:"", statsRange:"week", homeRange:"week", recordsCat:"all", planCalendarView:"month", planCalendarCursor:new Date().toISOString().slice(0,10) }
     };
     if (!old) return base;
 
@@ -319,6 +321,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!Array.isArray(s.customCategories)) s.customCategories = [];
     if (!Array.isArray(s.body)) s.body = [];
     if (!Array.isArray(s.goals)) s.goals = [];
+    if (!Array.isArray(s.plannedWorkouts)) s.plannedWorkouts = [];
+    if (!Array.isArray(s.workoutTemplates)) s.workoutTemplates = [];
     if (!Array.isArray(s.recommendations)) s.recommendations = [];
     if (!s.prs) s.prs = {};
     if (!s.settings) s.settings = { defaultRestSec: 90 };
@@ -394,6 +398,28 @@ document.addEventListener("DOMContentLoaded", () => {
       start:parseNum(g.start),
       createdAt:Number(g.createdAt || Date.now())
     })).filter(g=>g.target>0);
+
+    s.workoutTemplates = s.workoutTemplates.filter(Boolean).map(template=>({
+      id:String(template.id || `template-${uid()}`),
+      title:String(template.title || (s.lang==="en" ? "Workout template" : "Шаблон тренування")),
+      createdAt:Number(template.createdAt || Date.now()),
+      items:(Array.isArray(template.items) ? template.items : []).map(item=>({
+        exerciseId:String(item.exerciseId || "")
+      })).filter(item=>item.exerciseId)
+    })).filter(template=>template.items.length);
+
+    s.plannedWorkouts = s.plannedWorkouts.filter(Boolean).map(plan=>({
+      id:String(plan.id || `plan-${uid()}`),
+      date:String(plan.date || new Date().toISOString().slice(0,10)),
+      title:String(plan.title || (s.lang==="en" ? "Planned workout" : "Заплановане тренування")),
+      templateId:plan.templateId ? String(plan.templateId) : "",
+      status:["planned","started","completed","skipped"].includes(plan.status) ? plan.status : "planned",
+      createdAt:Number(plan.createdAt || Date.now()),
+      completedWorkoutId:plan.completedWorkoutId ? String(plan.completedWorkoutId) : "",
+      items:(Array.isArray(plan.items) ? plan.items : []).map(item=>({
+        exerciseId:String(item.exerciseId || "")
+      })).filter(item=>item.exerciseId)
+    })).filter(plan=>plan.items.length);
 
     return s;
   }
@@ -904,9 +930,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function resetTransientSession(){
-    workoutSession={active:false,startedAt:null,title:"",workoutId:null,items:[]};
+    workoutSession={active:false,startedAt:null,title:"",workoutId:null,planId:null,items:[]};
     selectedStatsExerciseId=null;
     if(typeof resetRestTimer==="function") resetRestTimer();
+    publishWorkoutToNative("reset");
   }
 
   function switchProfile(profileId,targetTab="home"){
@@ -945,10 +972,69 @@ document.addEventListener("DOMContentLoaded", () => {
     startedAt: null,
     title: "",
     workoutId: null,
+    planId: null,
     items: [] // [{id, exerciseId, sets:[{reps:"", weight:""}]}]
   };
 
   let rest = { left: state.settings.defaultRestSec, running:false, interval:null };
+
+  function nativeWorkoutBridge(){
+    return window.Capacitor?.Plugins?.GymWatchBridge || null;
+  }
+
+  function workoutNativeSnapshot(eventName="update"){
+    const sessionItems = workoutSession.items || [];
+    const currentItem = sessionItems[sessionItems.length-1] || null;
+    const exercise = currentItem ? state.exercises.find(e=>e.id===currentItem.exerciseId) : null;
+    const sets = currentItem?.sets || [];
+    return {
+      event:eventName,
+      active:!!workoutSession.active,
+      workoutId:workoutSession.workoutId || "",
+      title:workoutSession.title || "",
+      startedAt:workoutSession.startedAt || "",
+      exercise:exercise ? exName(exercise) : "",
+      currentExercise:exercise ? exName(exercise) : "",
+      setNumber:sets.length ? sets.length : 0,
+      currentSetIndex:sets.length ? sets.length : 0,
+      restSeconds:rest.left,
+      restLeft:rest.left,
+      restRunning:rest.running,
+      totalExercises:sessionItems.length,
+      items:(workoutSession.items||[]).map(item=>{
+        const itemExercise=state.exercises.find(e=>e.id===item.exerciseId);
+        return {
+          exerciseId:item.exerciseId,
+          exercise:itemExercise?.name || "",
+          metricType:exerciseTracking(itemExercise),
+          sets:(item.sets||[]).map(set=>({
+            reps:parseNum(set.reps),
+            weight:parseNum(set.weight),
+            duration:parseNum(set.duration),
+            distance:parseNum(set.distance)
+          }))
+        };
+      })
+    };
+  }
+
+  function publishWorkoutToNative(eventName="update"){
+    const bridge=nativeWorkoutBridge();
+    if(!bridge?.updateWorkout) return;
+    bridge.updateWorkout(workoutNativeSnapshot(eventName)).catch(()=>{});
+  }
+
+  function installNativeWorkoutListeners(){
+    const bridge=nativeWorkoutBridge();
+    if(!bridge?.addListener) return;
+    bridge.addListener("watchWorkoutCommand",(payload)=>{
+      const command=payload?.command;
+      if(command==="pauseRest" && rest.running) stopRestTimer();
+      if(command==="resumeRest" && !rest.running) runRestTimer(false);
+      if(command==="finishWorkout" && workoutSession.items?.length) saveWorkoutSession();
+      if(command==="requestSnapshot") publishWorkoutToNative("snapshot");
+    }).catch(()=>{});
+  }
 
   function restDefault(){
     return Math.max(10, parseInt(state.settings.defaultRestSec || 90, 10));
@@ -972,6 +1058,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const pct = Math.max(0, Math.min(100, ((max-rest.left)/max)*100));
       ring.style.setProperty("--timer-progress", `${pct}%`);
     }
+    publishWorkoutToNative("timer");
   }
 
   function stopRestTimer(){
@@ -1019,6 +1106,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(!set || !ex || !setIsComplete(ex,set) || set._restTriggered) return;
     set._restTriggered=true;
     startAutomaticRestTimer();
+    publishWorkoutToNative("setCompleted");
   }
 
   // ---------- flatten stats ----------
@@ -1384,6 +1472,35 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  function openCalendarDayModal(day){
+    const clients=clientProfiles();
+    const appointments=[...(appShell.appointments||[])]
+      .filter(item=>item.date===day && clients.some(profile=>profile.id===item.profileId))
+      .sort((a,b)=>String(a.time||"").localeCompare(String(b.time||"")));
+    const dateLabel=new Date(`${day}T12:00:00`).toLocaleDateString(state.lang==="en"?"en-US":"uk-UA",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+    const overlay=document.createElement("div");
+    overlay.className="modeOverlay";
+    overlay.innerHTML=`<div class="modePanel" style="max-width:560px">
+      <div class="detailHeader"><div><div class="brandEyebrow">${state.lang==="en"?"Calendar day":"День календаря"}</div><h2 style="margin:6px 0">${escapeHtml(dateLabel)}</h2></div><button class="btn" data-close>✕</button></div>
+      <div class="appointmentList" style="margin-top:14px">${appointments.length?appointments.map(item=>{
+        const profile=appShell.profiles.find(candidate=>candidate.id===item.profileId);
+        return `<div class="appointmentRow"><div class="appointmentDate"><strong>${escapeHtml(item.time||"")}</strong></div><div><strong>${escapeHtml(profile?.name||"Клієнт")}</strong><div class="muted">${escapeHtml(item.note || (state.lang==="en"?"Training session":"Тренування"))}</div></div><button class="btn" data-del-day-appointment="${item.id}">✕</button></div>`;
+      }).join(""):`<div class="emptyCalendar">${state.lang==="en"?"Nothing is planned for this day yet.":"На цей день ще нічого не заплановано."}</div>`}</div>
+      <button class="btn primary" id="dayAddAppointment" style="width:100%;margin-top:14px">＋ ${state.lang==="en"?"Add session":"Додати запис"}</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    const close=()=>overlay.remove();
+    overlay.querySelector("[data-close]").onclick=close;
+    overlay.querySelector("#dayAddAppointment").onclick=()=>{close();openAppointmentModal(day);};
+    overlay.querySelectorAll("[data-del-day-appointment]").forEach(button=>button.onclick=()=>{
+      if(!confirm(state.lang==="en"?"Delete this calendar entry?":"Видалити цей запис із календаря?")) return;
+      deleteAppointment(button.getAttribute("data-del-day-appointment"));
+      save();
+      close();
+      render();
+    });
+  }
+
   function appointmentTimestamp(item){
     return new Date(`${item.date}T${item.time||"00:00"}`).getTime();
   }
@@ -1586,7 +1703,7 @@ document.addEventListener("DOMContentLoaded", () => {
         appShell.coachUi.calendarCursor=dateKey(cursor);
         save();render();
       });
-      el.querySelectorAll("[data-calendar-date]").forEach(button=>button.onclick=()=>openAppointmentModal(button.getAttribute("data-calendar-date")));
+      el.querySelectorAll("[data-calendar-date]").forEach(button=>button.onclick=()=>openCalendarDayModal(button.getAttribute("data-calendar-date")));
       el.querySelectorAll("[data-del-appointment]").forEach(button=>button.onclick=()=>{
         if(!confirm(state.lang==="en"?"Delete this calendar entry?":"Видалити цей запис із календаря?")) return;
         deleteAppointment(button.getAttribute("data-del-appointment"));
@@ -1873,6 +1990,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `Workout ${fmtDate(workoutSession.startedAt)}`
         : `Тренування ${fmtDate(workoutSession.startedAt)}`;
     }
+    publishWorkoutToNative("start");
   }
 
   function viewWorkout(){
@@ -1900,6 +2018,8 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       </div>
     `));
+
+    el.appendChild(card(workoutPlanningPanelMarkup()));
 
     el.appendChild(card(`
       <div class="restPanel">
@@ -1941,11 +2061,30 @@ document.addEventListener("DOMContentLoaded", () => {
       if (titleInput){
         titleInput.addEventListener("input", (e)=>{
           workoutSession.title = e.target.value || "";
+          publishWorkoutToNative("title");
         });
       }
 
       const addBtn = $("#addExToW");
       if (addBtn) addBtn.onclick = ()=> openExercisePickerForWorkout();
+
+      $("#newPlanBtn")?.addEventListener("click",()=>openWorkoutPlanModal());
+      $("#newTemplateBtn")?.addEventListener("click",()=>openWorkoutTemplateModal());
+      bindPlannedWorkoutActions(el);
+      bindTemplateActions(el);
+      el.querySelectorAll("[data-plan-view]").forEach(button=>button.onclick=()=>{
+        state.ui.planCalendarView=button.getAttribute("data-plan-view");
+        save();render();
+      });
+      el.querySelectorAll("[data-plan-shift]").forEach(button=>button.onclick=()=>{
+        const cursor=new Date(`${state.ui.planCalendarCursor||dateKey(new Date())}T12:00:00`);
+        const direction=Number(button.getAttribute("data-plan-shift"));
+        if((state.ui.planCalendarView||"month")==="month") cursor.setMonth(cursor.getMonth()+direction);
+        else cursor.setDate(cursor.getDate()+7*direction);
+        state.ui.planCalendarCursor=dateKey(cursor);
+        save();render();
+      });
+      el.querySelectorAll("[data-plan-date]").forEach(button=>button.onclick=()=>openPlanDayModal(button.getAttribute("data-plan-date")));
 
       const restToggle = $("#restToggle");
       const restPlus = $("#restPlus");
@@ -1965,7 +2104,8 @@ document.addEventListener("DOMContentLoaded", () => {
           : "Очистити поточний набір тренування? Усі внесені вправи та підходи в цьому наборі буде втрачено.";
         if(!confirm(message)) return;
         resetRestTimer();
-        workoutSession = { active:false, startedAt:null, title:"", workoutId:null, items:[] };
+        workoutSession = { active:false, startedAt:null, title:"", workoutId:null, planId:null, items:[] };
+        publishWorkoutToNative("clear");
         render();
       };
 
@@ -2067,6 +2207,7 @@ document.addEventListener("DOMContentLoaded", () => {
               ? {duration:"10"}
               : {distance:"1",duration:"10"});
         resetRestTimer();
+        publishWorkoutToNative("setAdded");
         renderWorkoutItems();
       };
     });
@@ -2076,6 +2217,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.onclick = ()=>{
         const id = btn.getAttribute("data-rm");
         workoutSession.items = workoutSession.items.filter(x=>x.id!==id);
+        publishWorkoutToNative("exerciseRemoved");
         renderWorkoutItems();
       };
     });
@@ -2088,6 +2230,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const it = workoutSession.items.find(x=>x.id===id);
         if (!it) return;
         it.sets.splice(idx,1);
+        publishWorkoutToNative("setDeleted");
         renderWorkoutItems();
       };
     });
@@ -2102,6 +2245,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!it || !it.sets[idx]) return;
         it.sets[idx][k] = e.target.value;
         it.sets[idx]._restTriggered=false;
+        publishWorkoutToNative("setInput");
       });
 
       inp.addEventListener("blur", (e)=>{
@@ -2121,6 +2265,7 @@ document.addEventListener("DOMContentLoaded", () => {
         it.sets[idx][k] = fmtNum(num);
         e.target.value = it.sets[idx][k];
         maybeStartRestForSet(it,idx);
+        publishWorkoutToNative("setBlur");
       });
     });
   }
@@ -2245,6 +2390,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!workoutSession.title) workoutSession.title = state.lang==="en"
               ? `Workout ${fmtDate(workoutSession.startedAt)}`
               : `Тренування ${fmtDate(workoutSession.startedAt)}`;
+            publishWorkoutToNative("exerciseAdded");
           }
           close();
           renderWorkoutItems();
@@ -2271,6 +2417,282 @@ document.addEventListener("DOMContentLoaded", () => {
       .filter(w=>isSameLocalDay(w.date))
       .sort((a,b)=>new Date(b.date)-new Date(a.date))[0] || null;
   }
+
+  function exerciseIdsFromTemplate(templateId){
+    const template=(state.workoutTemplates||[]).find(item=>item.id===templateId);
+    return template ? template.items.map(item=>item.exerciseId).filter(Boolean) : [];
+  }
+
+  function plannedWorkoutItems(plan){
+    const ids=plan?.items?.length ? plan.items.map(item=>item.exerciseId) : exerciseIdsFromTemplate(plan?.templateId);
+    return [...new Set(ids.filter(id=>state.exercises.some(ex=>ex.id===id)))].map(exerciseId=>({exerciseId}));
+  }
+
+  function startPlannedWorkout(planId){
+    const plan=(state.plannedWorkouts||[]).find(item=>item.id===planId);
+    if(!plan) return;
+    const items=plannedWorkoutItems(plan);
+    if(!items.length){
+      alert(state.lang==="en"?"This plan has no exercises yet.":"У цьому плані ще немає вправ.");
+      return;
+    }
+    if(workoutSession.active && workoutSession.items?.length && !confirm(state.lang==="en"
+      ? "Replace the current workout draft with this planned workout?"
+      : "Замінити поточний набір тренування цим запланованим заняттям?")) return;
+    workoutSession={
+      active:true,
+      startedAt:new Date().toISOString(),
+      title:plan.title || (state.lang==="en"?"Planned workout":"Заплановане тренування"),
+      workoutId:null,
+      planId:plan.id,
+      items:items.map(item=>({id:uid(),exerciseId:item.exerciseId,sets:[]}))
+    };
+    plan.status="started";
+    save();
+    resetRestTimer();
+    publishWorkoutToNative("plannedStart");
+    setTab("workout");
+  }
+
+  function addExercisesToSession(exerciseIds){
+    const unique=[...new Set(exerciseIds)].filter(id=>state.exercises.some(ex=>ex.id===id));
+    unique.forEach(id=>{
+      if(!workoutSession.items.some(item=>item.exerciseId===id)){
+        workoutSession.items.push({id:uid(),exerciseId:id,sets:[]});
+      }
+    });
+    if(unique.length){
+      workoutSession.active=true;
+      if(!workoutSession.startedAt) workoutSession.startedAt=new Date().toISOString();
+      if(!workoutSession.title) workoutSession.title=state.lang==="en"
+        ? `Workout ${fmtDate(workoutSession.startedAt)}`
+        : `Тренування ${fmtDate(workoutSession.startedAt)}`;
+      publishWorkoutToNative("templateApplied");
+    }
+  }
+
+  function planCalendarPeriod(){
+    const view=state.ui.planCalendarView==="week"?"week":"month";
+    const cursor=new Date(`${state.ui.planCalendarCursor||dateKey(new Date())}T12:00:00`);
+    if(view==="week"){
+      const start=startOfWeek(cursor);
+      const days=Array.from({length:7},(_,index)=>{const day=new Date(start);day.setDate(start.getDate()+index);return day;});
+      const end=days[6];
+      return {view,cursor,days,title:`${days[0].toLocaleDateString(state.lang==="en"?"en-US":"uk-UA",{day:"numeric",month:"short"})} - ${end.toLocaleDateString(state.lang==="en"?"en-US":"uk-UA",{day:"numeric",month:"short",year:"numeric"})}`};
+    }
+    const first=new Date(cursor.getFullYear(),cursor.getMonth(),1);
+    const start=new Date(first);
+    start.setDate(start.getDate()-((start.getDay()+6)%7));
+    const days=Array.from({length:42},(_,index)=>{const day=new Date(start);day.setDate(start.getDate()+index);return day;});
+    return {view,cursor,days,title:cursor.toLocaleDateString(state.lang==="en"?"en-US":"uk-UA",{month:"long",year:"numeric"})};
+  }
+
+  function userPlanCalendarMarkup(){
+    const period=planCalendarPeriod();
+    const byDate=new Map();
+    (state.plannedWorkouts||[]).filter(plan=>plan.status!=="completed").forEach(plan=>{
+      const list=byDate.get(plan.date)||[];
+      list.push(plan);byDate.set(plan.date,list);
+    });
+    const weekNames=(state.lang==="en"?["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]:["Пн","Вт","Ср","Чт","Пт","Сб","Нд"]);
+    const weekdayHead=period.view==="month"?`<div class="calendarWeekdays">${weekNames.map(name=>`<span>${name}</span>`).join("")}</div>`:"";
+    return `<div class="calendarToolbar">
+      <div class="calendarTabs"><button class="periodBtn ${period.view==="week"?"active":""}" data-plan-view="week">${state.lang==="en"?"Week":"Тиждень"}</button><button class="periodBtn ${period.view==="month"?"active":""}" data-plan-view="month">${state.lang==="en"?"Month":"Місяць"}</button></div>
+      <div class="calendarNav"><button class="btn" data-plan-shift="-1">‹</button><strong>${escapeHtml(period.title)}</strong><button class="btn" data-plan-shift="1">›</button></div>
+    </div>${weekdayHead}<div class="calendarGrid ${period.view}">${period.days.map(day=>{
+      const key=dateKey(day);
+      const plans=(byDate.get(key)||[]).sort((a,b)=>String(a.title).localeCompare(String(b.title)));
+      const outside=period.view==="month" && day.getMonth()!==period.cursor.getMonth();
+      const today=key===dateKey(new Date());
+      return `<button class="calendarDay ${outside?"outside":""} ${today?"today":""}" data-plan-date="${key}">
+        <span class="calendarDayTop">${period.view==="week"?weekNames[(day.getDay()+6)%7]:""}<strong>${day.getDate()}</strong></span>
+        <span class="calendarEvents">${plans.slice(0,3).map(plan=>`<span class="calendarEvent">${escapeHtml(plan.title)}</span>`).join("")}${plans.length>3?`<small>+${plans.length-3}</small>`:""}</span>
+      </button>`;
+    }).join("")}</div>`;
+  }
+
+  function selectedPlanExercises(overlay){
+    return Array.from(overlay.querySelectorAll("[data-plan-exercise]:checked")).map(input=>input.value);
+  }
+
+  function exerciseChecklistMarkup(selectedIds=[]){
+    const selected=new Set(selectedIds);
+    return `<div class="planExerciseGrid">${state.exercises.map(ex=>`
+      <label class="planExercisePick">
+        <input type="checkbox" data-plan-exercise value="${ex.id}" ${selected.has(ex.id)?"checked":""}>
+        ${exIcon(ex)}
+        <span><strong>${escapeHtml(exName(ex))}</strong><small>${catName(ex.category)} · ${trackingLabel(ex)}</small></span>
+      </label>`).join("")}</div>`;
+  }
+
+  function openWorkoutPlanModal(initialDate=null,plan=null){
+    const date=initialDate || plan?.date || dateKey(new Date());
+    const selectedIds=plan ? plannedWorkoutItems(plan).map(item=>item.exerciseId) : [];
+    const templates=state.workoutTemplates||[];
+    const overlay=document.createElement("div");
+    overlay.className="modeOverlay";
+    overlay.innerHTML=`<div class="modePanel planModalPanel" style="max-width:620px">
+      <div class="detailHeader"><div><div class="brandEyebrow">${state.lang==="en"?"Workout planning":"Планування тренування"}</div><h2 style="margin:6px 0">${plan?(state.lang==="en"?"Edit planned workout":"Редагувати план"):(state.lang==="en"?"Plan workout":"Запланувати тренування")}</h2></div><button class="btn" data-close>✕</button></div>
+      <div class="bodyGrid bodyMeasureGrid" style="margin-top:14px">
+        <label class="bodyField bodyDateField"><span class="muted">${state.lang==="en"?"Date":"Дата"}</span><input class="btn" id="planDate" type="date" value="${escapeHtml(date)}"></label>
+        <label class="bodyField bodyDateField"><span class="muted">${state.lang==="en"?"Workout name":"Назва тренування"}</span><input class="btn" id="planTitle" maxlength="80" value="${escapeHtml(plan?.title||"")}" placeholder="${state.lang==="en"?"Push / Pull":"Жим / Тяга"}"></label>
+      </div>
+      <label class="bodyField" style="display:block;margin-top:12px"><span class="muted">${state.lang==="en"?"Use template":"Використати шаблон"}</span><select class="btn" id="planTemplate" style="width:100%"><option value="">${state.lang==="en"?"No template":"Без шаблону"}</option>${templates.map(template=>`<option value="${template.id}" ${template.id===plan?.templateId?"selected":""}>${escapeHtml(template.title)}</option>`).join("")}</select></label>
+      <div class="planPickerHead"><strong>${state.lang==="en"?"Exercises":"Вправи"}</strong><span class="muted">${state.lang==="en"?"Choose separate exercises or load a template above.":"Обери окремі вправи або завантаж шаблон вище."}</span></div>
+      ${exerciseChecklistMarkup(selectedIds)}
+      <button class="btn primary" id="planSave" style="width:100%;margin-top:14px">${state.lang==="en"?"Save planned workout":"Зберегти заплановане тренування"}</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    const close=()=>overlay.remove();
+    overlay.querySelector("[data-close]").onclick=close;
+    overlay.querySelector("#planTemplate").onchange=e=>{
+      const ids=exerciseIdsFromTemplate(e.target.value);
+      overlay.querySelectorAll("[data-plan-exercise]").forEach(input=>{ input.checked=ids.includes(input.value); });
+      const template=templates.find(item=>item.id===e.target.value);
+      const titleInput=overlay.querySelector("#planTitle");
+      if(template && !titleInput.value.trim()) titleInput.value=template.title;
+    };
+    overlay.querySelector("#planSave").onclick=()=>{
+      const exerciseIds=selectedPlanExercises(overlay);
+      if(!exerciseIds.length){
+        alert(state.lang==="en"?"Choose at least one exercise.":"Обери хоча б одну вправу.");
+        return;
+      }
+      const item={
+        id:plan?.id || `plan-${uid()}`,
+        date:overlay.querySelector("#planDate").value || dateKey(new Date()),
+        title:overlay.querySelector("#planTitle").value.trim() || (state.lang==="en"?"Planned workout":"Заплановане тренування"),
+        templateId:overlay.querySelector("#planTemplate").value || "",
+        status:plan?.status && plan.status!=="completed" ? plan.status : "planned",
+        createdAt:plan?.createdAt || Date.now(),
+        completedWorkoutId:plan?.completedWorkoutId || "",
+        items:exerciseIds.map(exerciseId=>({exerciseId}))
+      };
+      if(plan) state.plannedWorkouts=state.plannedWorkouts.map(existing=>existing.id===plan.id?item:existing);
+      else state.plannedWorkouts.unshift(item);
+      save();close();render();
+    };
+  }
+
+  function openWorkoutTemplateModal(template=null){
+    const selectedIds=(template?.items||[]).map(item=>item.exerciseId);
+    const overlay=document.createElement("div");
+    overlay.className="modeOverlay";
+    overlay.innerHTML=`<div class="modePanel planModalPanel" style="max-width:620px">
+      <div class="detailHeader"><div><div class="brandEyebrow">${state.lang==="en"?"Workout template":"Шаблон комплексу"}</div><h2 style="margin:6px 0">${template?(state.lang==="en"?"Edit template":"Редагувати шаблон"):(state.lang==="en"?"New template":"Новий шаблон")}</h2></div><button class="btn" data-close>✕</button></div>
+      <label class="bodyField" style="display:block;margin-top:14px"><span class="muted">${state.lang==="en"?"Template name":"Назва шаблону"}</span><input class="btn" id="templateTitle" maxlength="80" style="width:100%" value="${escapeHtml(template?.title||"")}" placeholder="${state.lang==="en"?"Chest + back":"Жим / тяга"}"></label>
+      <div class="planPickerHead"><strong>${state.lang==="en"?"Exercises":"Вправи"}</strong><span class="muted">${state.lang==="en"?"This set can be used while planning or during a workout.":"Цю заготовку можна вибрати при плануванні або вже під час заняття."}</span></div>
+      ${exerciseChecklistMarkup(selectedIds)}
+      <button class="btn primary" id="templateSave" style="width:100%;margin-top:14px">${state.lang==="en"?"Save template":"Зберегти шаблон"}</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    const close=()=>overlay.remove();
+    overlay.querySelector("[data-close]").onclick=close;
+    overlay.querySelector("#templateSave").onclick=()=>{
+      const exerciseIds=selectedPlanExercises(overlay);
+      if(!exerciseIds.length){
+        alert(state.lang==="en"?"Choose at least one exercise.":"Обери хоча б одну вправу.");
+        return;
+      }
+      const item={
+        id:template?.id || `template-${uid()}`,
+        title:overlay.querySelector("#templateTitle").value.trim() || (state.lang==="en"?"Workout template":"Шаблон тренування"),
+        createdAt:template?.createdAt || Date.now(),
+        items:exerciseIds.map(exerciseId=>({exerciseId}))
+      };
+      if(template) state.workoutTemplates=state.workoutTemplates.map(existing=>existing.id===template.id?item:existing);
+      else state.workoutTemplates.unshift(item);
+      save();close();render();
+    };
+  }
+
+  function plannedWorkoutRowMarkup(plan){
+    const items=plannedWorkoutItems(plan);
+    const names=items.slice(0,4).map(item=>{
+      const ex=state.exercises.find(candidate=>candidate.id===item.exerciseId);
+      return ex ? exName(ex) : "";
+    }).filter(Boolean).join(" · ");
+    return `<article class="plannedWorkoutRow">
+      <div class="plannedDate"><span>${fmtDate(plan.date)}</span><strong>${items.length}</strong><small>${state.lang==="en"?"ex.":"впр."}</small></div>
+      <div class="plannedMain"><strong>${escapeHtml(plan.title)}</strong><span>${escapeHtml(names || (state.lang==="en"?"No exercises":"Немає вправ"))}${items.length>4?` · +${items.length-4}`:""}</span></div>
+      <div class="plannedActions"><button class="btn primary" data-start-plan="${plan.id}">${state.lang==="en"?"Start":"Почати"}</button><button class="btn" data-edit-plan="${plan.id}">⋯</button><button class="btn" data-delete-plan="${plan.id}">✕</button></div>
+    </article>`;
+  }
+
+  function bindPlannedWorkoutActions(root,afterAction=()=>{}){
+    root.querySelectorAll("[data-start-plan]").forEach(button=>button.onclick=()=>{afterAction();startPlannedWorkout(button.getAttribute("data-start-plan"));});
+    root.querySelectorAll("[data-edit-plan]").forEach(button=>button.onclick=()=>{
+      const plan=state.plannedWorkouts.find(item=>item.id===button.getAttribute("data-edit-plan"));
+      if(plan){afterAction();openWorkoutPlanModal(plan.date,plan);}
+    });
+    root.querySelectorAll("[data-delete-plan]").forEach(button=>button.onclick=()=>{
+      if(!confirm(state.lang==="en"?"Delete this planned workout?":"Видалити це заплановане тренування?")) return;
+      state.plannedWorkouts=state.plannedWorkouts.filter(plan=>plan.id!==button.getAttribute("data-delete-plan"));
+      save();afterAction();render();
+    });
+  }
+
+  function openPlanDayModal(day){
+    const plans=(state.plannedWorkouts||[]).filter(plan=>plan.date===day && plan.status!=="completed");
+    const dateLabel=new Date(`${day}T12:00:00`).toLocaleDateString(state.lang==="en"?"en-US":"uk-UA",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+    const overlay=document.createElement("div");
+    overlay.className="modeOverlay";
+    overlay.innerHTML=`<div class="modePanel" style="max-width:560px">
+      <div class="detailHeader"><div><div class="brandEyebrow">${state.lang==="en"?"Planned workouts":"Заплановані тренування"}</div><h2 style="margin:6px 0">${escapeHtml(dateLabel)}</h2></div><button class="btn" data-close>✕</button></div>
+      <div class="plannedList" style="margin-top:14px">${plans.length?plans.map(plan=>plannedWorkoutRowMarkup(plan)).join(""):`<div class="emptyCalendar">${state.lang==="en"?"No planned workouts for this day.":"На цей день тренувань ще не заплановано."}</div>`}</div>
+      <button class="btn primary" id="dayAddPlan" style="width:100%;margin-top:14px">＋ ${state.lang==="en"?"Plan workout":"Запланувати тренування"}</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    const close=()=>overlay.remove();
+    overlay.querySelector("[data-close]").onclick=close;
+    overlay.querySelector("#dayAddPlan").onclick=()=>{close();openWorkoutPlanModal(day);};
+    bindPlannedWorkoutActions(overlay,close);
+  }
+
+  function bindTemplateActions(root){
+    root.querySelectorAll("[data-use-template]").forEach(button=>button.onclick=()=>{
+      addExercisesToSession(exerciseIdsFromTemplate(button.getAttribute("data-use-template")));
+      save();
+      renderWorkoutItems();
+    });
+    root.querySelectorAll("[data-edit-template]").forEach(button=>button.onclick=()=>{
+      const template=state.workoutTemplates.find(item=>item.id===button.getAttribute("data-edit-template"));
+      if(template) openWorkoutTemplateModal(template);
+    });
+    root.querySelectorAll("[data-delete-template]").forEach(button=>button.onclick=()=>{
+      if(!confirm(state.lang==="en"?"Delete this template?":"Видалити цей шаблон?")) return;
+      state.workoutTemplates=state.workoutTemplates.filter(template=>template.id!==button.getAttribute("data-delete-template"));
+      save();render();
+    });
+  }
+
+  function workoutPlanningPanelMarkup(){
+    const upcoming=(state.plannedWorkouts||[])
+      .filter(plan=>plan.status!=="completed")
+      .sort((a,b)=>String(a.date).localeCompare(String(b.date)) || String(a.title).localeCompare(String(b.title)))
+      .slice(0,8);
+    const templates=state.workoutTemplates||[];
+    return `
+      <section class="planningSuite">
+        <div class="detailHeader"><div><div class="brandEyebrow">${state.lang==="en"?"Training planner":"Планувальник тренувань"}</div><h2 style="margin:4px 0">${state.lang==="en"?"Planned workouts and templates":"Заплановані тренування і шаблони"}</h2><div class="muted">${state.lang==="en"?"Plan future days, then start with exercises already loaded.":"Плануй майбутні дні, а потім запускай заняття вже з набраними вправами."}</div></div><button class="btn primary" id="newPlanBtn">＋ ${state.lang==="en"?"Plan":"План"}</button></div>
+        <div class="planningGrid">
+          <div class="planningCalendar">${userPlanCalendarMarkup()}</div>
+          <div class="planningSide">
+            <div class="planningSubhead"><strong>${state.lang==="en"?"Upcoming":"Найближчі"}</strong><button class="btn" id="newTemplateBtn">＋ ${state.lang==="en"?"Template":"Шаблон"}</button></div>
+            <div class="plannedList">${upcoming.length?upcoming.map(plan=>plannedWorkoutRowMarkup(plan)).join(""):`<div class="emptyCalendar">${state.lang==="en"?"No planned workouts yet.":"Запланованих тренувань поки немає."}</div>`}</div>
+            <div class="planningSubhead" style="margin-top:12px"><strong>${state.lang==="en"?"Templates":"Шаблони комплексів"}</strong><span class="muted">${templates.length}</span></div>
+            <div class="templateList">${templates.length?templates.slice(0,8).map(template=>{
+              const names=template.items.slice(0,3).map(item=>{
+                const ex=state.exercises.find(candidate=>candidate.id===item.exerciseId);
+                return ex ? exName(ex) : "";
+              }).filter(Boolean).join(" · ");
+              return `<article class="templateRow"><div><strong>${escapeHtml(template.title)}</strong><span>${escapeHtml(names)}${template.items.length>3?` · +${template.items.length-3}`:""}</span></div><div class="templateActions"><button class="btn primary" data-use-template="${template.id}">${state.lang==="en"?"Use":"Додати"}</button><button class="btn" data-edit-template="${template.id}">⋯</button><button class="btn" data-delete-template="${template.id}">✕</button></div></article>`;
+            }).join(""):`<div class="emptyCalendar">${state.lang==="en"?"Create sets like Bench/Row or Biceps/Triceps once and reuse them.":"Створи заготовки типу Жим/Тяга або Біцепс/Трицепс і використовуй повторно."}</div>`}</div>
+          </div>
+        </div>
+      </section>`;
+  }
+
   function continueSavedWorkout(workout){
     if(!workout) return;
     workoutSession={
@@ -2278,12 +2700,14 @@ document.addEventListener("DOMContentLoaded", () => {
       startedAt:workout.date,
       title:workout.title || "",
       workoutId:workout.id,
+      planId:null,
       items:(workout.items||[]).map(it=>({
         id:uid(),
         exerciseId:it.exerciseId,
         sets:(it.sets||[]).map(set=>({...set,_restTriggered:true}))
       }))
     };
+    publishWorkoutToNative("continue");
     setTab("workout");
   }
 
@@ -2650,16 +3074,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const fallbackTitle = state.lang==="en" ? `Workout ${fmtDate(date)}` : `Тренування ${fmtDate(date)}`;
     const title = (workoutSession.title || "").trim() || fallbackTitle;
     const savedWorkout={ id:workoutId,date,title,items };
+    const nativeFinishedSnapshot=workoutNativeSnapshot("finish");
+    const completedPlanId=workoutSession.planId;
     if(workoutSession.workoutId){
       state.workouts=state.workouts.map(workout=>workout.id===workoutId?savedWorkout:workout);
     }else{
       state.workouts.unshift(savedWorkout);
     }
+    if(completedPlanId){
+      state.plannedWorkouts=(state.plannedWorkouts||[]).map(plan=>plan.id===completedPlanId
+        ? {...plan,status:"completed",completedWorkoutId:workoutId}
+        : plan);
+    }
     rebuildWorkoutDerivedData();
     save();
 
-    workoutSession = { active:false, startedAt:null, title:"", workoutId:null, items:[] };
+    workoutSession = { active:false, startedAt:null, title:"", workoutId:null, planId:null, items:[] };
     resetRestTimer();
+    nativeWorkoutBridge()?.finishWorkout?.({ ...nativeFinishedSnapshot, savedWorkout }).catch(()=>{});
 
     setTab("home");
     if(state.recommendations.length) setTimeout(()=>openRecommendationsModal(state.recommendations,gotAnyPR),0);
@@ -2757,7 +3189,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!confirm(t("confirmDeleteWorkout"))) return;
       state.workouts = state.workouts.filter(x=>x.id!==workoutId);
       if(workoutSession.workoutId===workoutId){
-        workoutSession={active:false,startedAt:null,title:"",workoutId:null,items:[]};
+        workoutSession={active:false,startedAt:null,title:"",workoutId:null,planId:null,items:[]};
       }
       rebuildWorkoutDerivedData();
       save();
@@ -4066,6 +4498,15 @@ document.addEventListener("DOMContentLoaded", () => {
         mini:`<div class="miniRow"><div class="miniStat">${en?"Month":"Місяць"}<strong>12</strong></div><div class="miniStat">${en?"Calories":"Калорії"}<strong>≈420</strong></div></div>`
       },
       {
+        title:en?"Plan future workouts and templates":"Плануй майбутні тренування і шаблони",
+        sub:en?"Prepare Tuesday or Thursday before the day comes":"Заготуй вівторок чи четвер ще до тренування",
+        copy:en
+          ?"In Workout use the planner calendar to create a future workout. Pick a date, name it, choose exercises manually or load a saved template. On the planned day tap Start, adjust the title or exercises if needed, enter real sets, then save. Statistics update only after saving the actual workout."
+          :"У розділі «Тренування» використовуй календар планування: обери дату, назву, вправи вручну або готовий шаблон. У потрібний день натисни «Почати», за потреби зміни назву чи вправи, внеси фактичні підходи й збережи. У статистику потрапляє тільки реально завершене тренування.",
+        example:en?"Sunday: plan Push for Tuesday and Pull for Thursday. Thursday: open the plan and start with exercises already loaded.":"Неділя: заплануй «Жим» на вівторок і «Тяга» на четвер. У четвер відкрий план і почни вже з набраними вправами.",
+        mini:`<div class="miniTitle">${en?"Planner":"Планувальник"} · ${en?"Templates":"Шаблони"}</div><div class="miniRow"><div class="miniField">${en?"Tue":"Вт"} · ${en?"Push":"Жим"}</div><div class="miniField">${en?"Thu":"Чт"} · ${en?"Pull":"Тяга"}</div></div><div class="miniButton">${en?"Start planned workout":"Почати план"}</div>`
+      },
+      {
         title:en?"Back up and restore data":"Створюй резервну копію та відновлюй дані",
         sub:en?"JSON keeps your local data portable":"JSON дозволяє перенести локальні дані",
         copy:en
@@ -4116,8 +4557,8 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Plan appointments in the calendar":"Плануй записи в календарі",
         sub:en?"Week and month views show the schedule":"Тиждень і місяць показують розклад",
         copy:en
-          ?"Use Week for the near schedule and Month for broader planning. Move between periods, tap a date, then choose an active client, time and optional note."
-          :"Використовуй «Тиждень» для найближчого розкладу, а «Місяць» — для довшого планування. Перемикай періоди, натисни дату, обери активного клієнта, час і за потреби примітку.",
+          ?"Use Week for the near schedule and Month for broader planning. Tap a date to first see what is already planned for that day, then use Add session below the list to choose an active client, time and optional note."
+          :"Використовуй «Тиждень» для найближчого розкладу, а «Місяць» — для довшого планування. Натисни дату, щоб спершу побачити всі записи цього дня, а нижче через «Додати запис» обери активного клієнта, час і примітку.",
         example:en?"Anna · June 15 · 18:00 · Leg day.":"Анна · 15 червня · 18:00 · Ноги.",
         mini:`<div class="miniTitle">${en?"Calendar":"Календар"} · ${en?"Month":"Місяць"}</div><div class="miniField">15 · ${en?"Anna":"Анна"} · 18:00</div>`
       },
@@ -4376,7 +4817,7 @@ document.addEventListener("DOMContentLoaded", () => {
         activeProfile().data=state;
         save();
         resetRestTimer();
-        workoutSession = { active:false, startedAt:null, title:"", workoutId:null, items:[] };
+        workoutSession = { active:false, startedAt:null, title:"", workoutId:null, planId:null, items:[] };
         selectedStatsExerciseId = null;
         render();
       };
@@ -4405,6 +4846,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // initial
   save();
   render();
+  installNativeWorkoutListeners();
   setTimeout(()=>openModeSetup(false),0);
   checkAppointmentReminders();
   setInterval(checkAppointmentReminders,60*1000);

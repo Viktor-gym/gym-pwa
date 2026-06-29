@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>GymTracker Pro</title>
   <meta name="theme-color" content="#0b1220" />
   <link rel="manifest" href="manifest.json" />
@@ -12,6 +12,10 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
       color:#e5e7eb;
       background:#0b1220;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
     }
     *,*::before,*::after{box-sizing:border-box}
     body{
@@ -26,7 +30,7 @@
     header{
       position: sticky;
       top: 0;
-      padding: 14px 16px;
+      padding: calc(14px + var(--safe-top)) calc(16px + var(--safe-right)) 14px calc(16px + var(--safe-left));
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -36,7 +40,7 @@
       z-index: 20;
     }
 
-    .wrap{ padding: 14px 16px 96px; max-width: 980px; margin: 0 auto; }
+    .wrap{ padding: 14px calc(16px + var(--safe-right)) calc(96px + var(--safe-bottom)) calc(16px + var(--safe-left)); max-width: 980px; margin: 0 auto; }
     button,input,select{ font:inherit; }
 
     .btn{
@@ -77,7 +81,7 @@
       border-top: 1px solid rgba(255,255,255,.10);
       backdrop-filter: blur(12px);
       display:flex; justify-content:space-around; gap:6px;
-      padding: 10px 10px 14px;
+      padding: 10px calc(10px + var(--safe-right)) calc(14px + var(--safe-bottom)) calc(10px + var(--safe-left));
       z-index: 30;
     }
     .navBtn{
@@ -255,7 +259,7 @@
       font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
     }
     *{box-sizing:border-box}
-    html{min-height:100%;background:var(--bg);overflow-x:hidden}
+    html{min-height:100%;background:var(--bg);overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}
     body{
       min-height:100vh;
       overflow-x:hidden;
@@ -408,6 +412,7 @@
     .comparisonSection{margin-top:14px}.comparisonTable{display:grid;gap:8px}.comparisonRow{display:grid;grid-template-columns:28px minmax(140px,1fr) repeat(4,minmax(64px,auto));align-items:center;gap:9px;padding:11px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.025)}.comparisonRank{display:grid;place-items:center;width:28px;height:28px;border-radius:10px;font-weight:900;background:rgba(139,92,246,.15);color:#ddd6fe}.comparisonMain{min-width:0}.comparisonMain strong{display:block;overflow:hidden;text-overflow:ellipsis}.comparisonMain span,.comparisonMetric span{display:block;margin-top:2px;font-size:8px;color:var(--muted)}.comparisonBar{height:5px;margin-top:6px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}.comparisonBar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8b5cf6,#22d3ee)}.comparisonMetric{text-align:right}.comparisonMetric strong{font-size:13px}
     .appointmentList{display:grid;gap:8px;margin-top:12px}.appointmentRow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px;border-radius:15px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
     .appointmentDate{min-width:58px;text-align:center;padding:7px;border-radius:11px;background:rgba(139,92,246,.14);font-size:10px}.appointmentDate strong{display:block;font-size:15px;color:#ddd6fe}
+    .planningSuite{min-width:0}.planningGrid{display:grid;grid-template-columns:minmax(0,.95fr) minmax(280px,1.05fr);gap:12px;margin-top:14px}.planningCalendar,.planningSide{min-width:0;padding:12px;border-radius:18px;border:1px solid var(--line);background:rgba(5,9,18,.32)}.planningSubhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.plannedList,.templateList{display:grid;gap:8px}.plannedWorkoutRow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border-radius:16px;border:1px solid var(--line);background:linear-gradient(145deg,rgba(139,92,246,.1),rgba(5,9,18,.42))}.plannedDate{display:grid;place-items:center;width:54px;min-height:54px;border-radius:14px;background:rgba(139,92,246,.14);border:1px solid rgba(167,139,250,.18);text-align:center}.plannedDate span{font-size:8px;color:var(--muted)}.plannedDate strong{font-size:20px;line-height:1}.plannedDate small{font-size:8px;color:#c4b5fd}.plannedMain{min-width:0}.plannedMain strong,.templateRow strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.plannedMain span,.templateRow span{display:block;margin-top:3px;font-size:10px;line-height:1.35;color:var(--muted);overflow-wrap:anywhere}.plannedActions,.templateActions{display:flex;gap:6px;align-items:center}.plannedActions .btn,.templateActions .btn{min-height:34px;padding:7px 9px}.templateRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border-radius:15px;border:1px solid var(--line);background:rgba(255,255,255,.035)}.planPickerHead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:14px 0 8px}.planExerciseGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:46vh;overflow:auto;padding-right:3px}.planExercisePick{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:center;padding:9px;border-radius:15px;border:1px solid var(--line);background:rgba(255,255,255,.035);cursor:pointer}.planExercisePick input{position:absolute;opacity:0;pointer-events:none}.planExercisePick:has(input:checked){border-color:rgba(167,139,250,.5);background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(34,211,238,.07))}.planExercisePick .exIconWrap{width:38px;height:38px;border-radius:12px}.planExercisePick strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.planExercisePick small{display:block;margin-top:2px;font-size:9px;color:var(--muted)}
     .kpiGrid4{grid-template-columns:repeat(4,minmax(0,1fr))}
     .kpiBox{position:relative;overflow:hidden;min-height:132px;border-radius:22px;padding:18px}
     .kpiBox:after{content:"";position:absolute;width:100px;height:100px;right:-34px;top:-42px;border-radius:50%;background:rgba(255,255,255,.12);filter:blur(2px)}
@@ -599,6 +604,7 @@
       .statsExerciseRow>.statsExerciseActions{width:auto;display:flex}
       .coachStack{grid-template-columns:1fr}.clientGrid{grid-template-columns:1fr}
       .comparisonRow{grid-template-columns:28px minmax(120px,1fr) repeat(2,minmax(58px,auto))}.comparisonMetric:nth-last-child(-n+2){display:none}
+      .planningGrid{grid-template-columns:1fr}.planExerciseGrid{grid-template-columns:1fr}
       .bottomNav{bottom:8px;width:calc(100% - 16px);border-radius:21px;padding:6px 4px}
       .navBtn{padding:7px 1px}.navIcon{width:27px;height:27px}.navLabel{font-size:9px}
     }
@@ -630,11 +636,111 @@
       .appointmentRow{grid-template-columns:50px minmax(0,1fr) 38px;padding:9px;gap:8px}.appointmentDate{min-width:0;padding:6px 4px}.appointmentRow>.btn{min-width:38px;padding:8px}
       .calendarToolbar{display:grid;grid-template-columns:1fr}.calendarNav{justify-content:space-between}.calendarGrid.week{grid-template-columns:1fr}.calendarGrid.week .calendarDay{min-height:66px}.calendarGrid.week .calendarDayTop{font-size:11px}.calendarGrid.month{gap:3px}.calendarGrid.month .calendarDay{min-height:62px;padding:4px;border-radius:9px}.calendarGrid.month .calendarEvent{font-size:0;height:5px;padding:0;border-radius:99px}.calendarWeekdays{gap:3px}.calendarEvents{gap:2px;margin-top:4px}
       .comparisonRow{grid-template-columns:26px minmax(0,1fr) repeat(2,52px);gap:7px;padding:9px}.comparisonMetric strong{font-size:12px}
+      .plannedWorkoutRow{grid-template-columns:48px minmax(0,1fr);gap:8px}.plannedActions{grid-column:1/-1;display:grid;grid-template-columns:1fr 42px 42px}.plannedActions .btn{width:100%}.templateRow{grid-template-columns:1fr}.templateActions{display:grid;grid-template-columns:1fr 42px 42px}.planPickerHead{display:block}.planPickerHead .muted{display:block;margin-top:4px}
+    }
+
+    /* Capacitor iOS keeps the web design, with tighter native spacing and one safe-area owner. */
+    html.capacitor-ios body{font-size:14px}
+    html.capacitor-ios button,
+    html.capacitor-ios input,
+    html.capacitor-ios select,
+    html.capacitor-ios textarea{-webkit-appearance:none;appearance:none;border-style:solid;touch-action:manipulation}
+    html.capacitor-ios input,
+    html.capacitor-ios select,
+    html.capacitor-ios textarea{font-size:16px}
+    @media(max-width:760px){
+      html.capacitor-ios header{
+        height:auto;min-height:60px;
+        padding:calc(8px + var(--safe-top)) calc(12px + var(--safe-right)) 8px calc(12px + var(--safe-left));
+      }
+      html.capacitor-ios .brandMark{width:36px;height:36px;border-radius:12px;font-size:18px}
+      html.capacitor-ios .brandTitle{font-size:17px}
+      html.capacitor-ios .wrap{
+        padding:12px calc(12px + var(--safe-right)) calc(102px + var(--safe-bottom)) calc(12px + var(--safe-left));
+      }
+      html.capacitor-ios .card{padding:13px;border-radius:19px;margin:10px 0}
+      html.capacitor-ios .btn{min-height:38px;padding:8px 10px;border-radius:12px;font-size:13px}
+      html.capacitor-ios .pill{padding:7px 9px;font-size:11px}
+      html.capacitor-ios .itemRow{padding:11px 12px;border-radius:16px}
+      html.capacitor-ios .kpiBox{min-height:94px;padding:12px}
+      html.capacitor-ios .kpiBox .val{font-size:27px}
+      html.capacitor-ios .modeOverlay{padding:12px}
+      html.capacitor-ios .modePanel{padding:17px;border-radius:22px}
+      html.capacitor-ios .modeChoices{gap:9px;margin-top:13px}
+      html.capacitor-ios .modeChoice{padding:14px;border-radius:17px}
+      html.capacitor-ios .modeChoice strong{margin:7px 0 4px;font-size:17px}
+      html.capacitor-ios .bottomNav{
+        bottom:calc(6px + var(--safe-bottom));
+        width:calc(100% - 16px - var(--safe-left) - var(--safe-right));
+        padding:5px 4px;border-radius:18px;
+      }
+      html.capacitor-ios .navBtn{min-width:0;min-height:0;padding:5px 1px;gap:3px;border-radius:11px;font-size:12px}
+      html.capacitor-ios .navIcon{width:24px;height:24px;border-radius:9px}
+      html.capacitor-ios .navLabel{font-size:8px}
+    }
+    @media(max-width:460px){
+      html.capacitor-ios header .brandEyebrow{display:block;font-size:8px;letter-spacing:.14em}
+      html.capacitor-ios .itemRow{
+        flex-direction:row;align-items:center;gap:9px;padding:10px 11px;
+      }
+      html.capacitor-ios .itemRow>.left{width:auto;min-width:0;flex:1;gap:9px}
+      html.capacitor-ios .itemRow>.row{
+        display:flex;width:auto;flex:0 0 auto;justify-content:flex-end;gap:7px;
+      }
+      html.capacitor-ios .itemRow>.row .btn{
+        width:auto;min-width:36px;min-height:36px;padding:7px 9px;font-size:12px;flex:0 0 auto;
+      }
+      html.capacitor-ios .itemRow .exIconWrap{width:42px;height:42px;border-radius:13px}
+      html.capacitor-ios .itemRow .exIconWrap svg{width:25px;height:25px}
+      html.capacitor-ios .itemRow .titleLine strong{font-size:13px}
+      html.capacitor-ios .itemRow .muted{font-size:10px;line-height:1.3}
+      html.capacitor-ios .statsExerciseRow{
+        display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;
+      }
+      html.capacitor-ios .statsExerciseRow>.statsExerciseActions{
+        width:auto;display:flex;grid-template-columns:none;gap:7px;
+      }
+      html.capacitor-ios .statsExerciseActions .btn{min-height:36px;padding:7px 9px;font-size:12px}
+      html.capacitor-ios .recordRow .row>div>div:first-child{font-size:22px!important}
+      html.capacitor-ios .workoutLaunch{
+        grid-template-columns:48px minmax(0,1fr) auto;gap:10px;padding:2px;
+      }
+      html.capacitor-ios .workoutLaunchIcon{width:48px;height:48px;border-radius:15px}
+      html.capacitor-ios .workoutLaunchTitle{font-size:16px}
+      html.capacitor-ios .workoutLaunchBtn{
+        grid-column:auto;width:auto;min-width:78px;padding-inline:12px;
+      }
+      html.capacitor-ios .restPanel{
+        grid-template-columns:60px minmax(0,1fr) 132px;gap:10px;padding:13px 14px;
+      }
+      html.capacitor-ios .restRing{width:60px;height:60px}
+      html.capacitor-ios .restRing:after{width:47px;height:47px}
+      html.capacitor-ios .restValue{font-size:15px}
+      html.capacitor-ios .restActions{
+        grid-column:auto;display:flex;width:132px;gap:6px;justify-content:flex-end;
+      }
+      html.capacitor-ios .restActions .btn{min-height:34px;padding:6px 8px;font-size:11px}
+      html.capacitor-ios .settingsActions{
+        grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
+      }
+      html.capacitor-ios .settingsActions #resetBtn{grid-column:auto}
+      html.capacitor-ios .settingsActions .btn{min-width:0;min-height:52px;padding:7px 5px;font-size:11px}
+      html.capacitor-ios #defRest{width:auto!important;min-width:0;flex:1 1 92px;max-width:120px}
+      html.capacitor-ios #saveSettings{flex:0 0 auto}
+      html.capacitor-ios .goalHero{padding:14px;border-radius:21px}
+      html.capacitor-ios .goalHeroTitle{font-size:20px}
     }
   </style>
 </head>
 
 <body>
+  <script>
+    (()=>{
+      const capacitorIos = window.Capacitor?.getPlatform?.() === "ios" || location.protocol === "capacitor:";
+      const previewIos = new URLSearchParams(location.search).has("capacitor-ios-preview");
+      if(capacitorIos || previewIos) document.documentElement.classList.add("capacitor-ios");
+    })();
+  </script>
   <header>
     <div class="brand">
       <div class="brandMark">G</div>
