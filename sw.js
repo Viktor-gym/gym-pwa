@@ -3,7 +3,7 @@
 // - cache bust via CACHE version
 
 // bump version when you publish updates
-const CACHE = "gym-pwa-v28-fix-exercises-records";
+const CACHE = "gym-pwa-v30-rollback-readable";
 const ASSETS = ["./index.html", "./app-v28.js", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
