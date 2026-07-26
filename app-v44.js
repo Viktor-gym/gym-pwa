@@ -1047,21 +1047,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateRestUI(){
-    const value = $("#restValue");
-    const label = $("#restLabel");
-    const ring = $("#restRing");
-    const toggle = $("#restToggle");
-    if (value) value.textContent = formatRest(rest.left);
-    if (label) label.textContent = rest.left === 0 ? t("timerReady") : t("restTimer");
-    if (toggle) toggle.textContent = rest.running ? `Ⅱ ${t("timerPause")}` : `▶ ${t("timerStart")}`;
     $$("[data-rest-value]").forEach(node=>node.textContent=formatRest(rest.left));
     $$("[data-rest-label]").forEach(node=>node.textContent=rest.left === 0 ? t("timerReady") : t("restTimer"));
     $$("[data-rest-toggle]").forEach(node=>node.textContent=rest.running ? `Ⅱ ${t("timerPause")}` : `▶ ${t("timerStart")}`);
-    if (ring){
-      const max = Math.max(restDefault(), rest.left, 1);
-      const pct = Math.max(0, Math.min(100, ((max-rest.left)/max)*100));
-      ring.style.setProperty("--timer-progress", `${pct}%`);
-    }
     $$("[data-rest-ring]").forEach(node=>{
       const max = Math.max(restDefault(), rest.left, 1);
       const pct = Math.max(0, Math.min(100, ((max-rest.left)/max)*100));
@@ -2054,22 +2042,6 @@ document.addEventListener("DOMContentLoaded", () => {
       `));
     }
 
-    el.appendChild(card(`
-      <div class="restPanel">
-        <div class="restRing" id="restRing" data-rest-ring>
-          <div class="restValue" id="restValue" data-rest-value>${formatRest(rest.left)}</div>
-        </div>
-        <div>
-          <div style="font-weight:900;font-size:17px" id="restLabel" data-rest-label>${t("restTimer")}</div>
-        </div>
-        <div class="restActions">
-          <button class="btn primary" id="restToggle" data-rest-toggle>▶ ${t("timerStart")}</button>
-          <button class="btn" id="restPlus">+30</button>
-          <button class="btn" id="restReset">${t("timerReset")}</button>
-        </div>
-      </div>
-    `));
-
     if(hasWorkoutItems){
       el.appendChild(document.createRange().createContextualFragment(`
         <div class="floatingRestDock" aria-label="${t("restTimer")}">
@@ -2126,15 +2098,6 @@ document.addEventListener("DOMContentLoaded", () => {
       $("#newTemplateBtn")?.addEventListener("click",()=>openWorkoutTemplateModal());
       bindPlannedWorkoutActions(el);
       bindTemplateActions(el);
-      const restToggle = $("#restToggle");
-      const restPlus = $("#restPlus");
-      const restReset = $("#restReset");
-      if (restToggle) restToggle.onclick = startRestTimer;
-      if (restPlus) restPlus.onclick = ()=>{
-        rest.left += 30;
-        updateRestUI();
-      };
-      if (restReset) restReset.onclick = resetRestTimer;
       const restToggleFloat = $("#restToggleFloat");
       const restPlusFloat = $("#restPlusFloat");
       if (restToggleFloat) restToggleFloat.onclick = startRestTimer;
@@ -4904,8 +4867,8 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Start or continue a workout":"Почни або продовж тренування",
         sub:en?"Build today's list and keep unfinished work":"Склади план дня і не втрачай незавершене",
         copy:en
-          ?"Start from Home or Workout, add exercises or a saved complex, then enter a title. When exercises are already loaded, the screen switches to focus mode: timer, exercise cards, Add exercise, Save and Clear."
-          :"Почни з «Головної» або «Тренування», додай вправи чи готовий комплекс і введи назву. Коли вправи вже набрані, екран переходить у фокус-режим: таймер, картки вправ, «Додати вправу», «Зберегти» й «Очистити».",
+          ?"Start from Home or Workout, add exercises or a saved complex, then enter a title. When exercises are already loaded, the screen switches to focus mode: exercise cards, Add exercise, Save and Clear, with the rest timer fixed at the top."
+          :"Почни з «Головної» або «Тренування», додай вправи чи готовий комплекс і введи назву. Коли вправи вже набрані, екран переходить у фокус-режим: картки вправ, «Додати вправу», «Зберегти» й «Очистити», а таймер відпочинку закріплений зверху.",
         example:en?"Chest day: bench press, incline press, push-ups. Use Add exercise if you need one more movement mid-workout.":"День грудей: жим лежачи, жим під кутом, віджимання. Якщо під час заняття потрібна ще одна вправа, натисни «Додати вправу».",
         mini:`<div class="miniTitle">${en?"Today's workout":"Сьогоднішнє тренування"}</div><div class="miniField">${en?"Chest day":"Груди"}</div><div class="miniRow"><div class="miniButton">＋ ${en?"Add exercise":"Додати вправу"}</div><div class="miniField">${en?"Save":"Зберегти"}</div></div>`
       },
@@ -4913,8 +4876,8 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Record sets and rest":"Внось підходи та відпочинок",
         sub:en?"The form adapts to each exercise":"Форма підлаштовується під тип вправи",
         copy:en
-          ?"Enter the actual result in the labeled fields. Tap the set number to mark it completed in green, especially when a template or latest results loaded old sets. The rest timer starts automatically after completed values and also stays visible in a floating dock while you scroll."
-          :"Внось фактичний результат у підписані поля. Натискай номер підходу, щоб позначити його зеленим як виконаний, особливо коли шаблон або останні результати підтягнули старі підходи. Таймер відпочинку запускається автоматично після заповнення значень і лишається видимим у плаваючій панелі під час прокрутки.",
+          ?"Enter the actual result in the labeled fields. Tap the set number to mark it completed in green, especially when a template or latest results loaded old sets. The rest timer starts automatically after completed values and stays fixed at the top of the workout screen."
+          :"Внось фактичний результат у підписані поля. Натискай номер підходу, щоб позначити його зеленим як виконаний, особливо коли шаблон або останні результати підтягнули старі підходи. Таймер відпочинку запускається автоматично після заповнення значень і закріплений зверху екрана тренування.",
         example:en?"Strength: 80 kg × 8, then tap #1. Cardio: 2.5 km in 30 min.":"Силова: 80 кг × 8, потім натисни #1. Кардіо: 2,5 км за 30 хв.",
         mini:`<div class="miniTitle">${en?"Set 1":"Підхід 1"}</div><div class="miniRow"><div class="miniButton">#1 ✓</div><div class="miniField">80 kg</div><div class="miniField">8 ${en?"reps":"повт."}</div></div><div class="miniField">01:30 ${en?"floating timer":"плаваючий таймер"}</div>`
       },
