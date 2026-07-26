@@ -3766,6 +3766,45 @@ document.addEventListener("DOMContentLoaded", () => {
       return `<div class="miniBarSlot" title="${fmtDate(item.date)} · ${label}"><span class="miniBarValue">${escapeHtml(label)}</span><div class="miniBarCol" style="height:${h}px"></div></div>`;
     }).join("")}</div>`;
   }
+
+  function weeklyFocusBuckets(workouts,limit=10){
+    const map=new Map();
+    workouts.forEach(workout=>{
+      const week=startOfWeek(new Date(workout.date)).toISOString().slice(0,10);
+      const cur=map.get(week)||{date:week,total:0,categories:{}};
+      (workout.items||[]).forEach(item=>{
+        const ex=state.exercises.find(ex=>ex.id===item.exerciseId);
+        const category=ex?.category||"other";
+        const volume=volumeOfSets(item.sets);
+        cur.categories[category]=(cur.categories[category]||0)+volume;
+        cur.total+=volume;
+      });
+      map.set(week,cur);
+    });
+    return [...map.values()].sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(-limit).map(bucket=>{
+      const top=Object.entries(bucket.categories).sort((a,b)=>b[1]-a[1])[0];
+      const category=top?.[0]||"other";
+      const volume=top?.[1]||0;
+      const pct=bucket.total>0 ? Math.round(volume/bucket.total*100) : 0;
+      return {...bucket,category,volume,pct};
+    });
+  }
+
+  function focusTrendMarkup(workouts){
+    const buckets=weeklyFocusBuckets(workouts,10).filter(item=>item.total>0);
+    if(!buckets.length) return `<div class="muted">${t("noData")}</div>`;
+    return `<div class="focusTrend">${buckets.map(item=>`
+      <div class="focusTrendRow" title="${fmtDate(item.date)} · ${escapeHtml(catName(item.category))} · ${fmtVol(item.volume)} kg">
+        <strong>${fmtDate(item.date)}</strong>
+        <div class="focusTrendMain">
+          <span>${escapeHtml(catName(item.category))}</span>
+          <div class="focusTrendTrack"><i style="width:${Math.max(5,item.pct)}%"></i></div>
+        </div>
+        <em>${item.pct}%</em>
+      </div>
+    `).join("")}</div>`;
+  }
+
   function typeBalanceMarkup(workouts){
     const counts=workoutTypeCounts(workouts);
     const entries=[
@@ -3805,9 +3844,9 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="muted" style="margin-top:10px">${state.lang==="en"?"Each bar is a week. Taller means more workouts.":"Кожна колонка — тиждень. Вища колонка означає більше тренувань."}</div>
       </div>
       <div class="sectionCard">
-        <div class="sectionTitle">${state.lang==="en"?"Load trend by weeks":"Тренд навантаження по тижнях"}</div>
-        ${miniBarsMarkup(buckets,"volume")}
-        <div class="muted" style="margin-top:10px">${state.lang==="en"?"Shows how total training load changes week by week.":"Показує, як змінюється сумарне навантаження від тижня до тижня."}</div>
+        <div class="sectionTitle">${state.lang==="en"?"Main focus trend":"Тренд основного фокусу"}</div>
+        ${focusTrendMarkup(range==="all"?state.workouts:workouts)}
+        <div class="muted" style="margin-top:10px">${state.lang==="en"?"Shows which muscle group took the largest share of weekly volume.":"Показує, яка група мʼязів займала найбільшу частку тижневого обʼєму."}</div>
       </div>
       <div class="sectionCard">
         <div class="sectionTitle">${state.lang==="en"?"Training type balance":"Баланс типів вправ"}</div>
@@ -4914,7 +4953,7 @@ document.addEventListener("DOMContentLoaded", () => {
         copy:en
           ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Statistics has week/month/year/all filters, insight cards, weekly rhythm bars, load trend, one calorie progress graph, muscle split, type balance and exercise details. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
           :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. «Статистика» має фільтри тиждень/місяць/рік/все, інсайти, ритм по тижнях, тренд навантаження, один графік прогресу калорій, розподіл по групах, баланс типів вправ і деталі кожної вправи. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
-        example:en?"Use Load trend to see whether training is growing, Calories progress to estimate energy cost, and Type balance to notice if cardio or reps work disappeared.":"Дивись «Тренд навантаження», щоб бачити ріст роботи, «Прогрес калорій» для оцінки енерговитрат і «Баланс типів вправ», щоб помітити, якщо зникло кардіо чи вправи на повтори.",
+        example:en?"Use Main focus trend to see what dominated each week, Calories progress to estimate energy cost, and Type balance to notice if cardio or reps work disappeared.":"Дивись «Тренд основного фокусу», щоб бачити, що домінувало кожного тижня, «Прогрес калорій» для оцінки енерговитрат і «Баланс типів вправ», щоб помітити, якщо зникло кардіо чи вправи на повтори.",
         mini:`<div class="miniRow"><div class="miniStat">${en?"Rhythm":"Ритм"}<strong>▁▃▆█</strong></div><div class="miniStat">${en?"Balance":"Баланс"}<strong>64%</strong></div></div>`
       },
       {
