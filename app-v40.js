@@ -1054,11 +1054,19 @@ document.addEventListener("DOMContentLoaded", () => {
     if (value) value.textContent = formatRest(rest.left);
     if (label) label.textContent = rest.left === 0 ? t("timerReady") : t("restTimer");
     if (toggle) toggle.textContent = rest.running ? `Ⅱ ${t("timerPause")}` : `▶ ${t("timerStart")}`;
+    $$("[data-rest-value]").forEach(node=>node.textContent=formatRest(rest.left));
+    $$("[data-rest-label]").forEach(node=>node.textContent=rest.left === 0 ? t("timerReady") : t("restTimer"));
+    $$("[data-rest-toggle]").forEach(node=>node.textContent=rest.running ? `Ⅱ ${t("timerPause")}` : `▶ ${t("timerStart")}`);
     if (ring){
       const max = Math.max(restDefault(), rest.left, 1);
       const pct = Math.max(0, Math.min(100, ((max-rest.left)/max)*100));
       ring.style.setProperty("--timer-progress", `${pct}%`);
     }
+    $$("[data-rest-ring]").forEach(node=>{
+      const max = Math.max(restDefault(), rest.left, 1);
+      const pct = Math.max(0, Math.min(100, ((max-rest.left)/max)*100));
+      node.style.setProperty("--timer-progress", `${pct}%`);
+    });
     publishWorkoutToNative("timer");
   }
 
@@ -2026,21 +2034,46 @@ document.addEventListener("DOMContentLoaded", () => {
       el.appendChild(card(workoutPlanningPanelMarkup()));
     }
 
+    if(hasWorkoutItems){
+      el.appendChild(card(`
+        <label class="bodyField" style="display:block">
+          <span class="muted">${t("workoutTitle")}</span>
+          <input id="workoutTitleInput" class="btn" style="width:100%;margin-top:6px"
+            value="${escapeHtml(workoutSession.title || "")}"
+            placeholder="${t("workoutTitle")}" />
+        </label>
+      `));
+    }
+
     el.appendChild(card(`
       <div class="restPanel">
-        <div class="restRing" id="restRing">
-          <div class="restValue" id="restValue">${formatRest(rest.left)}</div>
+        <div class="restRing" id="restRing" data-rest-ring>
+          <div class="restValue" id="restValue" data-rest-value>${formatRest(rest.left)}</div>
         </div>
         <div>
-          <div style="font-weight:900;font-size:17px" id="restLabel">${t("restTimer")}</div>
+          <div style="font-weight:900;font-size:17px" id="restLabel" data-rest-label>${t("restTimer")}</div>
         </div>
         <div class="restActions">
-          <button class="btn primary" id="restToggle">▶ ${t("timerStart")}</button>
+          <button class="btn primary" id="restToggle" data-rest-toggle>▶ ${t("timerStart")}</button>
           <button class="btn" id="restPlus">+30</button>
           <button class="btn" id="restReset">${t("timerReset")}</button>
         </div>
       </div>
     `));
+
+    if(hasWorkoutItems){
+      el.appendChild(document.createRange().createContextualFragment(`
+        <div class="floatingRestDock" aria-label="${t("restTimer")}">
+          <div class="floatingRestRing" data-rest-ring><span data-rest-value>${formatRest(rest.left)}</span></div>
+          <div class="floatingRestText"><strong data-rest-label>${t("restTimer")}</strong><span>${state.lang==="en"?"Always visible while you scroll":"Завжди видно під час прокрутки"}</span></div>
+          <div class="floatingRestActions">
+            <button class="btn primary" id="restToggleFloat" data-rest-toggle>▶ ${t("timerStart")}</button>
+            <button class="btn" id="restPlusFloat">+30</button>
+          </div>
+        </div>
+        <div class="floatingRestSpacer"></div>
+      `));
+    }
 
     const list = document.createElement("div");
     list.id = "workoutItems";
@@ -2090,6 +2123,13 @@ document.addEventListener("DOMContentLoaded", () => {
         updateRestUI();
       };
       if (restReset) restReset.onclick = resetRestTimer;
+      const restToggleFloat = $("#restToggleFloat");
+      const restPlusFloat = $("#restPlusFloat");
+      if (restToggleFloat) restToggleFloat.onclick = startRestTimer;
+      if (restPlusFloat) restPlusFloat.onclick = ()=>{
+        rest.left += 30;
+        updateRestUI();
+      };
       updateRestUI();
 
       const clearBtn = $("#clearWorkoutBtn");
@@ -2140,8 +2180,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const type = exerciseTracking(ex);
 
       const setsHtml = (it.sets||[]).map((s, idx)=>`
-        <div class="setline setline-${type}" style="margin-top:8px">
-          <span class="pill">#${idx+1}</span>
+        <div class="setline setline-${type} ${s._done?"setlineDone":""}" style="margin-top:8px">
+          <button class="pill setDoneToggle ${s._done?"done":""}" data-doneset="${it.id}" data-i="${idx}" title="${state.lang==="en"?"Mark set as done":"Позначити підхід виконаним"}">#${idx+1}</button>
           ${type==="strength" || type==="reps" ? `<label class="setField"><span>${state.lang==="en"?"Reps":"Повтори"}</span><input type="text" inputmode="numeric"
             data-id="${it.id}" data-i="${idx}" data-k="reps"
             value="${escapeHtml(s.reps ?? "")}" placeholder="8" /></label>` : ""}
@@ -2195,12 +2235,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const ex=state.exercises.find(e=>e.id===it.exerciseId);
         const type=exerciseTracking(ex);
         it.sets.push(type==="strength"
-          ? {reps:"8",weight:"0"}
+          ? {reps:"8",weight:"0",_done:false}
           : type==="reps"
-            ? {reps:"8"}
+            ? {reps:"8",_done:false}
             : type==="time"
-              ? {duration:"10"}
-              : {distance:"1",duration:"10"});
+              ? {duration:"10",_done:false}
+              : {distance:"1",duration:"10",_done:false});
         resetRestTimer();
         publishWorkoutToNative("setAdded");
         renderWorkoutItems();
@@ -2298,6 +2338,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="filters" id="pickCats"></div>
 
       <input id="pickQ" class="btn" style="width:100%; margin-top:10px" placeholder="${t("search")}" value="${escapeHtml(q)}"/>
+      <button class="btn" id="pickLatestToggle" style="width:100%; margin-top:10px">${state.lang==="en"?"Show latest results":"Показати останні результати"}</button>
 
       <div class="row" style="flex-direction:column; align-items:stretch; gap:10px; margin-top:12px" id="pickList"></div>
       <div class="pickerFooter">
@@ -2362,6 +2403,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <div style="min-width:0">
                 <div class="titleLine"><strong>${escapeHtml(exName(ex))}</strong></div>
                 <div class="muted">${catName(ex.category)} • ${trackingLabel(ex)} • PR: ${fmtNum(prW)} ${primaryUnit(ex)}</div>
+                <div class="muted latestPerformance" style="display:${modal.classList.contains("showLatestPerformance")?"block":"none"}; margin-top:3px">${escapeHtml(latestPerformanceText(ex.id))}</div>
               </div>
             </div>
             <div class="row">
@@ -2397,9 +2439,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const qInput = modal.querySelector("#pickQ");
     if (qInput) qInput.oninput = renderList;
+    const latestToggle = modal.querySelector("#pickLatestToggle");
+    if (latestToggle) latestToggle.onclick = ()=>{
+      modal.classList.toggle("showLatestPerformance");
+      latestToggle.textContent = modal.classList.contains("showLatestPerformance")
+        ? (state.lang==="en"?"Hide latest results":"Сховати останні результати")
+        : (state.lang==="en"?"Show latest results":"Показати останні результати");
+      renderList();
+    };
     const confirmBtn = modal.querySelector("#pickConfirm");
     if (confirmBtn) confirmBtn.onclick = ()=>{
-      addExercisesToSession([...selected]);
+      const ids=[...selected];
+      const copyLatest=ids.length && hasLatestPerformance(ids) && confirm(state.lang==="en"
+        ? "Add sets and weights from the latest workout for selected exercises?"
+        : "Додати підходи й ваги з останнього заняття для вибраних вправ?");
+      addExercisesToSession(ids,{copyLatest});
       save();
       close();
       render();
@@ -2416,21 +2470,38 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.className="modeOverlay";
     overlay.innerHTML=`<div class="modePanel" style="max-width:560px">
       <div class="detailHeader"><div><div class="brandEyebrow">${state.lang==="en"?"Complexes":"Комплекси"}</div><h2 style="margin:6px 0">${state.lang==="en"?"Add complex to workout":"Додати комплекс до тренування"}</h2></div><button class="btn" data-close>✕</button></div>
+      <button class="btn" id="templateLatestToggle" style="width:100%;margin-top:10px">${state.lang==="en"?"Show latest results":"Показати останні результати"}</button>
       <div class="templateList" style="margin-top:12px">${templates.map(template=>{
         const names=(template.items||[]).slice(0,4).map(item=>{
           const ex=state.exercises.find(candidate=>candidate.id===item.exerciseId);
           return ex ? exName(ex) : "";
         }).filter(Boolean).join(" · ");
-        return `<label class="templateRow templatePickRow"><input type="checkbox" data-template-pick value="${template.id}"><div><strong>${escapeHtml(template.title)}</strong><span>${escapeHtml(names)}${template.items.length>4?` · +${template.items.length-4}`:""}</span></div></label>`;
+        const latest=(template.items||[]).slice(0,4).map(item=>{
+          const ex=state.exercises.find(candidate=>candidate.id===item.exerciseId);
+          return ex ? `${exName(ex)}: ${latestPerformanceText(ex.id)}` : "";
+        }).filter(Boolean).join(" | ");
+        return `<label class="templateRow templatePickRow"><input type="checkbox" data-template-pick value="${template.id}"><div><strong>${escapeHtml(template.title)}</strong><span>${escapeHtml(names)}${template.items.length>4?` · +${template.items.length-4}`:""}</span><span class="muted templateLatest" style="display:none;margin-top:4px">${escapeHtml(latest)}</span></div></label>`;
       }).join("")}</div>
       <button class="btn primary" id="templatePickConfirm" style="width:100%;margin-top:14px">${state.lang==="en"?"Add selected complexes":"Додати вибрані комплекси"}</button>
     </div>`;
     document.body.appendChild(overlay);
     const close=()=>overlay.remove();
     overlay.querySelector("[data-close]").onclick=close;
+    overlay.querySelector("#templateLatestToggle").onclick=()=>{
+      overlay.classList.toggle("showLatestPerformance");
+      const show=overlay.classList.contains("showLatestPerformance");
+      overlay.querySelector("#templateLatestToggle").textContent = show
+        ? (state.lang==="en"?"Hide latest results":"Сховати останні результати")
+        : (state.lang==="en"?"Show latest results":"Показати останні результати");
+      overlay.querySelectorAll(".templateLatest").forEach(item=>{ item.style.display=show?"block":"none"; });
+    };
     overlay.querySelector("#templatePickConfirm").onclick=()=>{
       const ids=Array.from(overlay.querySelectorAll("[data-template-pick]:checked")).map(input=>input.value);
-      ids.forEach(id=>addExercisesToSession(exerciseIdsFromTemplate(id)));
+      const exerciseIds=ids.flatMap(id=>exerciseIdsFromTemplate(id));
+      const copyLatest=exerciseIds.length && hasLatestPerformance(exerciseIds) && confirm(state.lang==="en"
+        ? "Add sets and weights from the latest workout for this complex?"
+        : "Додати підходи й ваги з останнього заняття для цього комплексу?");
+      addExercisesToSession(exerciseIds,{copyLatest});
       save();
       close();
       render();
@@ -2448,6 +2519,78 @@ document.addEventListener("DOMContentLoaded", () => {
     return [...(state.workouts||[])]
       .filter(w=>isSameLocalDay(w.date))
       .sort((a,b)=>new Date(b.date)-new Date(a.date))[0] || null;
+  }
+
+  function latestExercisePerformance(exerciseId){
+    const entries=[];
+    (state.workouts||[]).forEach(workout=>{
+      const ts=new Date(workout.date).getTime();
+      if(!Number.isFinite(ts)) return;
+      (workout.items||[]).forEach(item=>{
+        if(item.exerciseId===exerciseId && (item.sets||[]).length){
+          entries.push({workout,item,ts});
+        }
+      });
+    });
+
+    box.querySelectorAll("[data-doneset]").forEach(btn=>{
+      btn.onclick = ()=>{
+        const id = btn.getAttribute("data-doneset");
+        const idx = Number(btn.getAttribute("data-i"));
+        const it = workoutSession.items.find(x=>x.id===id);
+        if (!it || !it.sets[idx]) return;
+        it.sets[idx]._done = !it.sets[idx]._done;
+        publishWorkoutToNative(it.sets[idx]._done ? "setMarkedDone" : "setMarkedOpen");
+        renderWorkoutItems();
+      };
+    });
+    entries.sort((a,b)=>b.ts-a.ts);
+    const latest=entries[0];
+    if(!latest) return null;
+    return {
+      workout:latest.workout,
+      sets:(latest.item.sets||[]).map(set=>({...set,_restTriggered:true,_done:false}))
+    };
+  }
+
+  function hasLatestPerformance(exerciseIds){
+    return [...new Set(exerciseIds)].some(id=>latestExercisePerformance(id)?.sets?.length);
+  }
+
+  function latestPerformanceText(exerciseId){
+    const ex=state.exercises.find(item=>item.id===exerciseId);
+    const latest=latestExercisePerformance(exerciseId);
+    if(!latest || !ex) return state.lang==="en" ? "No previous sets" : "Попередніх підходів немає";
+    const sets=latest.sets.slice(0,4).map(set=>formatExerciseSet(ex,set)).join(" · ");
+    return `${fmtDate(latest.workout.date)} · ${sets}${latest.sets.length>4?` · +${latest.sets.length-4}`:""}`;
+  }
+
+  function activateWorkoutFromHistory(workoutId){
+    const workout=state.workouts.find(item=>item.id===workoutId);
+    if(!workout) return;
+    if(workoutSession.active && workoutSession.items?.length && !confirm(state.lang==="en"
+      ? "Replace the current workout draft with this workout?"
+      : "Замінити поточне тренування цим заняттям?")) return;
+    workoutSession={
+      active:true,
+      startedAt:new Date().toISOString(),
+      title:state.lang==="en"
+        ? `Workout ${fmtDate(new Date())}`
+        : `Тренування ${fmtDate(new Date())}`,
+      workoutId:null,
+      planId:null,
+      items:(workout.items||[])
+        .filter(item=>state.exercises.some(ex=>ex.id===item.exerciseId))
+        .map(item=>({
+          id:uid(),
+          exerciseId:item.exerciseId,
+          sets:(item.sets||[]).map(set=>({...set,_restTriggered:true,_done:false}))
+        }))
+    };
+    resetRestTimer();
+    publishWorkoutToNative("historyActivated");
+    setTab("workout");
+    render();
   }
 
   function exerciseIdsFromTemplate(templateId){
@@ -2486,11 +2629,16 @@ document.addEventListener("DOMContentLoaded", () => {
     setTab("workout");
   }
 
-  function addExercisesToSession(exerciseIds){
+  function addExercisesToSession(exerciseIds,options={}){
     const unique=[...new Set(exerciseIds)].filter(id=>state.exercises.some(ex=>ex.id===id));
     unique.forEach(id=>{
-      if(!workoutSession.items.some(item=>item.exerciseId===id)){
-        workoutSession.items.push({id:uid(),exerciseId:id,sets:[]});
+      const existing=workoutSession.items.find(item=>item.exerciseId===id);
+      const latest=options.copyLatest ? latestExercisePerformance(id) : null;
+      const latestSets=latest?.sets?.length ? latest.sets.map(set=>({...set,_restTriggered:true,_done:false})) : [];
+      if(!existing){
+        workoutSession.items.push({id:uid(),exerciseId:id,sets:latestSets});
+      }else if(options.copyLatest && !existing.sets?.length && latestSets.length){
+        existing.sets=latestSets;
       }
     });
     if(unique.length){
@@ -2544,7 +2692,21 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function selectedPlanExercises(overlay){
-    return Array.from(overlay.querySelectorAll("[data-plan-exercise]:checked")).map(input=>input.value);
+    const checked=new Set(Array.from(overlay.querySelectorAll("[data-plan-exercise]:checked")).map(input=>input.value));
+    const ordered=Array.isArray(overlay.__exerciseOrder) ? overlay.__exerciseOrder.filter(id=>checked.has(id)) : [];
+    const missing=[...checked].filter(id=>!ordered.includes(id));
+    return [...ordered,...missing];
+  }
+
+  function bindPlanExerciseOrder(overlay,selectedIds=[]){
+    overlay.__exerciseOrder=[...new Set(selectedIds.filter(Boolean))];
+    overlay.querySelectorAll("[data-plan-exercise]").forEach(input=>{
+      input.onchange=()=>{
+        const id=input.value;
+        overlay.__exerciseOrder=overlay.__exerciseOrder.filter(item=>item!==id);
+        if(input.checked) overlay.__exerciseOrder.push(id);
+      };
+    });
   }
 
   function exerciseChecklistMarkup(selectedIds=[]){
@@ -2560,7 +2722,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <label class="planExercisePick">
             <input type="checkbox" data-plan-exercise value="${ex.id}" ${selected.has(ex.id)?"checked":""}>
             ${exIcon(ex)}
-            <span><strong>${escapeHtml(exName(ex))}</strong><small>${trackingLabel(ex)}</small></span>
+            <span><strong>${escapeHtml(exName(ex))}</strong><small>${trackingLabel(ex)}</small><small class="latestPerformance" style="display:none">${escapeHtml(latestPerformanceText(ex.id))}</small></span>
           </label>`).join("")}</div>
       </section>`;
     }).join("")}</div>`;
@@ -2580,16 +2742,23 @@ document.addEventListener("DOMContentLoaded", () => {
         <label class="bodyField bodyDateField"><span class="muted">${state.lang==="en"?"Workout name":"Назва тренування"}</span><input class="btn" id="planTitle" maxlength="80" value="${escapeHtml(plan?.title||"")}" placeholder="${state.lang==="en"?"Push / Pull":"Жим / Тяга"}"></label>
       </div>
       <label class="bodyField" style="display:block;margin-top:12px"><span class="muted">${state.lang==="en"?"Use template":"Використати шаблон"}</span><select class="btn" id="planTemplate" style="width:100%"><option value="">${state.lang==="en"?"No template":"Без шаблону"}</option>${templates.map(template=>`<option value="${template.id}" ${template.id===plan?.templateId?"selected":""}>${escapeHtml(template.title)}</option>`).join("")}</select></label>
-      <div class="planPickerHead"><strong>${state.lang==="en"?"Exercises":"Вправи"}</strong><span class="muted">${state.lang==="en"?"Choose separate exercises or load a template above.":"Обери окремі вправи або завантаж шаблон вище."}</span></div>
+      <div class="planPickerHead"><strong>${state.lang==="en"?"Exercises":"Вправи"}</strong><button class="btn" data-toggle-latest>${state.lang==="en"?"Latest results":"Останні результати"}</button></div>
       ${exerciseChecklistMarkup(selectedIds)}
       <button class="btn primary" id="planSave" style="width:100%;margin-top:14px">${state.lang==="en"?"Save planned workout":"Зберегти заплановане тренування"}</button>
     </div>`;
     document.body.appendChild(overlay);
     const close=()=>overlay.remove();
     overlay.querySelector("[data-close]").onclick=close;
+    bindPlanExerciseOrder(overlay,selectedIds);
+    overlay.querySelector("[data-toggle-latest]").onclick=()=>{
+      overlay.classList.toggle("showLatestPerformance");
+      const show=overlay.classList.contains("showLatestPerformance");
+      overlay.querySelectorAll(".latestPerformance").forEach(item=>{ item.style.display=show?"block":"none"; });
+    };
     overlay.querySelector("#planTemplate").onchange=e=>{
       const ids=exerciseIdsFromTemplate(e.target.value);
       overlay.querySelectorAll("[data-plan-exercise]").forEach(input=>{ input.checked=ids.includes(input.value); });
+      overlay.__exerciseOrder=[...ids];
       const template=templates.find(item=>item.id===e.target.value);
       const titleInput=overlay.querySelector("#planTitle");
       if(template && !titleInput.value.trim()) titleInput.value=template.title;
@@ -2624,13 +2793,19 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.innerHTML=`<div class="modePanel planModalPanel" style="max-width:620px">
       <div class="detailHeader"><div><div class="brandEyebrow">${state.lang==="en"?"Workout template":"Шаблон комплексу"}</div><h2 style="margin:6px 0">${template?(state.lang==="en"?"Edit template":"Редагувати шаблон"):(state.lang==="en"?"New template":"Новий шаблон")}</h2></div><button class="btn" data-close>✕</button></div>
       <label class="bodyField" style="display:block;margin-top:14px"><span class="muted">${state.lang==="en"?"Template name":"Назва шаблону"}</span><input class="btn" id="templateTitle" maxlength="80" style="width:100%" value="${escapeHtml(template?.title||"")}" placeholder="${state.lang==="en"?"Chest + back":"Жим / тяга"}"></label>
-      <div class="planPickerHead"><strong>${state.lang==="en"?"Exercises":"Вправи"}</strong><span class="muted">${state.lang==="en"?"This set can be used while planning or during a workout.":"Цю заготовку можна вибрати при плануванні або вже під час заняття."}</span></div>
+      <div class="planPickerHead"><strong>${state.lang==="en"?"Exercises":"Вправи"}</strong><button class="btn" data-toggle-latest>${state.lang==="en"?"Latest results":"Останні результати"}</button></div>
       ${exerciseChecklistMarkup(selectedIds)}
       <button class="btn primary" id="templateSave" style="width:100%;margin-top:14px">${state.lang==="en"?"Save template":"Зберегти шаблон"}</button>
     </div>`;
     document.body.appendChild(overlay);
     const close=()=>overlay.remove();
     overlay.querySelector("[data-close]").onclick=close;
+    bindPlanExerciseOrder(overlay,selectedIds);
+    overlay.querySelector("[data-toggle-latest]").onclick=()=>{
+      overlay.classList.toggle("showLatestPerformance");
+      const show=overlay.classList.contains("showLatestPerformance");
+      overlay.querySelectorAll(".latestPerformance").forEach(item=>{ item.style.display=show?"block":"none"; });
+    };
     overlay.querySelector("#templateSave").onclick=()=>{
       const exerciseIds=selectedPlanExercises(overlay);
       if(!exerciseIds.length){
@@ -2694,6 +2869,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function bindTemplateActions(root){
+    root.querySelectorAll("[data-view-template]").forEach(button=>button.onclick=(event)=>{
+      if(event.target.closest("button")) return;
+      const template=state.workoutTemplates.find(item=>item.id===button.getAttribute("data-view-template"));
+      if(template) openWorkoutTemplateViewModal(template);
+    });
     root.querySelectorAll("[data-use-template]").forEach(button=>button.onclick=()=>{
       addExercisesToSession(exerciseIdsFromTemplate(button.getAttribute("data-use-template")));
       save();
@@ -2708,6 +2888,41 @@ document.addEventListener("DOMContentLoaded", () => {
       state.workoutTemplates=state.workoutTemplates.filter(template=>template.id!==button.getAttribute("data-delete-template"));
       save();render();
     });
+  }
+
+  function openWorkoutTemplateViewModal(template){
+    const overlay=document.createElement("div");
+    overlay.className="modeOverlay";
+    const items=(template.items||[]).map(item=>{
+      const ex=state.exercises.find(candidate=>candidate.id===item.exerciseId);
+      if(!ex) return "";
+      return `<article class="templateRow" style="margin-top:8px">
+        <div class="left" style="min-width:0">
+          ${exIcon(ex)}
+          <div style="min-width:0">
+            <strong>${escapeHtml(exName(ex))}</strong>
+            <span>${catName(ex.category)} · ${trackingLabel(ex)}</span>
+            <span class="muted" style="display:block;margin-top:4px">${escapeHtml(latestPerformanceText(ex.id))}</span>
+          </div>
+        </div>
+      </article>`;
+    }).filter(Boolean).join("");
+    overlay.innerHTML=`<div class="modePanel" style="max-width:620px">
+      <div class="detailHeader"><div><div class="brandEyebrow">${state.lang==="en"?"Complex template":"Шаблон комплексу"}</div><h2 style="margin:6px 0">${escapeHtml(template.title)}</h2></div><button class="btn" data-close>✕</button></div>
+      <div style="margin-top:12px">${items || `<div class="emptyCalendar">${state.lang==="en"?"No exercises":"Немає вправ"}</div>`}</div>
+      <div class="row" style="justify-content:space-between;margin-top:14px">
+        <button class="btn" data-close-bottom>${t("ok")}</button>
+        <button class="btn primary" id="templateViewEdit">${state.lang==="en"?"Edit":"Редагувати"}</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    const close=()=>overlay.remove();
+    overlay.querySelector("[data-close]").onclick=close;
+    overlay.querySelector("[data-close-bottom]").onclick=close;
+    overlay.querySelector("#templateViewEdit").onclick=()=>{
+      close();
+      openWorkoutTemplateModal(template);
+    };
   }
 
   function workoutPlanningPanelMarkup(){
@@ -2727,7 +2942,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const ex=state.exercises.find(candidate=>candidate.id===item.exerciseId);
               return ex ? exName(ex) : "";
             }).filter(Boolean).join(" · ");
-            return `<article class="templateRow"><div><strong>${escapeHtml(template.title)}</strong><span>${escapeHtml(names)}${template.items.length>3?` · +${template.items.length-3}`:""}</span></div><div class="templateActions"><button class="btn" data-edit-template="${template.id}">⋯</button><button class="btn" data-delete-template="${template.id}">✕</button></div></article>`;
+              return `<article class="templateRow" data-view-template="${template.id}" role="button" tabindex="0"><div><strong>${escapeHtml(template.title)}</strong><span>${escapeHtml(names)}${template.items.length>3?` · +${template.items.length-3}`:""}</span></div><div class="templateActions"><button class="btn" data-edit-template="${template.id}">⋯</button><button class="btn" data-delete-template="${template.id}">✕</button></div></article>`;
           }).join(""):`<div class="emptyCalendar">${state.lang==="en"?"Create sets like Bench/Row or Biceps/Triceps once and reuse them.":"Створи заготовки типу Жим/Тяга або Біцепс/Трицепс і використовуй повторно."}</div>`}</div>
         </div>
       </section>`;
@@ -2744,7 +2959,7 @@ document.addEventListener("DOMContentLoaded", () => {
       items:(workout.items||[]).map(it=>({
         id:uid(),
         exerciseId:it.exerciseId,
-        sets:(it.sets||[]).map(set=>({...set,_restTriggered:true}))
+        sets:(it.sets||[]).map(set=>({...set,_restTriggered:true,_done:false}))
       }))
     };
     publishWorkoutToNative("continue");
@@ -3210,6 +3425,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       <div class="row" style="justify-content:space-between; margin-top:14px">
         <button class="btn" id="wdDelete">🗑 ${t("deleteWorkout")}</button>
+        <button class="btn" id="wdActivate">↻ ${state.lang==="en"?"Make active":"Зробити активним"}</button>
         <button class="btn primary" id="wdOk">${t("ok")}</button>
       </div>
     `;
@@ -3223,6 +3439,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (x) x.onclick = close;
     if (ok) ok.onclick = close;
     overlay.addEventListener("click",(e)=>{ if (e.target===overlay) close(); });
+
+    const activate = modal.querySelector("#wdActivate");
+    if (activate) activate.onclick = ()=>{
+      close();
+      activateWorkoutFromHistory(workoutId);
+    };
 
     const del = modal.querySelector("#wdDelete");
     if (del) del.onclick = ()=>{
@@ -3333,7 +3555,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const lastTs = lastBy[ex.id] || 0;
       const lastTxt = lastTs ? fmtDate(new Date(lastTs)) : "—";
       return `
-        <div class="itemRow">
+        <div class="itemRow" data-editex="${ex.id}" role="button" tabindex="0">
           <div class="left">
             ${exIcon(ex)}
             <div style="min-width:0">
@@ -3344,38 +3566,43 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="row">
             <button class="btn" data-fav="${ex.id}">${isFav(ex.id)?"⭐":"☆"}</button>
             <button class="btn" data-delex="${ex.id}" title="${t("deleteExercise")}">🗑</button>
-            <button class="btn primary" data-addw="${ex.id}">${t("addToWorkout")}</button>
           </div>
         </div>
       `;
     }).join("");
 
+    box.querySelectorAll("[data-editex]").forEach(row=>{
+      row.onclick = ()=>{
+        const ex = state.exercises.find(item=>item.id===row.getAttribute("data-editex"));
+        if (ex) openAddExerciseModal(ex);
+      };
+      row.onkeydown = (e)=>{
+        if (e.key==="Enter" || e.key===" "){
+          e.preventDefault();
+          row.click();
+        }
+      };
+    });
+
     box.querySelectorAll("[data-fav]").forEach(b=>{
-      b.onclick = ()=>{
+      b.onclick = (e)=>{
+        e.stopPropagation();
         toggleFav(b.getAttribute("data-fav"));
         renderExList();
       };
     });
 
     box.querySelectorAll("[data-delex]").forEach(b=>{
-      b.onclick = ()=>{
+      b.onclick = (e)=>{
+        e.stopPropagation();
         deleteExerciseById(b.getAttribute("data-delex"));
       };
     });
 
-    box.querySelectorAll("[data-addw]").forEach(b=>{
-      b.onclick = ()=>{
-        setTab("workout");
-        startWorkoutIfNeeded();
-        const id = b.getAttribute("data-addw");
-        const exists = workoutSession.items.some(x=>x.exerciseId===id);
-        if (!exists) workoutSession.items.push({ id: uid(), exerciseId:id, sets:[] });
-        renderWorkoutItems();
-      };
-    });
   }
 
-  function openAddExerciseModal(){
+  function openAddExerciseModal(exercise=null){
+    const isEdit = !!exercise;
     const overlay = document.createElement("div");
     overlay.style.position="fixed";
     overlay.style.inset="0";
@@ -3393,15 +3620,15 @@ document.addEventListener("DOMContentLoaded", () => {
     modal.innerHTML = `
       <div class="detailHeader">
         <div class="detailTitle">
-          <h2>${t("newExercise")}</h2>
-          <div class="sub">${state.lang==="en" ? "Add your own exercise" : "Додай свою вправу"}</div>
+          <h2>${isEdit ? (state.lang==="en"?"Edit exercise":"Редагувати вправу") : t("newExercise")}</h2>
+          <div class="sub">${isEdit ? (state.lang==="en" ? "Rename, move to another category or change tracking type" : "Перейменуй, перенеси в іншу групу або зміни тип обліку") : (state.lang==="en" ? "Add your own exercise" : "Додай свою вправу")}</div>
         </div>
         <button class="btn" id="addClose" style="border-radius:50%; width:42px; height:42px; padding:0;">✕</button>
       </div>
 
       <div class="row" style="margin-top:12px; flex-wrap:wrap;">
-        <input id="nUa" class="btn" style="flex:1; min-width:220px" placeholder="Назва (UA)" />
-        <input id="nEn" class="btn" style="flex:1; min-width:220px" placeholder="Name (EN)" />
+        <input id="nUa" class="btn" style="flex:1; min-width:220px" placeholder="Назва (UA)" value="${escapeHtml(exercise?.name_ua||"")}" />
+        <input id="nEn" class="btn" style="flex:1; min-width:220px" placeholder="Name (EN)" value="${escapeHtml(exercise?.name_en||"")}" />
         <select id="nCat" class="btn">
           ${allCategories().filter(c=>c.id!=="all").map(c=>`<option value="${c.id}">${state.lang==="ua"?c.ua:c.en}</option>`).join("")}
           <option value="__new">${state.lang==="en"?"+ New category":"+ Нова категорія"}</option>
@@ -3416,7 +3643,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <option value="time">${state.lang==="en"?"Duration":"Час виконання"}</option>
           <option value="distance">${state.lang==="en"?"Distance + time":"Дистанція + час"}</option>
         </select>
-        <button class="btn primary" id="addDo">${t("create")}</button>
+        <button class="btn primary" id="addDo">${isEdit ? (state.lang==="en"?"Save changes":"Зберегти зміни") : t("create")}</button>
       </div>
     `;
 
@@ -3429,9 +3656,16 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.addEventListener("click",(e)=>{ if (e.target===overlay) close(); });
     const categorySelect=modal.querySelector("#nCat");
     const newCategoryFields=modal.querySelector("#newCategoryFields");
+    if (exercise){
+      const knownCategory = allCategories().some(category=>category.id===exercise.category);
+      categorySelect.value = knownCategory ? exercise.category : "__new";
+      const trackingSelect = modal.querySelector("#nTracking");
+      if (trackingSelect) trackingSelect.value = exerciseTracking(exercise);
+    }
     categorySelect.onchange=()=>{
       newCategoryFields.style.display=categorySelect.value==="__new" ? "grid" : "none";
     };
+    categorySelect.onchange();
 
     const addDo = modal.querySelector("#addDo");
     if (addDo) addDo.onclick = ()=>{
@@ -3440,6 +3674,15 @@ document.addEventListener("DOMContentLoaded", () => {
       let category = modal.querySelector("#nCat")?.value || "back";
       const trackingType = modal.querySelector("#nTracking")?.value || "strength";
       if (!name_ua && !name_en) return;
+      const usedInWorkouts = isEdit && (state.workouts || []).some(w =>
+        (w.items || []).some(it => it.exerciseId === exercise.id)
+      );
+      if (usedInWorkouts && trackingType !== exerciseTracking(exercise)){
+        const ok = confirm(state.lang==="en"
+          ? "This exercise already exists in saved workouts. Changing its tracking type can change how old sets are displayed. Save anyway?"
+          : "Ця вправа вже є у збережених тренуваннях. Зміна типу обліку може змінити відображення старих підходів. Все одно зберегти?");
+        if (!ok) return;
+      }
       if(category==="__new"){
         const ua=(modal.querySelector("#nCatUa")?.value||"").trim();
         const en=(modal.querySelector("#nCatEn")?.value||"").trim();
@@ -3454,32 +3697,136 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      state.exercises.unshift({
-        id: uid(),
-        name_ua: name_ua || name_en,
-        name_en: name_en || name_ua,
-        category,
-        trackingType
-      });
+      if (isEdit){
+        exercise.name_ua = name_ua || name_en;
+        exercise.name_en = name_en || name_ua;
+        exercise.category = category;
+        exercise.trackingType = trackingType;
+      } else {
+        state.exercises.unshift({
+          id: uid(),
+          name_ua: name_ua || name_en,
+          name_en: name_en || name_ua,
+          category,
+          trackingType
+        });
+      }
       save();
       close();
       renderExCats();
       renderExList();
+      if (isEdit) render();
     };
   }
 
   // ---------- STATS ----------
+  function statsPeriodBounds(range, now=new Date()){
+    if (range==="all") return {start:new Date(0),end:new Date(now),previousStart:null,previousEnd:null};
+    return homePeriodBounds(range,now);
+  }
+  function workoutTypeCounts(workouts){
+    const counts={strength:0,reps:0,time:0,distance:0};
+    workouts.forEach(workout=>{
+      (workout.items||[]).forEach(item=>{
+        const ex=state.exercises.find(ex=>ex.id===item.exerciseId);
+        const type=exerciseTracking(ex);
+        counts[type]=(counts[type]||0)+(item.sets||[]).length;
+      });
+    });
+    return counts;
+  }
+  function topCategoryByVolume(workouts){
+    const totals={};
+    workouts.forEach(workout=>{
+      (workout.items||[]).forEach(item=>{
+        const ex=state.exercises.find(ex=>ex.id===item.exerciseId);
+        const cat=ex?.category||"other";
+        totals[cat]=(totals[cat]||0)+volumeOfSets(item.sets);
+      });
+    });
+    const best=Object.entries(totals).sort((a,b)=>b[1]-a[1])[0];
+    return best ? {category:best[0],volume:best[1]} : null;
+  }
+  function weeklyActivityBuckets(workouts,limit=10){
+    const map=new Map();
+    workouts.forEach(workout=>{
+      const key=startOfWeek(new Date(workout.date)).toISOString().slice(0,10);
+      const cur=map.get(key)||{date:key,workouts:0,sets:0,volume:0};
+      cur.workouts+=1;
+      cur.sets+=countSetsInWorkouts([workout]);
+      cur.volume+=volumeInWorkouts([workout]);
+      map.set(key,cur);
+    });
+    return [...map.values()].sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(-limit);
+  }
+  function miniBarsMarkup(buckets,metric="workouts"){
+    if(!buckets.length) return `<div class="muted">${t("noData")}</div>`;
+    const max=Math.max(1,...buckets.map(item=>parseNum(item[metric])));
+    return `<div class="miniBars">${buckets.map(item=>{
+      const h=Math.max(8,Math.round(parseNum(item[metric])/max*96));
+      const label=metric==="volume"?fmtVol(item.volume):fmtNum(item[metric]);
+      return `<div class="miniBarCol" style="height:${h}px" title="${fmtDate(item.date)} · ${label}"></div>`;
+    }).join("")}</div>`;
+  }
+  function typeBalanceMarkup(workouts){
+    const counts=workoutTypeCounts(workouts);
+    const entries=[
+      ["strength",state.lang==="en"?"Strength":"Силові","#8b5cf6","#c4b5fd","rgba(139,92,246,.32)"],
+      ["reps",state.lang==="en"?"Reps":"Повтори","#10b981","#6ee7b7","rgba(16,185,129,.3)"],
+      ["time",state.lang==="en"?"Time":"Час","#f59e0b","#fde68a","rgba(245,158,11,.28)"],
+      ["distance",state.lang==="en"?"Cardio":"Кардіо","#22d3ee","#67e8f9","rgba(34,211,238,.3)"]
+    ].filter(([key])=>counts[key]>0);
+    const total=entries.reduce((sum,[key])=>sum+counts[key],0);
+    if(!total) return `<div class="muted">${t("noData")}</div>`;
+    return `<div class="typeBalance">${entries.map(([key,label,color,light,glow])=>{
+      const pct=Math.round(counts[key]/total*100);
+      return `<div class="typeBalanceRow"><strong>${label}</strong><div class="typeBalanceTrack"><span class="typeBalanceFill" style="width:${Math.max(3,pct)}%;--bar-color:${color};--bar-color-light:${light};--bar-glow:${glow}"></span></div><span>${pct}%</span></div>`;
+    }).join("")}</div>`;
+  }
+  function advancedStatsMarkup(workouts,previousWorkouts,range){
+    const buckets=weeklyActivityBuckets(range==="all"?state.workouts:workouts,10);
+    const avgVolume=workouts.length ? Math.round(volumeInWorkouts(workouts)/workouts.length) : 0;
+    const avgSets=workouts.length ? Math.round(countSetsInWorkouts(workouts)/workouts.length*10)/10 : 0;
+    const currentVolume=volumeInWorkouts(workouts);
+    const previousVolume=volumeInWorkouts(previousWorkouts||[]);
+    const volumeTrend=range==="all" ? null : percentageDelta(currentVolume,previousVolume);
+    const topCat=topCategoryByVolume(workouts);
+    const streak=activeWeekStreak();
+    return `
+      <div class="sectionCard">
+        <div class="sectionTitle">${state.lang==="en"?"Training intelligence":"Тренувальні інсайти"}</div>
+        <div class="advancedStatsGrid">
+          <div class="advancedStatCard"><span>${state.lang==="en"?"Week streak":"Серія тижнів"}</span><strong>${streak}</strong><small>${state.lang==="en"?"weeks with training in a row":"тижнів поспіль з тренуваннями"}</small></div>
+          <div class="advancedStatCard"><span>${state.lang==="en"?"Average session":"Середнє заняття"}</span><strong>${fmtVol(avgVolume)} kg</strong><small>${fmtNum(avgSets)} ${state.lang==="en"?"sets per workout":"підходів за тренування"}</small></div>
+          <div class="advancedStatCard"><span>${state.lang==="en"?"Main focus":"Основний фокус"}</span><strong>${topCat?escapeHtml(catName(topCat.category)):"—"}</strong><small>${topCat?`${fmtVol(topCat.volume)} kg`:t("noData")}${volumeTrend===null?"":` · ${volumeTrend>=0?"+":""}${volumeTrend}%`}</small></div>
+        </div>
+      </div>
+      <div class="sectionCard">
+        <div class="sectionTitle">${state.lang==="en"?"Weekly rhythm":"Ритм по тижнях"}</div>
+        ${miniBarsMarkup(buckets,"workouts")}
+        <div class="muted" style="margin-top:10px">${state.lang==="en"?"Each bar is a week. Taller means more workouts.":"Кожна колонка — тиждень. Вища колонка означає більше тренувань."}</div>
+      </div>
+      <div class="sectionCard">
+        <div class="sectionTitle">${state.lang==="en"?"Load trend by weeks":"Тренд навантаження по тижнях"}</div>
+        ${miniBarsMarkup(buckets,"volume")}
+        <div class="muted" style="margin-top:10px">${state.lang==="en"?"Shows how total training load changes week by week.":"Показує, як змінюється сумарне навантаження від тижня до тижня."}</div>
+      </div>
+      <div class="sectionCard">
+        <div class="sectionTitle">${state.lang==="en"?"Training type balance":"Баланс типів вправ"}</div>
+        ${typeBalanceMarkup(workouts)}
+        <div class="muted" style="margin-top:10px">${state.lang==="en"?"Strength, reps, timed work and cardio by completed sets.":"Силові, повтори, вправи на час і кардіо за кількістю внесених підходів."}</div>
+      </div>`;
+  }
+
   function viewStats(){
     const el = document.createElement("div");
 
     const range = state.ui.statsRange || "week";
     const now = new Date();
 
-    let from = new Date(0);
-    if (range==="week") from = startOfWeek(now);
-    if (range==="month") from = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const workouts = state.workouts.filter(w => new Date(w.date) >= from);
+    const bounds=statsPeriodBounds(range,now);
+    const workouts = range==="all" ? [...state.workouts] : workoutsInBounds(bounds.start,bounds.end);
+    const previousWorkouts = range==="all" ? [] : workoutsInBounds(bounds.previousStart,bounds.previousEnd);
 
     const trainings = workouts.length;
     const days = activeDaysCount(workouts);
@@ -3498,6 +3845,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="filters" id="statsRanges">
         <button class="fchip ${range==="week"?"active":""}" data-r="week">${t("week")}</button>
         <button class="fchip ${range==="month"?"active":""}" data-r="month">${t("month")}</button>
+        <button class="fchip ${range==="year"?"active":""}" data-r="year">${state.lang==="en"?"Year":"Рік"}</button>
         <button class="fchip ${range==="all"?"active":""}" data-r="all">${t("all")}</button>
       </div>
 
@@ -3511,6 +3859,8 @@ document.addEventListener("DOMContentLoaded", () => {
         <div><div style="font-weight:900">🔥 ${t("calories")}</div><div class="muted">${t("caloriesApprox")} · MET + ${fmtNum(latestBodyWeight())} kg</div></div>
         <div class="calorieValue">≈ ${calories} kcal</div>
       </div>
+
+      ${advancedStatsMarkup(workouts,previousWorkouts,range)}
 
       <div class="sectionCard">
         <div class="sectionTitle">${t("volumeProgress")}</div>
@@ -4383,10 +4733,10 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"1. Create or choose exercises":"1. Створи або обери вправи",
         sub:en?"Exercise type defines what you enter":"Тип вправи визначає поля введення",
         copy:en
-          ? "Open Exercises and tap +. Choose an existing category or New category. Then select tracking: weight + reps, reps only, duration, or distance + time."
-          : "Відкрий «Вправи» й натисни +. Обери наявну категорію або «Нова категорія». Далі вкажи тип обліку: вага + повтори, лише повтори, час або дистанція + час.",
-        example:en?"Example: Pull-ups → Reps only. Treadmill → Distance + time.":"Приклад: Підтягування → Лише повтори. Доріжка → Дистанція + час.",
-        mini:`<div class="miniTitle">＋ ${en?"New exercise":"Нова вправа"}</div><div class="miniField">${en?"Pull-ups":"Підтягування"}</div><div class="miniRow"><div class="miniField">${en?"Back":"Спина"}</div><div class="miniField">${en?"Reps only":"Лише повтори"}</div></div><div class="miniButton" style="margin-top:6px;text-align:center">${en?"Create":"Створити"}</div>`
+          ? "Open Exercises and tap + to create an item in your library. Tap an exercise card to rename it, move it to another category, or correct tracking: weight + reps, reps only, duration, or distance + time."
+          : "Відкрий «Вправи» й натисни +, щоб створити позицію в бібліотеці. Натисни на картку вправи, щоб перейменувати її, перенести в іншу категорію або виправити тип обліку: вага + повтори, лише повтори, час або дистанція + час.",
+        example:en?"Example: Pull-ups → Reps only. Treadmill → Distance + time. Add exercises to a workout from the Workout tab.":"Приклад: Підтягування → Лише повтори. Доріжка → Дистанція + час. Додавай вправи до заняття з вкладки «Тренування».",
+        mini:`<div class="miniTitle">＋ ${en?"New exercise":"Нова вправа"}</div><div class="miniField">${en?"Pull-ups":"Підтягування"}</div><div class="miniRow"><div class="miniField">${en?"Back":"Спина"}</div><div class="miniField">${en?"Tap card":"Натисни картку"}</div></div><div class="miniButton" style="margin-top:6px;text-align:center">${en?"Save":"Зберегти"}</div>`
       },
       {
         title:en?"2. Start a workout":"2. Почни тренування",
@@ -4487,37 +4837,46 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Prepare exercises":"Підготуй вправи",
         sub:en?"Category and tracking type control the fields":"Категорія і тип обліку визначають поля",
         copy:en
-          ?"Open Exercises, use an existing exercise or tap +. Choose a category or create a new one, then select weight + reps, reps only, duration, or distance + time."
-          :"Відкрий «Вправи», обери наявну вправу або натисни +. Вкажи категорію чи створи нову, а також тип обліку: вага + повтори, лише повтори, тривалість або дистанція + час.",
-        example:en?"Bench press: weight + reps. Pull-ups: reps only. Treadmill: distance + time.":"Жим лежачи: вага + повтори. Підтягування: лише повтори. Доріжка: дистанція + час.",
-        mini:`<div class="miniTitle">＋ ${en?"Exercise":"Вправа"}</div><div class="miniField">${en?"Pull-ups":"Підтягування"}</div><div class="miniRow"><div class="miniField">${en?"Back":"Спина"}</div><div class="miniField">${en?"Reps":"Повтори"}</div></div>`
+          ?"Open Exercises to maintain your exercise library. Tap + to create a new exercise. Tap an existing exercise card to rename it, move it to another muscle group, or correct the tracking type: weight + reps, reps only, duration, or distance + time."
+          :"Відкрий «Вправи», щоб вести бібліотеку вправ. Натисни +, щоб створити нову вправу. Натисни на наявну картку, щоб перейменувати її, перенести в іншу групу м’язів або виправити тип обліку: вага + повтори, лише повтори, тривалість або дистанція + час.",
+        example:en?"Bench press: weight + reps. Pull-ups: reps only. Treadmill: distance + time. Add exercises to a workout from the Workout tab.":"Жим лежачи: вага + повтори. Підтягування: лише повтори. Доріжка: дистанція + час. До тренування вправи додаються з вкладки «Тренування».",
+        mini:`<div class="miniTitle">＋ ${en?"Exercise":"Вправа"}</div><div class="miniField">${en?"Pull-ups":"Підтягування"}</div><div class="miniRow"><div class="miniField">${en?"Back":"Спина"}</div><div class="miniField">${en?"Tap card":"Натисни картку"}</div></div>`
       },
       {
         title:en?"Start or continue a workout":"Почни або продовж тренування",
         sub:en?"Build today's list and keep unfinished work":"Склади план дня і не втрачай незавершене",
         copy:en
-          ?"Start from Home or Workout, add exercises and enter a title. A workout from the current day can be continued. Saving and clearing require confirmation to prevent accidental taps."
-          :"Почни з «Головної» або «Тренування», додай вправи та назву. Тренування поточного дня можна продовжити. Збереження й очищення потребують підтвердження, щоб уникнути випадкового натискання.",
-        example:en?"Chest day: bench press, incline press, push-ups.":"День грудей: жим лежачи, жим під кутом, віджимання.",
-        mini:`<div class="miniTitle">${en?"Today's workout":"Сьогоднішнє тренування"}</div><div class="miniField">${en?"Chest day":"Груди"}</div><div class="miniButton">＋ ${en?"Add exercise":"Додати вправу"}</div>`
+          ?"Start from Home or Workout, add exercises or a saved complex, then enter a title. When exercises are already loaded, the screen switches to focus mode: timer, exercise cards, Add exercise, Save and Clear."
+          :"Почни з «Головної» або «Тренування», додай вправи чи готовий комплекс і введи назву. Коли вправи вже набрані, екран переходить у фокус-режим: таймер, картки вправ, «Додати вправу», «Зберегти» й «Очистити».",
+        example:en?"Chest day: bench press, incline press, push-ups. Use Add exercise if you need one more movement mid-workout.":"День грудей: жим лежачи, жим під кутом, віджимання. Якщо під час заняття потрібна ще одна вправа, натисни «Додати вправу».",
+        mini:`<div class="miniTitle">${en?"Today's workout":"Сьогоднішнє тренування"}</div><div class="miniField">${en?"Chest day":"Груди"}</div><div class="miniRow"><div class="miniButton">＋ ${en?"Add exercise":"Додати вправу"}</div><div class="miniField">${en?"Save":"Зберегти"}</div></div>`
       },
       {
         title:en?"Record sets and rest":"Внось підходи та відпочинок",
         sub:en?"The form adapts to each exercise":"Форма підлаштовується під тип вправи",
         copy:en
-          ?"Enter the actual result in the labeled fields. When the required values are filled, the rest timer starts automatically. At zero the app can vibrate on supported devices."
-          :"Внось фактичний результат у підписані поля. Після заповнення потрібних значень таймер відпочинку запускається автоматично. Після завершення телефон може вібрувати, якщо пристрій це підтримує.",
-        example:en?"Strength: 80 kg × 8. Cardio: 2.5 km in 30 min.":"Силова: 80 кг × 8. Кардіо: 2,5 км за 30 хв.",
-        mini:`<div class="miniTitle">${en?"Set 1":"Підхід 1"}</div><div class="miniRow"><div class="miniField">80 kg</div><div class="miniField">8 ${en?"reps":"повт."}</div></div><div class="miniField">01:30 ${en?"rest":"відпочинок"}</div>`
+          ?"Enter the actual result in the labeled fields. Tap the set number to mark it completed in green, especially when a template or latest results loaded old sets. The rest timer starts automatically after completed values and also stays visible in a floating dock while you scroll."
+          :"Внось фактичний результат у підписані поля. Натискай номер підходу, щоб позначити його зеленим як виконаний, особливо коли шаблон або останні результати підтягнули старі підходи. Таймер відпочинку запускається автоматично після заповнення значень і лишається видимим у плаваючій панелі під час прокрутки.",
+        example:en?"Strength: 80 kg × 8, then tap #1. Cardio: 2.5 km in 30 min.":"Силова: 80 кг × 8, потім натисни #1. Кардіо: 2,5 км за 30 хв.",
+        mini:`<div class="miniTitle">${en?"Set 1":"Підхід 1"}</div><div class="miniRow"><div class="miniButton">#1 ✓</div><div class="miniField">80 kg</div><div class="miniField">8 ${en?"reps":"повт."}</div></div><div class="miniField">01:30 ${en?"floating timer":"плаваючий таймер"}</div>`
       },
       {
         title:en?"Save, edit or delete correctly":"Зберігай, редагуй і видаляй правильно",
         sub:en?"All derived results are recalculated":"Усі похідні результати перераховуються",
         copy:en
-          ?"After the last set save the workout. Statistics, records, favorites and recommendations update from saved history. If a workout is deleted, its records and traces are removed as well."
-          :"Після останнього підходу збережи тренування. Статистика, рекорди, улюблені вправи й рекомендації оновлюються зі збереженої історії. Якщо тренування видалити, його рекорди та сліди також прибираються.",
-        example:en?"A deleted test workout no longer affects the maximum weight.":"Видалене тестове тренування більше не впливає на максимальну вагу.",
-        mini:`<div class="miniButton">${en?"Save workout":"Зберегти тренування"}</div><div class="miniRow"><div class="miniField">${en?"Edit":"Редагувати"}</div><div class="miniField">${en?"Delete":"Видалити"}</div></div>`
+          ?"After the last set save the workout. Statistics, records, favorites and recommendations update from saved history. Open any saved workout from Home to edit, delete, or tap Make active to create today's workout with the same exercises, sets, reps and weights."
+          :"Після останнього підходу збережи тренування. Статистика, рекорди, улюблені вправи й рекомендації оновлюються зі збереженої історії. Відкрий будь-яке збережене тренування з «Головної», щоб редагувати, видалити або натиснути «Зробити активним» і створити сьогоднішнє заняття з тими ж вправами, підходами, повторами та вагою.",
+        example:en?"If you do not rename the activated workout, the app gives it today's date automatically.":"Якщо не перейменувати активоване тренування, додаток автоматично дасть йому сьогоднішню дату.",
+        mini:`<div class="miniButton">${en?"Make active":"Зробити активним"}</div><div class="miniRow"><div class="miniField">${en?"Edit title":"Назва"}</div><div class="miniField">${en?"Delete":"Видалити"}</div></div>`
+      },
+      {
+        title:en?"Reuse latest results":"Використовуй останні результати",
+        sub:en?"Bring back the last working sets when it helps":"Підтягуй останні робочі підходи, коли це зручно",
+        copy:en
+          ?"When adding exercises or a complex, use Latest results to see the last saved sets. If the app finds previous work, it asks whether to copy those sets and weights into the new workout, so you can start from a familiar baseline and adjust during training."
+          :"Коли додаєш вправи або комплекс, використовуй «Останні результати», щоб побачити останні збережені підходи. Якщо додаток знаходить попередню роботу, він питає, чи скопіювати ці підходи та вагу в нове тренування, щоб ти стартував зі знайомої бази й коригував її по ходу.",
+        example:en?"Add bench press, confirm latest results, then change only the sets that differ today.":"Додай жим лежачи, підтвердь останні результати й зміни тільки ті підходи, які сьогодні відрізняються.",
+        mini:`<div class="miniTitle">${en?"Latest results":"Останні результати"}</div><div class="miniField">80 kg × 8 · 3 ${en?"sets":"підходи"}</div><div class="miniButton">${en?"Copy to workout":"Додати в тренування"}</div>`
       },
       {
         title:en?"Set goals and use recommendations":"Постав цілі та користуйся рекомендаціями",
@@ -4532,19 +4891,19 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Read Home, Statistics and Body":"Аналізуй головну, статистику й тіло",
         sub:en?"Choose a period and open exercise details":"Обирай період і відкривай деталі вправ",
         copy:en
-          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Tap the workout count to jump to the workout list. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
-          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. Натисни кількість тренувань, щоб перейти до списку. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
-        example:en?"Enter only weight and waist today; empty body fields are allowed.":"Сьогодні можна внести лише вагу й талію; порожні поля дозволені.",
-        mini:`<div class="miniRow"><div class="miniStat">${en?"Month":"Місяць"}<strong>12</strong></div><div class="miniStat">${en?"Calories":"Калорії"}<strong>≈420</strong></div></div>`
+          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Statistics has week/month/year/all filters, insight cards, weekly rhythm bars, load trend bars, muscle split, type balance and exercise details. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
+          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. «Статистика» має фільтри тиждень/місяць/рік/все, інсайти, ритм по тижнях, тренд навантаження, розподіл по групах, баланс типів вправ і деталі кожної вправи. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
+        example:en?"Use Load trend to see whether training is growing, and Type balance to notice if cardio or reps work disappeared.":"Дивись «Тренд навантаження», щоб бачити ріст роботи, і «Баланс типів вправ», щоб помітити, якщо зникло кардіо чи вправи на повтори.",
+        mini:`<div class="miniRow"><div class="miniStat">${en?"Rhythm":"Ритм"}<strong>▁▃▆█</strong></div><div class="miniStat">${en?"Balance":"Баланс"}<strong>64%</strong></div></div>`
       },
       {
         title:en?"Plan future workouts and templates":"Плануй майбутні тренування і шаблони",
         sub:en?"Prepare Tuesday or Thursday before the day comes":"Заготуй вівторок чи четвер ще до тренування",
         copy:en
-          ?"In Workout use Planned workouts to create a future workout. Pick a date and time, name it, choose exercises by category or load a saved template. On the planned day tap Start, adjust the title or exercises if needed, enter real sets, then save. Statistics update only after saving the actual workout."
-          :"У розділі «Тренування» використовуй «Заплановані тренування»: обери дату й час, назву, вправи по категоріях або готовий шаблон. У потрібний день натисни «Почати», за потреби зміни назву чи вправи, внеси фактичні підходи й збережи. У статистику потрапляє тільки реально завершене тренування.",
-        example:en?"Sunday: plan Push for Tuesday and Pull for Thursday. Thursday: open the plan and start with exercises already loaded.":"Неділя: заплануй «Жим» на вівторок і «Тяга» на четвер. У четвер відкрий план і почни вже з набраними вправами.",
-        mini:`<div class="miniTitle">${en?"Planner":"Планувальник"} · ${en?"Templates":"Шаблони"}</div><div class="miniRow"><div class="miniField">${en?"Tue":"Вт"} · ${en?"Push":"Жим"}</div><div class="miniField">${en?"Thu":"Чт"} · ${en?"Pull":"Тяга"}</div></div><div class="miniButton">${en?"Start planned workout":"Почати план"}</div>`
+          ?"In Workout use Planned workouts to create a future workout. Pick a date and time, name it, choose exercises by category or load a saved template. Templates keep exercises in the order you add them. Tap a template to preview its exercises and latest results, then use Edit to change it."
+          :"У розділі «Тренування» використовуй «Заплановані тренування»: обери дату й час, назву, вправи по категоріях або готовий шаблон. Шаблони зберігають вправи саме в тому порядку, у якому ти їх додаєш. Натисни на шаблон, щоб переглянути його вправи й останні результати, а через «Редагувати» зміни склад.",
+        example:en?"Sunday: plan Push for Tuesday and Pull for Thursday. Thursday: open the plan, start with exercises already loaded, then save the actual work.":"Неділя: заплануй «Жим» на вівторок і «Тяга» на четвер. У четвер відкрий план, почни вже з набраними вправами й збережи фактичну роботу.",
+        mini:`<div class="miniTitle">${en?"Planner":"Планувальник"} · ${en?"Templates":"Шаблони"}</div><div class="miniRow"><div class="miniField">${en?"Tue":"Вт"} · ${en?"Push":"Жим"}</div><div class="miniField">${en?"Template preview":"Перегляд шаблону"}</div></div><div class="miniButton">${en?"Edit template":"Редагувати шаблон"}</div>`
       },
       {
         title:en?"Back up and restore data":"Створюй резервну копію та відновлюй дані",
