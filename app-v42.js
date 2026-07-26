@@ -1879,6 +1879,15 @@ document.addEventListener("DOMContentLoaded", () => {
     return el;
   }
 
+  function cleanRecommendationTitle(title){
+    const raw=String(title||"").trim();
+    const fallback=state.lang==="en" ? "Next workout" : "Наступне тренування";
+    if(!raw) return fallback;
+    if(/^(Workout|Тренування)\s+\d{1,2}\.\d{1,2}\.\d{4}$/i.test(raw)) return fallback;
+    const stripped=raw.replace(/\s+\d{1,2}\.\d{1,2}\.\d{4}$/,"").trim();
+    return stripped || fallback;
+  }
+
   function recommendationCardMarkup(){
     if ((state.recommendations||[]).length){
       const summary=state.recommendations[0];
@@ -1888,7 +1897,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div>
             <div class="muted" style="text-transform:uppercase;letter-spacing:.12em;font-size:9px">${state.lang==="en"?"Program forecast":"Прогноз програми"}</div>
             <div class="recommendationHeroTitle">${t("nextWorkout")}</div>
-            <div class="recommendationSession">${escapeHtml(summary.title)}</div>
+            <div class="recommendationSession">${escapeHtml(cleanRecommendationTitle(summary.title))}</div>
             <div class="muted">${escapeHtml(summary.prescription||"")}</div>
           </div>
           <div class="recommendationConfidence">${state.lang==="en"?"Analysis":"Аналіз"}<br><strong>${state.workouts.length}</strong> ${state.lang==="en"?"sessions":"занять"}</div>
@@ -2273,6 +2282,18 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     });
 
+    box.querySelectorAll("[data-doneset]").forEach(btn=>{
+      btn.onclick = ()=>{
+        const id = btn.getAttribute("data-doneset");
+        const idx = Number(btn.getAttribute("data-i"));
+        const it = workoutSession.items.find(x=>x.id===id);
+        if (!it || !it.sets[idx]) return;
+        it.sets[idx]._done = !it.sets[idx]._done;
+        publishWorkoutToNative(it.sets[idx]._done ? "setMarkedDone" : "setMarkedOpen");
+        renderWorkoutItems();
+      };
+    });
+
     // input bind (NO rerender on every key)
     box.querySelectorAll("input[data-id]").forEach(inp=>{
       inp.addEventListener("input", (e)=>{
@@ -2536,17 +2557,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    box.querySelectorAll("[data-doneset]").forEach(btn=>{
-      btn.onclick = ()=>{
-        const id = btn.getAttribute("data-doneset");
-        const idx = Number(btn.getAttribute("data-i"));
-        const it = workoutSession.items.find(x=>x.id===id);
-        if (!it || !it.sets[idx]) return;
-        it.sets[idx]._done = !it.sets[idx]._done;
-        publishWorkoutToNative(it.sets[idx]._done ? "setMarkedDone" : "setMarkedOpen");
-        renderWorkoutItems();
-      };
-    });
     entries.sort((a,b)=>b.ts-a.ts);
     const latest=entries[0];
     if(!latest) return null;
@@ -2872,21 +2882,42 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function bindTemplateActions(root){
-    root.querySelectorAll("[data-view-template]").forEach(button=>button.onclick=(event)=>{
-      if(event.target.closest("button")) return;
-      const template=state.workoutTemplates.find(item=>item.id===button.getAttribute("data-view-template"));
+    root.querySelectorAll("[data-view-template]").forEach(button=>{
+      const open=(event)=>{
+        if(event?.target?.closest("button")) return;
+        const template=state.workoutTemplates.find(item=>item.id===button.getAttribute("data-view-template"));
+        if(template) openWorkoutTemplateViewModal(template);
+      };
+      button.onclick=open;
+      button.onkeydown=(event)=>{
+        if(event.key==="Enter" || event.key===" "){
+          event.preventDefault();
+          open(event);
+        }
+      };
+    });
+    root.querySelectorAll("[data-open-template]").forEach(button=>button.onclick=(event)=>{
+      event.stopPropagation();
+      const template=state.workoutTemplates.find(item=>item.id===button.getAttribute("data-open-template"));
       if(template) openWorkoutTemplateViewModal(template);
     });
-    root.querySelectorAll("[data-use-template]").forEach(button=>button.onclick=()=>{
-      addExercisesToSession(exerciseIdsFromTemplate(button.getAttribute("data-use-template")));
+    root.querySelectorAll("[data-use-template]").forEach(button=>button.onclick=(event)=>{
+      event.stopPropagation();
+      const exerciseIds=exerciseIdsFromTemplate(button.getAttribute("data-use-template"));
+      const copyLatest=exerciseIds.length && hasLatestPerformance(exerciseIds) && confirm(state.lang==="en"
+        ? "Add sets and weights from the latest workout for this complex?"
+        : "Додати підходи й ваги з останнього заняття для цього комплексу?");
+      addExercisesToSession(exerciseIds,{copyLatest});
       save();
-      renderWorkoutItems();
+      render();
     });
-    root.querySelectorAll("[data-edit-template]").forEach(button=>button.onclick=()=>{
+    root.querySelectorAll("[data-edit-template]").forEach(button=>button.onclick=(event)=>{
+      event.stopPropagation();
       const template=state.workoutTemplates.find(item=>item.id===button.getAttribute("data-edit-template"));
       if(template) openWorkoutTemplateModal(template);
     });
-    root.querySelectorAll("[data-delete-template]").forEach(button=>button.onclick=()=>{
+    root.querySelectorAll("[data-delete-template]").forEach(button=>button.onclick=(event)=>{
+      event.stopPropagation();
       if(!confirm(state.lang==="en"?"Delete this template?":"Видалити цей шаблон?")) return;
       state.workoutTemplates=state.workoutTemplates.filter(template=>template.id!==button.getAttribute("data-delete-template"));
       save();render();
@@ -2945,7 +2976,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const ex=state.exercises.find(candidate=>candidate.id===item.exerciseId);
               return ex ? exName(ex) : "";
             }).filter(Boolean).join(" · ");
-              return `<article class="templateRow" data-view-template="${template.id}" role="button" tabindex="0"><div><strong>${escapeHtml(template.title)}</strong><span>${escapeHtml(names)}${template.items.length>3?` · +${template.items.length-3}`:""}</span></div><div class="templateActions"><button class="btn" data-edit-template="${template.id}">⋯</button><button class="btn" data-delete-template="${template.id}">✕</button></div></article>`;
+              return `<article class="templateRow" data-view-template="${template.id}" role="button" tabindex="0"><div><strong>${escapeHtml(template.title)}</strong><span>${escapeHtml(names)}${template.items.length>3?` · +${template.items.length-3}`:""}</span></div><div class="templateActions templateActionsWide"><button class="btn" data-open-template="${template.id}">${state.lang==="en"?"View":"Перегляд"}</button><button class="btn primary" data-edit-template="${template.id}">${state.lang==="en"?"Edit":"Редагувати"}</button><button class="btn" data-delete-template="${template.id}">✕</button></div></article>`;
           }).join(""):`<div class="emptyCalendar">${state.lang==="en"?"Create sets like Bench/Row or Biceps/Triceps once and reuse them.":"Створи заготовки типу Жим/Тяга або Біцепс/Трицепс і використовуй повторно."}</div>`}</div>
         </div>
       </section>`;
@@ -3271,7 +3302,7 @@ document.addEventListener("DOMContentLoaded", () => {
     modal.style.cssText="width:min(680px,96vw);max-height:84vh;overflow:auto";
     modal.innerHTML=`
       <div class="detailHeader"><div class="detailTitle"><h2>${gotAnyPR?"🏆 ":""}${t("saveOk")}</h2><div class="sub">${state.lang==="en"?"Program forecast updated":"Прогноз програми оновлено"}</div></div><button class="btn" id="recClose">✕</button></div>
-      <div class="recommendationHero" style="margin-top:12px"><div><div class="recommendationSession">${escapeHtml(summary.title)}</div><div class="muted">${escapeHtml(summary.prescription||"")}</div></div></div>
+      <div class="recommendationHero" style="margin-top:12px"><div><div class="recommendationSession">${escapeHtml(cleanRecommendationTitle(summary.title))}</div><div class="muted">${escapeHtml(summary.prescription||"")}</div></div></div>
       <div class="recommendationReason">${escapeHtml(summary.text||"")}</div>
       <div class="recommendationPlan">${details.map(rec=>`<div class="recommendationPlanRow"><div class="recommendationPlanMain"><strong>${escapeHtml(rec.title)}</strong><span>${escapeHtml(rec.text||"")}</span></div><div class="recommendationPrescription">${escapeHtml(rec.prescription||"")}</div></div>`).join("")}</div>
       <div class="premiumNote" style="margin-top:14px">${state.lang==="en"?"The forecast follows your workout rotation and recent performance. Adjust it if recovery or technique is poor.":"Прогноз враховує чергування твоїх занять та останні результати. Коригуй його, якщо відновлення або техніка недостатні."}</div>
@@ -3772,6 +3803,19 @@ document.addEventListener("DOMContentLoaded", () => {
       return `<div class="miniBarSlot" title="${fmtDate(item.date)} · ${label}"><span class="miniBarValue">${escapeHtml(label)}</span><div class="miniBarCol" style="height:${h}px"></div></div>`;
     }).join("")}</div>`;
   }
+  function weeklyCaloriesTrendMarkup(buckets){
+    const points=(buckets||[]).map(item=>({
+      value:Math.round(parseNum(item.calories)),
+      label:fmtDate(item.date)
+    }));
+    return `<div class="chartSurface calorieTrendSurface">${trendMarkup(points,{
+      color:"#fb923c",
+      unit:"kcal",
+      format:value=>`≈ ${fmtNum(value)}`,
+      pointFormat:value=>fmtNum(value),
+      caption:state.lang==="en" ? "Calories of latest week" : "Калорії останнього тижня"
+    })}</div>`;
+  }
   function typeBalanceMarkup(workouts){
     const counts=workoutTypeCounts(workouts);
     const entries=[
@@ -3817,7 +3861,7 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
       <div class="sectionCard">
         <div class="sectionTitle">${state.lang==="en"?"Calories by weeks":"Калорії по тижнях"}</div>
-        ${miniBarsMarkup(buckets,"calories")}
+        ${weeklyCaloriesTrendMarkup(buckets)}
         <div class="muted" style="margin-top:10px">${state.lang==="en"?"Approximate calories burned per week, based on workout duration, sets, MET and latest body weight.":"Приблизно спалені калорії за тиждень на основі тривалості, підходів, MET і останньої ваги тіла."}</div>
       </div>
       <div class="sectionCard">
@@ -3878,6 +3922,12 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
 
       <div class="sectionCard">
+        <div class="sectionTitle">${state.lang==="en"?"Calories progress":"Прогрес калорій"}</div>
+        <div class="chartSurface" id="chartAllCalories"></div>
+        <div class="muted" style="margin-top:10px">${state.lang==="en"?"Estimated calories for the latest workouts in the same style as volume progress.":"Орієнтовні калорії за останні тренування в такому ж стилі, як прогрес обʼєму."}</div>
+      </div>
+
+      <div class="sectionCard">
         <div class="sectionTitle">${t("muscleSplit")}</div>
         <div class="chartSurface" id="chartMusclePie"></div>
         <div class="muted" style="margin-top:10px">${t("muscleSplitHint")}</div>
@@ -3903,6 +3953,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       drawAllVolumeBars(workouts);
+      drawAllCaloriesTrend(workouts);
       drawMusclePie(workouts);
       renderStatsExercisesOnlyTrained();
       if (selectedStatsExerciseId) renderExerciseDetail();
@@ -4055,6 +4106,22 @@ document.addEventListener("DOMContentLoaded", () => {
       format:fmtVol,
       pointFormat:fmtVol,
       caption:state.lang==="en" ? "Volume of latest workout" : "Обʼєм останнього тренування"
+    });
+  }
+
+  function drawAllCaloriesTrend(workouts){
+    const box = $("#chartAllCalories");
+    if (!box) return;
+    const points = [...workouts].reverse().map(w=>({
+      value:estimateWorkoutCalories(w),
+      label:fmtDate(w.date)
+    }));
+    box.innerHTML = trendMarkup(points,{
+      color:"#fb923c",
+      unit:"kcal",
+      format:value=>`≈ ${fmtNum(value)}`,
+      pointFormat:value=>fmtNum(value),
+      caption:state.lang==="en" ? "Calories of latest workout" : "Калорії останнього тренування"
     });
   }
 
@@ -4900,17 +4967,17 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Read Home, Statistics and Body":"Аналізуй головну, статистику й тіло",
         sub:en?"Choose a period and open exercise details":"Обирай період і відкривай деталі вправ",
         copy:en
-          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Statistics has week/month/year/all filters, insight cards, weekly rhythm bars, load trend bars, calories by weeks, muscle split, type balance and exercise details. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
-          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. «Статистика» має фільтри тиждень/місяць/рік/все, інсайти, ритм по тижнях, тренд навантаження, калорії по тижнях, розподіл по групах, баланс типів вправ і деталі кожної вправи. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
-        example:en?"Use Load trend to see whether training is growing, Calories by weeks to estimate energy cost, and Type balance to notice if cardio or reps work disappeared.":"Дивись «Тренд навантаження», щоб бачити ріст роботи, «Калорії по тижнях» для оцінки енерговитрат і «Баланс типів вправ», щоб помітити, якщо зникло кардіо чи вправи на повтори.",
+          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Statistics has week/month/year/all filters, insight cards, weekly rhythm bars, load trend, calorie progress graphs, muscle split, type balance and exercise details. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
+          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. «Статистика» має фільтри тиждень/місяць/рік/все, інсайти, ритм по тижнях, тренд навантаження, графіки калорій, розподіл по групах, баланс типів вправ і деталі кожної вправи. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
+        example:en?"Use Load trend to see whether training is growing, Calories progress to estimate energy cost, and Type balance to notice if cardio or reps work disappeared.":"Дивись «Тренд навантаження», щоб бачити ріст роботи, «Прогрес калорій» для оцінки енерговитрат і «Баланс типів вправ», щоб помітити, якщо зникло кардіо чи вправи на повтори.",
         mini:`<div class="miniRow"><div class="miniStat">${en?"Rhythm":"Ритм"}<strong>▁▃▆█</strong></div><div class="miniStat">${en?"Balance":"Баланс"}<strong>64%</strong></div></div>`
       },
       {
         title:en?"Plan future workouts and templates":"Плануй майбутні тренування і шаблони",
         sub:en?"Prepare Tuesday or Thursday before the day comes":"Заготуй вівторок чи четвер ще до тренування",
         copy:en
-          ?"In Workout use Planned workouts to create a future workout. Pick a date and time, name it, choose exercises by category or load a saved template. Templates keep exercises in the order you add them. Tap a template to preview its exercises and latest results, then use Edit to change it."
-          :"У розділі «Тренування» використовуй «Заплановані тренування»: обери дату й час, назву, вправи по категоріях або готовий шаблон. Шаблони зберігають вправи саме в тому порядку, у якому ти їх додаєш. Натисни на шаблон, щоб переглянути його вправи й останні результати, а через «Редагувати» зміни склад.",
+          ?"In Workout use Planned workouts to create a future workout. Pick a date and time, name it, choose exercises by category or load a saved template. Templates keep exercises in the order you add them. Use View to preview exercises and latest results, Edit to change the set, or delete it when it is no longer needed."
+          :"У розділі «Тренування» використовуй «Заплановані тренування»: обери дату й час, назву, вправи по категоріях або готовий шаблон. Шаблони зберігають вправи саме в тому порядку, у якому ти їх додаєш. Кнопка «Перегляд» показує вправи й останні результати, «Редагувати» змінює склад, а видалення прибирає шаблон.",
         example:en?"Sunday: plan Push for Tuesday and Pull for Thursday. Thursday: open the plan, start with exercises already loaded, then save the actual work.":"Неділя: заплануй «Жим» на вівторок і «Тяга» на четвер. У четвер відкрий план, почни вже з набраними вправами й збережи фактичну роботу.",
         mini:`<div class="miniTitle">${en?"Planner":"Планувальник"} · ${en?"Templates":"Шаблони"}</div><div class="miniRow"><div class="miniField">${en?"Tue":"Вт"} · ${en?"Push":"Жим"}</div><div class="miniField">${en?"Template preview":"Перегляд шаблону"}</div></div><div class="miniButton">${en?"Edit template":"Редагувати шаблон"}</div>`
       },

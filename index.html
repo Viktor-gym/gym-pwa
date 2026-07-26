@@ -558,6 +558,8 @@
     .miniBarSlot{display:grid;grid-template-rows:auto 1fr;align-items:end;gap:6px;min-width:0;height:122px}
     .miniBarValue{display:block;text-align:center;font-size:9px;font-weight:900;color:#e9d5ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .miniBarCol{min-height:8px;border-radius:999px 999px 6px 6px;background:linear-gradient(180deg,#a78bfa,#22d3ee);box-shadow:0 8px 20px rgba(139,92,246,.16)}
+    .calorieTrendSurface{margin-top:12px;border-color:rgba(251,146,60,.18);background:linear-gradient(145deg,rgba(251,146,60,.08),rgba(5,9,18,.34))}
+    .templateActionsWide{display:grid;grid-template-columns:auto auto 42px;gap:8px;align-items:center}.templateActionsWide .btn{white-space:nowrap}
     .typeBalance{display:grid;gap:9px;margin-top:14px}
     .typeBalanceRow{display:grid;grid-template-columns:92px 1fr 44px;gap:8px;align-items:center}
     .typeBalanceRow strong{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -695,7 +697,7 @@
       .appointmentRow{grid-template-columns:50px minmax(0,1fr) 38px;padding:9px;gap:8px}.appointmentDate{min-width:0;padding:6px 4px}.appointmentRow>.btn{min-width:38px;padding:8px}
       .calendarToolbar{display:grid;grid-template-columns:1fr}.calendarNav{justify-content:space-between}.calendarGrid.week{grid-template-columns:1fr}.calendarGrid.week .calendarDay{min-height:66px}.calendarGrid.week .calendarDayTop{font-size:11px}.calendarGrid.month{gap:3px}.calendarGrid.month .calendarDay{min-height:62px;padding:4px;border-radius:9px}.calendarGrid.month .calendarEvent{font-size:0;height:5px;padding:0;border-radius:99px}.calendarWeekdays{gap:3px}.calendarEvents{gap:2px;margin-top:4px}
       .comparisonRow{grid-template-columns:26px minmax(0,1fr) repeat(2,52px);gap:7px;padding:9px}.comparisonMetric strong{font-size:12px}
-      .plannedWorkoutRow{grid-template-columns:48px minmax(0,1fr);gap:8px}.plannedActions{grid-column:1/-1;display:grid;grid-template-columns:1fr 42px 42px}.plannedActions .btn{width:100%}.templateRow{grid-template-columns:1fr}.templateActions{display:grid;grid-template-columns:1fr 1fr}.workoutQuickActions{width:100%;min-width:0}.planPickerHead{display:block}.planPickerHead .muted{display:block;margin-top:4px}
+      .plannedWorkoutRow{grid-template-columns:48px minmax(0,1fr);gap:8px}.plannedActions{grid-column:1/-1;display:grid;grid-template-columns:1fr 42px 42px}.plannedActions .btn{width:100%}.templateRow{grid-template-columns:1fr}.templateActions{display:grid;grid-template-columns:1fr 1fr}.templateActionsWide{grid-template-columns:1fr 1fr 42px}.workoutQuickActions{width:100%;min-width:0}.planPickerHead{display:block}.planPickerHead .muted{display:block;margin-top:4px}
     }
 
     /* Capacitor iOS keeps the web design, with tighter native spacing and one safe-area owner. */
@@ -847,7 +849,7 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app-v41.js"></script>
+  <script defer src="app-v42.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
