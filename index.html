@@ -546,12 +546,17 @@
     .floatingRestText{min-width:0}.floatingRestText strong{display:block;font-size:13px}.floatingRestText span{display:block;margin-top:2px;font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .floatingRestActions{display:flex;gap:6px}.floatingRestActions .btn{min-height:36px;padding:7px 10px;font-size:12px}
     .floatingRestSpacer{height:78px}
+    .workoutActionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;align-items:stretch}
+    .workoutActionGrid .btn{width:100%}
+    .activeWorkoutActions{margin-bottom:86px}
     .advancedStatsGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
     .advancedStatCard{padding:14px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.025))}
     .advancedStatCard span{display:block;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
     .advancedStatCard strong{display:block;margin-top:7px;font-size:22px;letter-spacing:-.04em}
     .advancedStatCard small{display:block;margin-top:5px;color:#a7f3d0;font-size:10px;line-height:1.35}
-    .miniBars{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px;align-items:end;min-height:96px;margin-top:14px}
+    .miniBars{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;align-items:end;min-height:122px;margin-top:14px}
+    .miniBarSlot{display:grid;grid-template-rows:auto 1fr;align-items:end;gap:6px;min-width:0;height:122px}
+    .miniBarValue{display:block;text-align:center;font-size:9px;font-weight:900;color:#e9d5ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .miniBarCol{min-height:8px;border-radius:999px 999px 6px 6px;background:linear-gradient(180deg,#a78bfa,#22d3ee);box-shadow:0 8px 20px rgba(139,92,246,.16)}
     .typeBalance{display:grid;gap:9px;margin-top:14px}
     .typeBalanceRow{display:grid;grid-template-columns:92px 1fr 44px;gap:8px;align-items:center}
@@ -676,6 +681,8 @@
       .restPanel{grid-template-columns:auto 1fr}.restActions{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,1fr)}
       .floatingRestDock{bottom:calc(76px + var(--safe-bottom));grid-template-columns:auto minmax(0,1fr);width:calc(100% - 18px);padding:9px 10px;border-radius:19px}
       .floatingRestActions{grid-column:1/-1;display:grid;grid-template-columns:1fr 72px}.floatingRestActions .btn{width:100%}
+      .activeWorkoutActions{margin-bottom:128px}.workoutActionGrid{grid-template-columns:1fr 1fr}
+      .miniBars{gap:4px}.miniBarValue{font-size:8px}
       .advancedStatsGrid{grid-template-columns:1fr}.typeBalanceRow{grid-template-columns:78px 1fr 38px}
       .brandEyebrow{display:none}
       .goalHero{padding:17px}.goalHeroHead{flex-wrap:wrap}.goalHeroHead .btn{padding:10px 12px}.goalHeroTitle{font-size:22px}.goalSpotValue{font-size:27px;overflow-wrap:anywhere}
@@ -776,6 +783,7 @@
       html.capacitor-ios .floatingRestRing{width:44px;height:44px}
       html.capacitor-ios .floatingRestRing:after{width:35px;height:35px}
       html.capacitor-ios .floatingRestActions .btn{min-height:33px;padding:6px 8px;font-size:11px}
+      html.capacitor-ios .activeWorkoutActions{margin-bottom:116px}
       html.capacitor-ios .settingsActions{
         grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
       }
@@ -839,7 +847,7 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app-v40.js"></script>
+  <script defer src="app-v41.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {

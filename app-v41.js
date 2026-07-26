@@ -2080,9 +2080,10 @@ document.addEventListener("DOMContentLoaded", () => {
     el.appendChild(list);
 
     el.appendChild(card(`
-      <div class="row" style="justify-content:space-between">
-        <button class="btn primary" id="saveWorkoutBtn">${workoutSession.workoutId?(state.lang==="en"?"💾 Update workout":"💾 Оновити тренування"):t("saveWorkout")}</button>
+      <div class="workoutActionGrid ${hasWorkoutItems?"activeWorkoutActions":""}">
         ${hasWorkoutItems?`<button class="btn" id="addExToWBottom">${t("addExerciseToWorkout")}</button>`:""}
+        ${hasWorkoutItems?`<button class="btn" id="addTemplateToWBottom">＋ ${state.lang==="en"?"Add complex":"Додати комплекс"}</button>`:""}
+        <button class="btn primary" id="saveWorkoutBtn">${workoutSession.workoutId?(state.lang==="en"?"💾 Update workout":"💾 Оновити тренування"):t("saveWorkout")}</button>
         <button class="btn" id="clearWorkoutBtn">${t("clearWorkout")}</button>
       </div>
     `));
@@ -2109,6 +2110,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (addBottomBtn) addBottomBtn.onclick = ()=> openExercisePickerForWorkout();
       const addTemplateBtn = $("#addTemplateToW");
       if (addTemplateBtn) addTemplateBtn.onclick = ()=> openTemplatePickerForWorkout();
+      const addTemplateBottomBtn = $("#addTemplateToWBottom");
+      if (addTemplateBottomBtn) addTemplateBottomBtn.onclick = ()=> openTemplatePickerForWorkout();
 
       $("#newPlanBtn")?.addEventListener("click",()=>openWorkoutPlanModal());
       $("#newTemplateBtn")?.addEventListener("click",()=>openWorkoutTemplateModal());
@@ -3751,10 +3754,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const map=new Map();
     workouts.forEach(workout=>{
       const key=startOfWeek(new Date(workout.date)).toISOString().slice(0,10);
-      const cur=map.get(key)||{date:key,workouts:0,sets:0,volume:0};
+      const cur=map.get(key)||{date:key,workouts:0,sets:0,volume:0,calories:0};
       cur.workouts+=1;
       cur.sets+=countSetsInWorkouts([workout]);
       cur.volume+=volumeInWorkouts([workout]);
+      cur.calories+=estimateWorkoutCalories(workout);
       map.set(key,cur);
     });
     return [...map.values()].sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(-limit);
@@ -3764,8 +3768,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const max=Math.max(1,...buckets.map(item=>parseNum(item[metric])));
     return `<div class="miniBars">${buckets.map(item=>{
       const h=Math.max(8,Math.round(parseNum(item[metric])/max*96));
-      const label=metric==="volume"?fmtVol(item.volume):fmtNum(item[metric]);
-      return `<div class="miniBarCol" style="height:${h}px" title="${fmtDate(item.date)} · ${label}"></div>`;
+      const label=metric==="volume"?fmtVol(item.volume):metric==="calories"?`${fmtNum(item.calories)} kcal`:fmtNum(item[metric]);
+      return `<div class="miniBarSlot" title="${fmtDate(item.date)} · ${label}"><span class="miniBarValue">${escapeHtml(label)}</span><div class="miniBarCol" style="height:${h}px"></div></div>`;
     }).join("")}</div>`;
   }
   function typeBalanceMarkup(workouts){
@@ -3810,6 +3814,11 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="sectionTitle">${state.lang==="en"?"Load trend by weeks":"Тренд навантаження по тижнях"}</div>
         ${miniBarsMarkup(buckets,"volume")}
         <div class="muted" style="margin-top:10px">${state.lang==="en"?"Shows how total training load changes week by week.":"Показує, як змінюється сумарне навантаження від тижня до тижня."}</div>
+      </div>
+      <div class="sectionCard">
+        <div class="sectionTitle">${state.lang==="en"?"Calories by weeks":"Калорії по тижнях"}</div>
+        ${miniBarsMarkup(buckets,"calories")}
+        <div class="muted" style="margin-top:10px">${state.lang==="en"?"Approximate calories burned per week, based on workout duration, sets, MET and latest body weight.":"Приблизно спалені калорії за тиждень на основі тривалості, підходів, MET і останньої ваги тіла."}</div>
       </div>
       <div class="sectionCard">
         <div class="sectionTitle">${state.lang==="en"?"Training type balance":"Баланс типів вправ"}</div>
@@ -4891,9 +4900,9 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Read Home, Statistics and Body":"Аналізуй головну, статистику й тіло",
         sub:en?"Choose a period and open exercise details":"Обирай період і відкривай деталі вправ",
         copy:en
-          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Statistics has week/month/year/all filters, insight cards, weekly rhythm bars, load trend bars, muscle split, type balance and exercise details. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
-          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. «Статистика» має фільтри тиждень/місяць/рік/все, інсайти, ритм по тижнях, тренд навантаження, розподіл по групах, баланс типів вправ і деталі кожної вправи. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
-        example:en?"Use Load trend to see whether training is growing, and Type balance to notice if cardio or reps work disappeared.":"Дивись «Тренд навантаження», щоб бачити ріст роботи, і «Баланс типів вправ», щоб помітити, якщо зникло кардіо чи вправи на повтори.",
+          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Statistics has week/month/year/all filters, insight cards, weekly rhythm bars, load trend bars, calories by weeks, muscle split, type balance and exercise details. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
+          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. «Статистика» має фільтри тиждень/місяць/рік/все, інсайти, ритм по тижнях, тренд навантаження, калорії по тижнях, розподіл по групах, баланс типів вправ і деталі кожної вправи. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
+        example:en?"Use Load trend to see whether training is growing, Calories by weeks to estimate energy cost, and Type balance to notice if cardio or reps work disappeared.":"Дивись «Тренд навантаження», щоб бачити ріст роботи, «Калорії по тижнях» для оцінки енерговитрат і «Баланс типів вправ», щоб помітити, якщо зникло кардіо чи вправи на повтори.",
         mini:`<div class="miniRow"><div class="miniStat">${en?"Rhythm":"Ритм"}<strong>▁▃▆█</strong></div><div class="miniStat">${en?"Balance":"Баланс"}<strong>64%</strong></div></div>`
       },
       {
