@@ -2976,7 +2976,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const ex=state.exercises.find(candidate=>candidate.id===item.exerciseId);
               return ex ? exName(ex) : "";
             }).filter(Boolean).join(" · ");
-              return `<article class="templateRow" data-view-template="${template.id}" role="button" tabindex="0"><div><strong>${escapeHtml(template.title)}</strong><span>${escapeHtml(names)}${template.items.length>3?` · +${template.items.length-3}`:""}</span></div><div class="templateActions templateActionsWide"><button class="btn" data-open-template="${template.id}">${state.lang==="en"?"View":"Перегляд"}</button><button class="btn primary" data-edit-template="${template.id}">${state.lang==="en"?"Edit":"Редагувати"}</button><button class="btn" data-delete-template="${template.id}">✕</button></div></article>`;
+              return `<article class="templateRow" data-view-template="${template.id}" role="button" tabindex="0"><div><strong>${escapeHtml(template.title)}</strong><span>${escapeHtml(names)}${template.items.length>3?` · +${template.items.length-3}`:""}</span></div><div class="templateActions"><button class="btn" data-edit-template="${template.id}">⋯</button><button class="btn" data-delete-template="${template.id}">✕</button></div></article>`;
           }).join(""):`<div class="emptyCalendar">${state.lang==="en"?"Create sets like Bench/Row or Biceps/Triceps once and reuse them.":"Створи заготовки типу Жим/Тяга або Біцепс/Трицепс і використовуй повторно."}</div>`}</div>
         </div>
       </section>`;
@@ -3803,19 +3803,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return `<div class="miniBarSlot" title="${fmtDate(item.date)} · ${label}"><span class="miniBarValue">${escapeHtml(label)}</span><div class="miniBarCol" style="height:${h}px"></div></div>`;
     }).join("")}</div>`;
   }
-  function weeklyCaloriesTrendMarkup(buckets){
-    const points=(buckets||[]).map(item=>({
-      value:Math.round(parseNum(item.calories)),
-      label:fmtDate(item.date)
-    }));
-    return `<div class="chartSurface calorieTrendSurface">${trendMarkup(points,{
-      color:"#fb923c",
-      unit:"kcal",
-      format:value=>`≈ ${fmtNum(value)}`,
-      pointFormat:value=>fmtNum(value),
-      caption:state.lang==="en" ? "Calories of latest week" : "Калорії останнього тижня"
-    })}</div>`;
-  }
   function typeBalanceMarkup(workouts){
     const counts=workoutTypeCounts(workouts);
     const entries=[
@@ -3858,11 +3845,6 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="sectionTitle">${state.lang==="en"?"Load trend by weeks":"Тренд навантаження по тижнях"}</div>
         ${miniBarsMarkup(buckets,"volume")}
         <div class="muted" style="margin-top:10px">${state.lang==="en"?"Shows how total training load changes week by week.":"Показує, як змінюється сумарне навантаження від тижня до тижня."}</div>
-      </div>
-      <div class="sectionCard">
-        <div class="sectionTitle">${state.lang==="en"?"Calories by weeks":"Калорії по тижнях"}</div>
-        ${weeklyCaloriesTrendMarkup(buckets)}
-        <div class="muted" style="margin-top:10px">${state.lang==="en"?"Approximate calories burned per week, based on workout duration, sets, MET and latest body weight.":"Приблизно спалені калорії за тиждень на основі тривалості, підходів, MET і останньої ваги тіла."}</div>
       </div>
       <div class="sectionCard">
         <div class="sectionTitle">${state.lang==="en"?"Training type balance":"Баланс типів вправ"}</div>
@@ -4967,8 +4949,8 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Read Home, Statistics and Body":"Аналізуй головну, статистику й тіло",
         sub:en?"Choose a period and open exercise details":"Обирай період і відкривай деталі вправ",
         copy:en
-          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Statistics has week/month/year/all filters, insight cards, weekly rhythm bars, load trend, calorie progress graphs, muscle split, type balance and exercise details. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
-          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. «Статистика» має фільтри тиждень/місяць/рік/все, інсайти, ритм по тижнях, тренд навантаження, графіки калорій, розподіл по групах, баланс типів вправ і деталі кожної вправи. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
+          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Statistics has week/month/year/all filters, insight cards, weekly rhythm bars, load trend, one calorie progress graph, muscle split, type balance and exercise details. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
+          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. «Статистика» має фільтри тиждень/місяць/рік/все, інсайти, ритм по тижнях, тренд навантаження, один графік прогресу калорій, розподіл по групах, баланс типів вправ і деталі кожної вправи. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
         example:en?"Use Load trend to see whether training is growing, Calories progress to estimate energy cost, and Type balance to notice if cardio or reps work disappeared.":"Дивись «Тренд навантаження», щоб бачити ріст роботи, «Прогрес калорій» для оцінки енерговитрат і «Баланс типів вправ», щоб помітити, якщо зникло кардіо чи вправи на повтори.",
         mini:`<div class="miniRow"><div class="miniStat">${en?"Rhythm":"Ритм"}<strong>▁▃▆█</strong></div><div class="miniStat">${en?"Balance":"Баланс"}<strong>64%</strong></div></div>`
       },
