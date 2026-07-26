@@ -263,6 +263,20 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${dd}.${mm}.${yy}`;
   }
 
+  function fmtShortDate(iso){
+    const d = new Date(`${String(iso).slice(0,10)}T12:00:00`);
+    const dd = String(d.getDate()).padStart(2,"0");
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    return `${dd}.${mm}`;
+  }
+
+  function fmtWeekRange(key){
+    const start = new Date(`${key}T12:00:00`);
+    const end = new Date(start);
+    end.setDate(start.getDate()+6);
+    return `${fmtShortDate(dateKey(start))}-${fmtShortDate(dateKey(end))}`;
+  }
+
   function startOfWeek(d){
     const x = new Date(d);
     const day = (x.getDay()+6)%7; // Mon=0
@@ -3747,7 +3761,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function weeklyActivityBuckets(workouts,limit=10){
     const map=new Map();
     workouts.forEach(workout=>{
-      const key=startOfWeek(new Date(workout.date)).toISOString().slice(0,10);
+      const key=dateKey(startOfWeek(new Date(workout.date)));
       const cur=map.get(key)||{date:key,workouts:0,sets:0,volume:0,calories:0};
       cur.workouts+=1;
       cur.sets+=countSetsInWorkouts([workout]);
@@ -3770,7 +3784,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function weeklyFocusBuckets(workouts,limit=10){
     const map=new Map();
     workouts.forEach(workout=>{
-      const week=startOfWeek(new Date(workout.date)).toISOString().slice(0,10);
+      const week=dateKey(startOfWeek(new Date(workout.date)));
       const cur=map.get(week)||{date:week,total:0,categories:{}};
       (workout.items||[]).forEach(item=>{
         const ex=state.exercises.find(ex=>ex.id===item.exerciseId);
@@ -3794,8 +3808,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const buckets=weeklyFocusBuckets(workouts,10).filter(item=>item.total>0);
     if(!buckets.length) return `<div class="muted">${t("noData")}</div>`;
     return `<div class="focusTrend">${buckets.map(item=>`
-      <div class="focusTrendRow" title="${fmtDate(item.date)} · ${escapeHtml(catName(item.category))} · ${fmtVol(item.volume)} kg">
-        <strong>${fmtDate(item.date)}</strong>
+      <div class="focusTrendRow" title="${fmtWeekRange(item.date)} · ${escapeHtml(catName(item.category))} · ${fmtVol(item.volume)} kg">
+        <strong>${fmtWeekRange(item.date)}</strong>
         <div class="focusTrendMain">
           <span>${escapeHtml(catName(item.category))}</span>
           <div class="focusTrendTrack"><i style="width:${Math.max(5,item.pct)}%"></i></div>
