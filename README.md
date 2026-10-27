@@ -1,7 +1,8 @@
 # GymTracker Pro PWA
 
 HTML, CSS and vanilla JavaScript; static GitHub Pages deployment. The current
-release is `app-v49.js` with the separate `studio-v48.css` design and exercise atlas.
+release is `app-v50.js` with `studio-v50.css` and the exercise atlas.
+Publication approved by the owner on 2026-10-27 after local verification.
 
 ## Development
 
@@ -9,7 +10,7 @@ Serve this folder with any local HTTP server. No build step or API key is requir
 For example: `npx http-server . -p 8080`.
 
 Run library regression checks: `node --test tests/atlas.test.cjs`.
-Syntax checks: `node --check app-v49.js`, `node --check exercise-atlas-v49.js`,
+Syntax checks: `node --check app-v50.js`, `node --check exercise-atlas-v50.js`,
 and `node --check sw.js`.
 
 ## Exercise Atlas
@@ -33,7 +34,7 @@ app use, NOT open-source or public domain. See `assets/motion/SOURCE.md` before
 reusing any artwork. No Fitness Online assets or paid packages are included.
 
 `exercise-repdb-v49.js` adds 18 further unique 3D animations from the 22-exercise
-RepDB preview, bringing the catalog to 899 movements with **68 animated guides**.
+RepDB preview, bringing that catalog to 899 movements with **68 smooth animated guides**.
 Four already-covered movements are not duplicated. RepDB characters also show
 muscle colouring. The supplied CC BY-NC 4.0 license permits personal/non-commercial
 use with attribution. This restriction was explicitly accepted by the owner.
@@ -42,9 +43,28 @@ media/data or obtain separate rights.** No purchase has been made. Credits are
 visible in the library and each RepDB guide. See `assets/repdb-motion/SOURCE.md`
 and `LICENSE.md`. Existing exact animations and user exercise settings stay intact.
 
+`exercise-poses-v50.js` adds **261 three-position illustrated guides**, linking
+83 existing entries and adding 178 equipment/movement variants. Total catalog:
+**1,077 entries; 68 smooth 3D animations + 261 illustrated sequences**. These are
+different demonstration types, not 329 smooth 3D animations. All 68 existing 3D
+entries and assets remain unchanged. Missing exact guides retain their current
+photographs and instructions; no broad muscle-group substitution is used.
+
+The three drawings cycle only inside the opened guide, with play/pause, manual
+01/02/03 positions and 0.5x speed. Lists use one still poster. Reduced-motion
+starts paused, hidden pages pause and closing releases the timer. Filters select
+3D, illustrated sequences, both, or all movements. New source-only entries have
+no written technique and say so; linked entries retain existing instructions.
+
+Drawings: Workout Guide by Bryl Lim / Everkinetic, **CC BY-SA 4.0**. Derived
+sprites and posters retain that license. See `assets/poses/SOURCE.md`, original
+LICENSE-ASSETS, ATTRIBUTION.md and per-frame ATTRIBUTION.json for source URLs and
+modifications. No new purchases or human recordings are included.
+
 Animations (68 muted H.264 MP4 containers) and JPEG posters are bundled.
 The media cache saves these plus photos of 84 common movements (168 JPEGs, about
-11 MB) after a successful online update. Service worker byte-range responses allow
+11 MB) plus 522 WebP pose sprites/posters (about 13 MB) after a successful online
+update. Media downloads are optional and can be retried online. Service worker byte-range responses allow
 offline iPhone/Safari playback. Missing media remains retryable online; app updates
 do not depend on every optional media download succeeding. Other photos load on
 demand from the public source; up to 240 remote images are cached. See

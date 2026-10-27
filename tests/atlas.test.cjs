@@ -8,17 +8,19 @@ const scope={window:{},document:{addEventListener(){}}};
 vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-library-v47.js'),'utf8'),scope);
 vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-motion-v48.js'),'utf8'),scope);
 vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-repdb-v49.js'),'utf8'),scope);
-vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-atlas-v49.js'),'utf8'),scope);
+const original=JSON.parse(JSON.stringify(scope.window.GYM_EXERCISE_LIBRARY));
+vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-poses-v50.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-atlas-v50.js'),'utf8'),scope);
 const atlas=scope.window.GymAtlas;
 test('library has unique entries and valid local image assets',()=>{
- assert.equal(atlas.entries.length,899);
- assert.equal(new Set(atlas.entries.map(x=>x.id)).size,899);
+ assert.equal(atlas.entries.length,1077);
+ assert.equal(new Set(atlas.entries.map(x=>x.id)).size,1077);
  for(const entry of atlas.entries){
    assert(entry.name&&Array.isArray(entry.images)&&entry.primaryMuscles.length>=1);
    assert(['strength','reps','time','distance'].includes(entry.trackingType));
    for(const image of entry.images){assert(!image.includes('..'));if(entry.localImages)assert(fs.existsSync(path.join(root,'assets/exercises',image)));}
  }
- assert.equal(atlas.entries.filter(entry=>!entry.images.length&&!entry.motion).length,3);
+ assert.equal(atlas.entries.filter(entry=>!entry.images.length&&!entry.motion&&!entry.poseGuide).length,3);
  assert.equal(atlas.imageUrl(atlas.byId.get('Kettlebell_Halo')),'');
 });
 test('equipment and variants are kept distinct',()=>{
@@ -48,7 +50,7 @@ test('units follow the movement, muscle annotations use source metadata',()=>{
 test('public source does not bundle profile backups or private sample references',()=>{
  const files=fs.readdirSync(root);
  assert(!files.some(name=>name.startsWith('gym-tracker-profile-')));
- const app=fs.readFileSync(path.join(root,'app-v49.js'),'utf8');
+ const app=fs.readFileSync(path.join(root,'app-v50.js'),'utf8');
  assert(!app.includes('gym_pva/111'));
  assert(app.includes('gymPwaData_v3')&&app.includes('gymPwaApp_v4'));
 });
@@ -88,4 +90,36 @@ test('offline animation range responses handle iPhone probes, suffixes and inval
   assert.deepEqual([...new Uint8Array(await part.arrayBuffer())],Array.from({length:end-start+1},(_,i)=>start+i));
  }
  for(const range of ['bytes=6-','bytes=3-2','bytes=','bytes=-0','bytes=0-1,3-4'])assert.equal((await swScope.rangeResponse(response(),range)).status,416);
+});
+
+test('all existing 3D entries are unchanged, not replaced with illustrated sequences',()=>{
+ for(const entry of original.filter(e=>e.motion)){
+  assert.deepEqual(JSON.parse(JSON.stringify(atlas.byId.get(entry.id))),entry);
+ }
+ assert(!atlas.entries.some(e=>e.motion&&e.poseGuide));
+ const before=new Map();
+ for(const e of original)for(const name of [e.name,e.name_ua,...e.aliases].filter(Boolean))before.set(atlas.normalize(name),e.id);
+ for(const [name,id]of before)assert.equal(atlas.match(name)?.id,id,'existing exact name: '+name);
+});
+
+test('261 illustrated guides keep static posters and source attribution',()=>{
+ const illustrated=atlas.entries.filter(e=>e.poseGuide);
+ assert.equal(illustrated.length,261);
+ const credits=JSON.parse(fs.readFileSync(path.join(root,'assets/poses/ATTRIBUTION.json'),'utf8'));
+ assert.equal(credits.length,261);
+ for(const entry of illustrated){
+  assert.equal(entry.poseGuide.frameCount,3);
+  assert.equal(entry.poseGuide.license,'CC BY-SA 4.0');
+  assert.equal(atlas.previewUrl(entry),entry.poseGuide.poster);
+  for(const name of [entry.poseGuide.sprite,entry.poseGuide.poster]){
+   const file=fs.readFileSync(path.join(root,name));
+   assert.equal(file.subarray(0,4).toString(),'RIFF');assert.equal(file.subarray(8,12).toString(),'WEBP');
+  }
+  assert(!atlas.thumbnail(entry).includes('<video'));
+  assert(credits.some(c=>c.slug===entry.poseGuide.slug));
+ }
+ assert(atlas.match('Жим штанги лежачи').poseGuide);
+ assert(atlas.byId.get('pose-weighted-pull-up').poseGuide);
+ assert.notEqual(atlas.match('Підтягування').id,'pose-weighted-pull-up');
+ assert.equal(atlas.search('',{limit:atlas.entries.length}).length,1077);
 });

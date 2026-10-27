@@ -10,6 +10,8 @@ are next revisited. This is a project note, not a scheduled background task.
 - Keep catalog matching separate from stored exercise IDs, workouts, clients,
   sets, goals and JSON exports. Never publish private profile examples.
 - Keep one still illustration per list card; animate only inside its guide.
+- Keep the 68 smooth 3D guides intact. Approved fallback: the exact three-position
+  Workout Guide illustration, clearly labelled as a sequence, not smooth motion.
 
 ## Search Next
 
@@ -29,8 +31,11 @@ smooth motion, muscles and technique. Its artwork is not a reusable asset pack.
   before any commercial app or paid-client use; do not buy without permission.
 - Free Exercise DB: 876 original catalog entries with static photographs;
   Unlicense. Keep as the fallback, not a fake animation made from two photos.
-- Workout Guide / Everkinetic: 302 illustrated exercises, CC BY-SA 4.0 artwork;
-  only three frames per movement, not continuous 3D. Not added to animation count.
+- Workout Guide / Everkinetic: 302 source exercises, CC BY-SA 4.0 artwork;
+  v50 integrates 261 three-frame guides (83 existing links,
+  178 new variants), omitting 41 already-covered/duplicate mappings. Original
+  source metadata and per-frame attribution retained. Not continuous 3D and
+  not added to the count of 68 smooth animations. Total catalog: 1,077 entries.
 - OpenGym3D: promising CC0 motion/MakeHuman pipeline, currently limited live
   exercise coverage and drafts. Recheck readiness and each clip's license.
 - Wikimedia Commons: inspect each file. Many clips are real-person footage,
@@ -42,3 +47,10 @@ smooth motion, muscles and technique. Its artwork is not a reusable asset pack.
 For new sources, verify actual archive licenses, equipment/form accuracy,
 mobile playback, attribution, offline caching and reduced-motion support.
 Document any new coverage limit honestly and update the in-app guide.
+
+## Release Approval
+
+v50 was verified locally first; the owner approved GitHub/Pages publication on
+2026-10-27. No iOS/Capacitor changes in this pass.
+Backup before these changes: `work/backups/pwa-before-poses-20261027`, outside
+the deployment directory. Never add the private test profile to this repository.
