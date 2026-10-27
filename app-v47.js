@@ -552,6 +552,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if(existing){
         exerciseIdMap.set(ex.id,existing.id);
         existing.trackingType=existing.trackingType || ex.trackingType;
+        if(!existing.catalogId && ex.catalogId) existing.catalogId=ex.catalogId;
         return;
       }
       const copy={...ex};
@@ -924,10 +925,66 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function exIcon(ex){
+    const matched = window.GymAtlas?.match(ex);
+    if(matched) return GymAtlas.thumbnail(matched,state.lang).replace('class="atlasThumb"',`class="atlasThumb" data-atlas-exercise="${escapeHtml(ex.id)}"`);
     const tone = catTone(ex.category);
     const wrapCls = toneWrapClass(tone);
-    const kind = exerciseIconKind(ex);
-    return `<div class="exIconWrap exerciseArt ${wrapCls}">${iconSvg(kind)}</div>`;
+    return `<div class="exIconWrap exerciseArt atlasCustomIcon ${wrapCls}" title="${state.lang==='en'?'Custom exercise: choose a library movement':'Власна вправа: можна вибрати рух з бібліотеки'}"><span aria-hidden="true">◇</span></div>`;
+  }
+
+  function showExerciseGuide(ex){
+    GymAtlas.open(GymAtlas.match(ex),{lang:state.lang,title:exName(ex),onEdit:()=>openAddExerciseModal(ex)});
+  }
+
+  document.addEventListener('click',event=>{
+    const thumb=event.target.closest('[data-atlas-id]');
+    if(!thumb || thumb.closest('.atlasOverlay')) return;
+    event.preventDefault();event.stopPropagation();
+    const ex=state.exercises.find(item=>item.id===thumb.dataset.atlasExercise);
+    if(ex) showExerciseGuide(ex);
+    else {const entry=GymAtlas.byId.get(thumb.dataset.atlasId);if(entry) GymAtlas.open(entry,{lang:state.lang});}
+  },true);
+  document.addEventListener('keydown',event=>{
+    if((event.key==='Enter'||event.key===' ') && event.target.matches('[data-atlas-id]')){event.preventDefault();event.stopPropagation();event.target.click();}
+  },true);
+
+  function ensureAtlasCategory(entry){
+    const id=entry.muscleGroup;
+    if(allCategories().some(item=>item.id===id)) return id;
+    const existing=allCategories().find(item=>GymAtlas.normalize(item.ua)===GymAtlas.normalize(GymAtlas.category(id,'ua')));
+    if(existing) return existing.id;
+    state.customCategories.push({id,ua:GymAtlas.category(id,'ua'),en:GymAtlas.category(id,'en'),tone:'teal'});
+    return id;
+  }
+
+  function addAtlasExercise(entry){
+    const existing=state.exercises.find(ex=>GymAtlas.match(ex)?.id===entry.id);
+    if(existing){openAddExerciseModal(existing);return;}
+    const ex={id:uid(),name_ua:entry.name_ua||entry.name,name_en:entry.name,category:ensureAtlasCategory(entry),trackingType:entry.trackingType,catalogId:entry.id};
+    state.exercises.unshift(ex);save();render();
+  }
+
+  let exerciseLibraryView=false,atlasLibraryQuery='',atlasLibraryCategory='all',atlasLibraryLimit=36;
+  function atlasTabsMarkup(){return `<div class="atlasTabs"><button class="btn ${!exerciseLibraryView?'active':''}" data-exercise-view="mine">${state.lang==='en'?'My exercises':'Мої вправи'}</button><button class="btn ${exerciseLibraryView?'active':''}" data-exercise-view="library">${state.lang==='en'?'Movement library':'Бібліотека рухів'} <small>876</small></button></div>`;}
+  function bindAtlasTabs(root){root.querySelectorAll('[data-exercise-view]').forEach(button=>button.onclick=()=>{exerciseLibraryView=button.dataset.exerciseView==='library';render();});}
+  function viewExerciseLibrary(){
+    const en=state.lang==='en',el=document.createElement('div');
+    el.appendChild(card(`<div class="detailHeader"><div class="detailTitle"><span class="atlasEyebrow">${en?'EXPLORE THE MOVEMENT':'ЗНАЙДИ СВІЙ РУХ'}</span><h2>${en?'Exercise library':'Бібліотека вправ'}</h2><div class="sub">${en?'Real positions. Equipment. Working muscles.':'Реальні позиції. Обладнання. Задіяні м’язи.'}</div></div></div>${atlasTabsMarkup()}<div class="atlasLibraryIntro"><div><strong>${en?'Choose with confidence':'Обирай, розуміючи рух'}</strong><small>${en?'Open a photo to see both positions and the muscle map.':'Відкрий фото, щоб побачити обидві позиції та карту м’язів.'}</small></div><span class="atlasCount">${GymAtlas.entries.length}</span></div><input class="btn" id="atlasLibraryQ" type="search" style="width:100%" placeholder="${en?'Search by name, e.g. bench press':'Назва вправи: жим, тяга, присідання…'}" value="${escapeHtml(atlasLibraryQuery)}"><div class="categoryRail" id="atlasLibraryCats"></div><div class="muted" id="atlasLibraryCount" style="margin:12px 0"></div><div class="atlasLibraryGrid" id="atlasLibraryList"></div><button class="btn" id="atlasLibraryMore" style="width:100%;margin-top:14px">${en?'Show more':'Показати ще'}</button>`));
+    setTimeout(()=>{
+      bindAtlasTabs(el);
+      const categories=['all',...Object.keys({chest:1,back:1,legs:1,shoulders:1,arms:1,core:1,cardio:1})];
+      function list(){
+        const results=GymAtlas.search(atlasLibraryQuery,{category:atlasLibraryCategory,lang:state.lang,limit:1000});
+        el.querySelector('#atlasLibraryCount').textContent=en?`${results.length} movements · names UA / EN`:`${results.length} рухів · назви UA / EN`;
+        el.querySelector('#atlasLibraryList').innerHTML=results.length?results.slice(0,atlasLibraryLimit).map(entry=>`<button class="atlasLibraryCard" data-library-entry="${entry.id}"><span class="atlasLibraryPhoto">${entry.images.length?`<img src="${GymAtlas.imageUrl(entry)}" alt="${escapeHtml(GymAtlas.label(entry,state.lang))}" loading="lazy">`:`<span class="muted">${en?'Photos coming later':'Фото поки немає'}</span>`}<span class="atlasThumbPlay">▶</span></span><span class="atlasLibraryInfo"><strong>${escapeHtml(GymAtlas.label(entry,state.lang))}</strong><small>${escapeHtml(GymAtlas.category(entry.muscleGroup,state.lang))} · ${GymAtlas.unitLabel(entry.trackingType,state.lang)}</small></span></button>`).join(''):`<div class="atlasEmpty">${en?'No match. You can create your own exercise in My exercises.':'Не знайшли відповідника. Можна створити власну вправу в «Мої вправи».'}</div>`;
+        el.querySelector('#atlasLibraryMore').hidden=results.length<=atlasLibraryLimit;
+        el.querySelectorAll('[data-library-entry]').forEach(button=>button.onclick=()=>GymAtlas.open(GymAtlas.byId.get(button.dataset.libraryEntry),{lang:state.lang,onAdd:addAtlasExercise}));
+      }
+      function cats(){el.querySelector('#atlasLibraryCats').innerHTML=categories.map(id=>`<button class="fchip ${atlasLibraryCategory===id?'active':''}" data-atlas-cat="${id}">${id==='all'?t('all'):GymAtlas.category(id,state.lang)}</button>`).join('');el.querySelectorAll('[data-atlas-cat]').forEach(button=>button.onclick=()=>{atlasLibraryCategory=button.dataset.atlasCat;atlasLibraryLimit=36;cats();list();});}
+      el.querySelector('#atlasLibraryQ').oninput=event=>{atlasLibraryQuery=event.target.value;atlasLibraryLimit=36;list();};
+      el.querySelector('#atlasLibraryMore').onclick=()=>{atlasLibraryLimit+=36;list();};cats();list();
+    },0);
+    return el;
   }
 
   function activeProfile(){
@@ -2017,6 +2074,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const el = document.createElement("div");
     startWorkoutIfNeeded();
     const hasWorkoutItems = (workoutSession.items||[]).length > 0;
+    el.className='workoutView'+(hasWorkoutItems?' hasActiveWorkout':'');
 
     if(!hasWorkoutItems){
       el.appendChild(card(`
@@ -3473,6 +3531,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---------- EXERCISES ----------
   function viewExercises(){
+    if(exerciseLibraryView && window.GymAtlas) return viewExerciseLibrary();
     const el = document.createElement("div");
 
     el.appendChild(card(`
@@ -3484,6 +3543,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <button class="btn primary" id="exPlus" title="Add" style="border-radius:50%; width:44px; height:44px; padding:0;">＋</button>
       </div>
 
+      ${atlasTabsMarkup()}
       <div class="categoryRail" id="exCats"></div>
 
       <input id="exQ" class="btn" style="width:100%; margin-top:10px; box-sizing:border-box;" placeholder="${t("search")}" value="${escapeHtml(state.ui.exQ||"")}"/>
@@ -3494,6 +3554,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(()=>{
       renderExCats();
       renderExList();
+      bindAtlasTabs(el);
 
       const exQ = $("#exQ");
       if (exQ){
@@ -3585,9 +3646,10 @@ document.addEventListener("DOMContentLoaded", () => {
     box.querySelectorAll("[data-editex]").forEach(row=>{
       row.onclick = ()=>{
         const ex = state.exercises.find(item=>item.id===row.getAttribute("data-editex"));
-        if (ex) openAddExerciseModal(ex);
+        if (ex) showExerciseGuide(ex);
       };
       row.onkeydown = (e)=>{
+        if(e.target!==row) return;
         if (e.key==="Enter" || e.key===" "){
           e.preventDefault();
           row.click();
@@ -3614,6 +3676,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function openAddExerciseModal(exercise=null){
     const isEdit = !!exercise;
+    let selectedCatalogId=exercise?.catalogId || GymAtlas.match(exercise)?.id || null;
     const overlay = document.createElement("div");
     overlay.style.position="fixed";
     overlay.style.inset="0";
@@ -3625,7 +3688,7 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.style.padding="16px";
 
     const modal = document.createElement("div");
-    modal.className="card";
+    modal.className="card exerciseEditorDialog";
     modal.style.width="min(720px, 96vw)";
 
     modal.innerHTML = `
@@ -3637,10 +3700,13 @@ document.addEventListener("DOMContentLoaded", () => {
         <button class="btn" id="addClose" style="border-radius:50%; width:42px; height:42px; padding:0;">✕</button>
       </div>
 
+      <div class="row" style="margin-top:14px;align-items:stretch">
+        <label style="flex:1 1 220px">${state.lang==='en'?'Exercise name (UA)':'Назва вправи (UA)'}<input id="nUa" class="btn" style="width:100%;margin-top:5px" placeholder="${state.lang==='en'?'Start typing…':'Почни вводити назву…'}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="atlasSuggestions" value="${escapeHtml(exercise?.name_ua||"")}" /></label>
+        <label style="flex:1 1 220px">${state.lang==='en'?'Exercise name (EN)':'Назва англійською (EN)'}<input id="nEn" class="btn" style="width:100%;margin-top:5px" placeholder="Bench press…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="atlasSuggestions" value="${escapeHtml(exercise?.name_en||"")}" /></label>
+      </div>
+      <div class="atlasEditor" id="atlasEditor"><div class="atlasEditorHeader"><strong>${state.lang==='en'?'Match a movement':'Знайди відповідний рух'}</strong><span>${GymAtlas.entries.length} ${state.lang==='en'?'exercises · live search':'вправ · пошук під час введення'}</span></div><div id="atlasLinked"></div><div class="atlasSuggestions" id="atlasSuggestions" role="listbox" aria-label="${state.lang==='en'?'Suggested exercises':'Підказки вправ'}"></div><div class="atlasEditorTools"><button class="btn" id="atlasManual" type="button">${state.lang==='en'?'Use my own exercise':'Власна вправа без прив’язки'}</button><button class="btn" id="atlasBrowse" type="button">${state.lang==='en'?'Choose from library':'Вибрати з бібліотеки'}</button></div></div>
       <div class="row" style="margin-top:12px; flex-wrap:wrap;">
-        <input id="nUa" class="btn" style="flex:1; min-width:220px" placeholder="Назва (UA)" value="${escapeHtml(exercise?.name_ua||"")}" />
-        <input id="nEn" class="btn" style="flex:1; min-width:220px" placeholder="Name (EN)" value="${escapeHtml(exercise?.name_en||"")}" />
-        <select id="nCat" class="btn">
+        <select id="nCat" class="btn" aria-label="${state.lang==='en'?'Muscle group':'Група м’язів'}">
           ${allCategories().filter(c=>c.id!=="all").map(c=>`<option value="${c.id}">${state.lang==="ua"?c.ua:c.en}</option>`).join("")}
           <option value="__new">${state.lang==="en"?"+ New category":"+ Нова категорія"}</option>
         </select>
@@ -3648,12 +3714,13 @@ document.addEventListener("DOMContentLoaded", () => {
           <input id="nCatUa" class="btn" placeholder="${state.lang==="en"?"Category name":"Назва категорії"}" />
           <input id="nCatEn" class="btn" placeholder="${state.lang==="en"?"English name (optional)":"Назва англійською (необов’язково)"}" />
         </div>
-        <select id="nTracking" class="btn">
+        <select id="nTracking" class="btn" aria-label="${state.lang==='en'?'Tracking type':'Тип обліку'}">
           <option value="strength">${state.lang==="en"?"Weight + reps":"Вага + повтори"}</option>
           <option value="reps">${state.lang==="en"?"Repetitions only":"Лише повтори"}</option>
           <option value="time">${state.lang==="en"?"Duration":"Час виконання"}</option>
           <option value="distance">${state.lang==="en"?"Distance + time":"Дистанція + час"}</option>
         </select>
+        <span class="atlasUnits" id="atlasUnits"></span>
         <button class="btn primary" id="addDo">${isEdit ? (state.lang==="en"?"Save changes":"Зберегти зміни") : t("create")}</button>
       </div>
     `;
@@ -3678,6 +3745,44 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     categorySelect.onchange();
 
+    const suggestions=modal.querySelector('#atlasSuggestions');
+    const linked=modal.querySelector('#atlasLinked');
+    const nameInputs=[modal.querySelector('#nUa'),modal.querySelector('#nEn')];
+    const trackingSelect=modal.querySelector('#nTracking');
+    const en=state.lang==='en';
+    function updateUnits(){modal.querySelector('#atlasUnits').textContent=(en?'Fields: ':'Поля підходу: ')+GymAtlas.unitLabel(trackingSelect.value,state.lang);}
+    trackingSelect.addEventListener('change',updateUnits);updateUnits();
+    function clearSuggestions(){suggestions.innerHTML='';nameInputs.forEach(input=>input.setAttribute('aria-expanded','false'));}
+    function showLinked(){
+      const entry=GymAtlas.byId.get(selectedCatalogId);
+      linked.innerHTML=entry?`<div class="atlasLinked">${GymAtlas.thumbnail(entry,state.lang,false)}<div><strong>${escapeHtml(GymAtlas.label(entry,state.lang))}</strong><small>${en?'Photo and movement linked. All fields can be edited.':'Фото й показ руху прив’язані. Усі поля можна скоригувати.'}</small></div><button class="btn" id="atlasLinkedPreview">▶</button></div>`:`<p class="muted" style="font-size:11px;margin:10px 0 0">${selectedCatalogId==='none'?(en?'Custom name and settings. No library movement.':'Власна назва й параметри. Рух із бібліотеки не прив’язаний.'):(en?'Start typing to see matching photos. Selecting a result fills the fields below.':'Почни вводити назву, щоб побачити варіанти з фото. Вибір заповнить поля нижче.')}</p>`;
+      linked.querySelector('#atlasLinkedPreview')?.addEventListener('click',()=>GymAtlas.open(entry,{lang:state.lang}));
+    }
+    function chooseEntry(entry){
+      selectedCatalogId=entry.id;
+      nameInputs[0].value=entry.name_ua||entry.name;nameInputs[1].value=entry.name;
+      const existingCategory=allCategories().find(item=>item.id===entry.muscleGroup || GymAtlas.normalize(item.ua)===GymAtlas.normalize(GymAtlas.category(entry.muscleGroup,'ua')));
+      const categoryId=existingCategory?.id||entry.muscleGroup;
+      if(![...categorySelect.options].some(option=>option.value===categoryId)) categorySelect.add(new Option(GymAtlas.category(entry.muscleGroup,state.lang),categoryId));
+      categorySelect.value=categoryId;categorySelect.onchange();trackingSelect.value=entry.trackingType;
+      updateUnits();clearSuggestions();showLinked();
+    }
+    function highlight(name,query){const index=name.toLowerCase().indexOf(query.toLowerCase());return index<0?escapeHtml(name):escapeHtml(name.slice(0,index))+'<mark>'+escapeHtml(name.slice(index,index+query.length))+'</mark>'+escapeHtml(name.slice(index+query.length));}
+    function suggest(query){
+      const results=GymAtlas.search(query,{limit:8,lang:state.lang});
+      nameInputs.forEach(input=>input.setAttribute('aria-expanded',String(results.length>0)));
+      suggestions.innerHTML=results.length?results.map(entry=>`<button class="atlasSuggestion" role="option" aria-selected="false" type="button" data-suggest-entry="${entry.id}">${GymAtlas.thumbnail(entry,state.lang,false)}<span><strong>${highlight(GymAtlas.label(entry,state.lang),query)}</strong><small>${highlight(entry.name,query)} · ${escapeHtml(GymAtlas.category(entry.muscleGroup,state.lang))} · ${GymAtlas.unitLabel(entry.trackingType,state.lang)}</small></span></button>`).join(''):`<div class="muted" style="font-size:12px;padding:10px 0">${en?'No matching exercise. Keep the name you entered and choose the group and tracking type below.':'Відповідника не знайдено. Залиш введену назву та самостійно обери групу й тип обліку нижче.'}</div>`;
+      suggestions.querySelectorAll('[data-suggest-entry]').forEach(button=>button.onclick=()=>chooseEntry(GymAtlas.byId.get(button.dataset.suggestEntry)));
+    }
+    nameInputs.forEach(input=>{
+      input.addEventListener('input',()=>{selectedCatalogId=null;showLinked();input.value.trim()?suggest(input.value.trim()):clearSuggestions();});
+      input.addEventListener('keydown',event=>{if(event.key==='ArrowDown'){event.preventDefault();suggestions.querySelector('button')?.focus();}if(event.key==='Escape'){event.preventDefault();clearSuggestions();}});
+    });
+    suggestions.addEventListener('keydown',event=>{const buttons=[...suggestions.querySelectorAll('button')],index=buttons.indexOf(document.activeElement);if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();buttons[(index+(event.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus();}if(event.key==='Escape'){clearSuggestions();nameInputs[0].focus();}});
+    modal.querySelector('#atlasManual').onclick=()=>{selectedCatalogId='none';clearSuggestions();showLinked();};
+    modal.querySelector('#atlasBrowse').onclick=()=>suggest('');
+    showLinked();
+
     const addDo = modal.querySelector("#addDo");
     if (addDo) addDo.onclick = ()=>{
       const name_ua = (modal.querySelector("#nUa")?.value || "").trim();
@@ -3685,6 +3790,8 @@ document.addEventListener("DOMContentLoaded", () => {
       let category = modal.querySelector("#nCat")?.value || "back";
       const trackingType = modal.querySelector("#nTracking")?.value || "strength";
       if (!name_ua && !name_en) return;
+      const selectedEntry=GymAtlas.byId.get(selectedCatalogId);
+      if(selectedEntry && category===selectedEntry.muscleGroup && !allCategories().some(item=>item.id===category)) category=ensureAtlasCategory(selectedEntry);
       const usedInWorkouts = isEdit && (state.workouts || []).some(w =>
         (w.items || []).some(it => it.exerciseId === exercise.id)
       );
@@ -3713,13 +3820,15 @@ document.addEventListener("DOMContentLoaded", () => {
         exercise.name_en = name_en || name_ua;
         exercise.category = category;
         exercise.trackingType = trackingType;
+        exercise.catalogId = selectedCatalogId || 'none';
       } else {
         state.exercises.unshift({
           id: uid(),
           name_ua: name_ua || name_en,
           name_en: name_en || name_ua,
           category,
-          trackingType
+          trackingType,
+          catalogId:selectedCatalogId || 'none'
         });
       }
       save();
@@ -4911,10 +5020,17 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Prepare exercises":"Підготуй вправи",
         sub:en?"Category and tracking type control the fields":"Категорія і тип обліку визначають поля",
         copy:en
-          ?"Open Exercises to maintain your exercise library. Tap + to create a new exercise. Tap an existing exercise card to rename it, move it to another muscle group, or correct the tracking type: weight + reps, reps only, duration, or distance + time."
-          :"Відкрий «Вправи», щоб вести бібліотеку вправ. Натисни +, щоб створити нову вправу. Натисни на наявну картку, щоб перейменувати її, перенести в іншу групу м’язів або виправити тип обліку: вага + повтори, лише повтори, тривалість або дистанція + час.",
+          ?"Open Exercises → My exercises. Tap + and start typing a name in Ukrainian or English. Photo suggestions update as you type. Selecting a movement fills both names, muscle group, tracking type and units, and links its demonstration. You can adjust every field. If there is no match, keep your name and enter the group and tracking type manually. Tap an existing exercise to view its technique, then Edit exercise to change it."
+          :"Відкрий «Вправи» → «Мої вправи». Натисни + та почни вводити назву українською або англійською. Варіанти з фото з’являються під час введення. Вибір вправи заповнює обидві назви, групу м’язів, тип обліку та одиниці, а також прив’язує показ руху. Усі поля можна скоригувати. Якщо відповідника немає, залиш власну назву та самостійно вкажи групу й тип обліку. Натисни на наявну вправу, щоб переглянути техніку, а потім «Редагувати вправу», щоб змінити її.",
         example:en?"Bench press: weight + reps. Pull-ups: reps only. Treadmill: distance + time. Add exercises to a workout from the Workout tab.":"Жим лежачи: вага + повтори. Підтягування: лише повтори. Доріжка: дистанція + час. До тренування вправи додаються з вкладки «Тренування».",
         mini:`<div class="miniTitle">＋ ${en?"Exercise":"Вправа"}</div><div class="miniField">${en?"Pull-ups":"Підтягування"}</div><div class="miniRow"><div class="miniField">${en?"Back":"Спина"}</div><div class="miniField">${en?"Tap card":"Натисни картку"}</div></div>`
+      },
+      {
+        title:en?"Explore photos and working muscles":"Дивись фото руху та задіяні м’язи",
+        sub:en?"876 library movements and a frame-by-frame player":"876 рухів у бібліотеці та покадровий показ",
+        copy:en?"Open Exercises → Movement library, filter by group and search a name. Open a card to see two real photographs, the front and back muscle maps, and instructions. Green marks primary muscles and amber secondary muscles. Press Play, pause, switch positions 01/02 or choose a slower speed. This is a replay of two photographed positions, not continuous video. Add a movement to My exercises from this card; add it to a workout from Workout as usual. Photos of common movements work offline after the update; other images need an initial online visit. The atlas works for the selected trainer client as well.":"Відкрий «Вправи» → «Бібліотека рухів», обери групу та знайди назву. У картці є два реальні фото, карта м’язів спереду й ззаду та інструкція. Зеленим позначені основні м’язи, бурштиновим — допоміжні. Натисни «Показ руху», постав паузу, перемикай позиції 01/02 або уповільни показ. Це повторення двох фотопозицій, не безперервне відео. З картки можна додати вправу до «Мої вправи», а в заняття — через «Тренування», як і раніше. Фото основних рухів працюють офлайн після оновлення; інші потребують першого відкриття з інтернетом. Атлас доступний і для вибраного клієнта тренера.",
+        example:en?"Type Bench → select Dumbbell Bench Press → fields fill in → Create. Tap its photo during a workout to review technique. An unmatched custom movement stays in your list without a guessed image.":"Введи «Жим» → вибери жим гантелей лежачи → поля заповняться → «Створити». У тренуванні натисни фото, щоб згадати техніку. Власна незнайома вправа залишиться у списку без випадково підібраного фото.",
+        mini:`<div class="miniTitle">${en?'Movement atlas':'Атлас рухів'}</div><div class="miniField">${en?'Bench… → photo suggestions':'Жим… → підказки з фото'}</div><div class="miniRow"><div class="miniButton">01 → 02</div><div class="miniField">${en?'Primary / secondary muscles':'Основні / допоміжні м’язи'}</div></div>`
       },
       {
         title:en?"Start or continue a workout":"Почни або продовж тренування",
@@ -4974,8 +5090,8 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Plan future workouts and templates":"Плануй майбутні тренування і шаблони",
         sub:en?"Prepare Tuesday or Thursday before the day comes":"Заготуй вівторок чи четвер ще до тренування",
         copy:en
-          ?"In Workout use Planned workouts to create a future workout. Pick a date and time, name it, choose exercises by category or load a saved template. Templates keep exercises in the order you add them. Use View to preview exercises and latest results, Edit to change the set, or delete it when it is no longer needed."
-          :"У розділі «Тренування» використовуй «Заплановані тренування»: обери дату й час, назву, вправи по категоріях або готовий шаблон. Шаблони зберігають вправи саме в тому порядку, у якому ти їх додаєш. Кнопка «Перегляд» показує вправи й останні результати, «Редагувати» змінює склад, а видалення прибирає шаблон.",
+          ?"In Workout use Planned workouts to create a future workout. Pick a date and time, name it, choose exercises by category or load a saved template. Templates keep exercises in the order you add them. Tap a template to preview its exercises and latest results. The compact ⋯ button edits it; ✕ deletes it after confirmation."
+          :"У розділі «Тренування» використовуй «Заплановані тренування»: обери дату й час, назву, вправи по категоріях або готовий шаблон. Шаблони зберігають вправи саме в тому порядку, у якому ти їх додаєш. Натисни шаблон для перегляду вправ і останніх результатів. Компактна кнопка ⋯ відкриває редагування; ✕ видаляє шаблон після підтвердження.",
         example:en?"Sunday: plan Push for Tuesday and Pull for Thursday. Thursday: open the plan, start with exercises already loaded, then save the actual work.":"Неділя: заплануй «Жим» на вівторок і «Тяга» на четвер. У четвер відкрий план, почни вже з набраними вправами й збережи фактичну роботу.",
         mini:`<div class="miniTitle">${en?"Planner":"Планувальник"} · ${en?"Templates":"Шаблони"}</div><div class="miniRow"><div class="miniField">${en?"Tue":"Вт"} · ${en?"Push":"Жим"}</div><div class="miniField">${en?"Template preview":"Перегляд шаблону"}</div></div><div class="miniButton">${en?"Edit template":"Редагувати шаблон"}</div>`
       },
@@ -5300,6 +5416,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---------- nav handlers (SAFE) ----------
+  const navPaths={home:'M3 10 12 3l9 7M5 9v12h14V9M9 21v-7h6v7',workout:'M3 8v8m3-11v14m12-14v14m3-11v8M6 12h12',exercises:'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',stats:'M4 20V10m8 10V4m8 16v-7M2 22h20',body:'M12 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6M5 10l7-1 7 1m-7-1v8m0 0-4 6m4-6 4 6',records:'M7 3h10v6a5 5 0 0 1-10 0V3M7 5H3v3a4 4 0 0 0 4 4m10-7h4v3a4 4 0 0 1-4 4m-5 2v7m-5 0h10',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1 1-3'};
+  $$('.navBtn').forEach(button=>{const icon=button.querySelector('.navIcon');if(icon&&navPaths[button.dataset.tab]) icon.innerHTML=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${navPaths[button.dataset.tab]}"/></svg>`;});
   $$(".navBtn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const tab = btn.getAttribute("data-tab");

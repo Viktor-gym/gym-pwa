@@ -1,0 +1,9 @@
+# Personal exports and local review artifacts never belong in the deployed app.
+gym-tracker-*.json
+gym-tracker-*.zip
+111/
+screenshots/
+backups/
+node_modules/
+playwright-report/
+test-results/

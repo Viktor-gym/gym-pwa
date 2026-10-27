@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>GymTracker Pro</title>
-  <meta name="theme-color" content="#0b1220" />
+  <meta name="theme-color" content="#131916" />
   <link rel="manifest" href="manifest.json" />
 
   <style>
@@ -779,6 +779,7 @@
       html.capacitor-ios .goalHeroTitle{font-size:20px}
     }
   </style>
+  <link rel="stylesheet" href="studio-v47.css" />
 </head>
 
 <body>
@@ -831,7 +832,9 @@
   </nav>
 
   <!-- ✅ defer + cache-bust щоб старий SW/кеш не ламав -->
-  <script defer src="app-v46.js"></script>
+  <script defer src="exercise-library-v47.js"></script>
+  <script defer src="exercise-atlas-v47.js"></script>
+  <script defer src="app-v47.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
