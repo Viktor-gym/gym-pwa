@@ -4,14 +4,15 @@
 
 // bump version when you publish updates
 importScripts('./exercise-precache-v47.js');
-const CACHE = 'gym-pwa-v47-movement-atlas';
+const CACHE = 'gym-pwa-v48-3d-motion';
 const MEDIA_CACHE = 'gym-pwa-exercise-media-v1';
-const ASSETS = ['./index.html','./app-v47.js','./studio-v47.css','./exercise-library-v47.js','./exercise-atlas-v47.js','./exercise-precache-v47.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
+const ASSETS = ['./index.html','./app-v48.js','./studio-v48.css','./exercise-library-v47.js','./exercise-motion-v48.js','./exercise-atlas-v48.js','./exercise-precache-v47.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
+const MOTION_ASSETS=Array.from({length:50},(_,index)=>String(index+51).padStart(4,'0')).flatMap(id=>['./assets/motion/'+id+'.jpg','./assets/motion/'+id+'.mp4']);
 
 self.addEventListener("install", (e) => {
   e.waitUntil(Promise.all([
     caches.open(CACHE).then(c=>c.addAll(ASSETS)),
-    caches.open(MEDIA_CACHE).then(c=>Promise.allSettled(self.GYM_PHOTO_ASSETS.map(url=>c.add(url))))
+    caches.open(MEDIA_CACHE).then(c=>Promise.allSettled([...self.GYM_PHOTO_ASSETS,...MOTION_ASSETS].map(async url=>{if(!await c.match(url))await c.add(url);})))
   ]));
   self.skipWaiting();
 });
@@ -28,7 +29,21 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   if(e.request.method!=='GET') return;
   const url=new URL(e.request.url);
-  const isMedia=(url.origin===self.location.origin && url.pathname.includes('/assets/exercises/')) || (url.origin==='https://raw.githubusercontent.com' && url.pathname.startsWith('/yuhonas/free-exercise-db/'));
+  // iPhone media playback requests byte ranges, including during offline playback.
+  if(url.origin===self.location.origin && /\/assets\/motion\/\d{4}\.mp4$/.test(url.pathname)){
+    e.respondWith((async()=>{
+      const media=await caches.open(MEDIA_CACHE);
+      let full=await media.match(url.href);
+      if(!full){
+        full=await fetch(new Request(url.href,{credentials:'same-origin'}));
+        if(full.status===200)await media.put(url.href,full.clone());
+      }
+      return e.request.headers.has('Range')&&full.status===200?rangeResponse(full,e.request.headers.get('Range')):full;
+    })().catch(()=>Response.error()));
+    return;
+  }
+  const isMotionPoster=url.origin===self.location.origin && /\/assets\/motion\/\d{4}\.jpg$/.test(url.pathname);
+  const isMedia=isMotionPoster || (url.origin===self.location.origin && url.pathname.includes('/assets/exercises/')) || (url.origin==='https://raw.githubusercontent.com' && url.pathname.startsWith('/yuhonas/free-exercise-db/'));
   if(isMedia){
     const network=()=>fetch(e.request).then(async response=>{
       if(response.ok || response.type==='opaque'){
@@ -70,3 +85,16 @@ self.addEventListener("fetch", (e) => {
     })
   );
 });
+
+async function rangeResponse(response,header){
+  const bytes=await response.arrayBuffer(),size=bytes.byteLength;
+  const match=/^bytes=(\d*)-(\d*)$/.exec(header);
+  if(!match || (!match[1]&&!match[2]))return new Response(null,{status:416,headers:{'Content-Range':'bytes */'+size}});
+  const start=match[1]?Number(match[1]):Math.max(0,size-Number(match[2]));
+  const end=match[1]?(match[2]?Math.min(Number(match[2]),size-1):size-1):size-1;
+  if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start>end||start>=size)return new Response(null,{status:416,headers:{'Content-Range':'bytes */'+size}});
+  const headers=new Headers(response.headers);
+  headers.delete('Content-Encoding');headers.delete('Transfer-Encoding');
+  headers.set('Content-Type','video/mp4');headers.set('Accept-Ranges','bytes');headers.set('Content-Range',`bytes ${start}-${end}/${size}`);headers.set('Content-Length',String(end-start+1));
+  return new Response(bytes.slice(start,end+1),{status:206,statusText:'Partial Content',headers});
+}

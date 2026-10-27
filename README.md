@@ -1,7 +1,7 @@
 # GymTracker Pro PWA
 
 HTML, CSS and vanilla JavaScript; static GitHub Pages deployment. The current
-release is `app-v47.js` with the separate `studio-v47.css` design and exercise atlas.
+release is `app-v48.js` with the separate `studio-v48.css` design and exercise atlas.
 
 ## Development
 
@@ -9,7 +9,7 @@ Serve this folder with any local HTTP server. No build step or API key is requir
 For example: `npx http-server . -p 8080`.
 
 Run library regression checks: `node --test tests/atlas.test.cjs`.
-Syntax checks: `node --check app-v47.js`, `node --check exercise-atlas-v47.js`,
+Syntax checks: `node --check app-v48.js`, `node --check exercise-atlas-v48.js`,
 and `node --check sw.js`.
 
 ## Exercise Atlas
@@ -19,12 +19,26 @@ source photographs. There are 84 curated Ukrainian names and aliases for common
 movements; other names and full instructions remain in their source English.
 Ukrainian search also expands common equipment and movement terms.
 
-The player replays two real photographed positions with pause, position selection
-and speed controls. It is labelled as a two-position demonstration, not continuous
-video. Front/back muscle maps highlight primary and secondary muscles using the
-source metadata. Photos of 84 common movements (168 JPEGs, about 11 MB) are bundled
-and cached separately. Other photos load on demand from the public source; up to
-240 remote images are cached. See `assets/exercises/SOURCE.md` and `LICENSE.txt`.
+`exercise-motion-v48.js` augments the catalog to 890 movements with 50 exact
+3D animations from the free Vital Animations Free50 pack. All 50 are animated
+characters, not recordings of people. A list card always displays a single static
+poster; opening it shows continuous motion with pause/restart, 0.5x speed and a
+scrubber. A filter shows only animated entries. Respect reduced-motion settings.
+No animation is substituted for a different equipment or movement variant.
+Unavailable animations show clearly labelled static positions, not a fake replay.
+
+Primary/secondary muscle highlighting is on a separate front/back map, not painted
+onto the character. Anatomy colours are coral/amber. The free pack is licensed for
+app use, NOT open-source or public domain. See `assets/motion/SOURCE.md` before
+reusing any artwork. No Fitness Online assets or paid packages are included.
+
+Animations (50 muted MP4 containers, about 5.3 MB) and JPEG posters are bundled.
+The media cache saves these plus photos of 84 common movements (168 JPEGs, about
+11 MB) after a successful online update. Service worker byte-range responses allow
+offline iPhone/Safari playback. Missing media remains retryable online; app updates
+do not depend on every optional media download succeeding. Other photos load on
+demand from the public source; up to 240 remote images are cached. See
+`assets/exercises/SOURCE.md` and `LICENSE.txt` for the Unlicense photo source.
 
 Typing a name in the exercise editor displays photo suggestions immediately.
 Selecting one fills both names, muscle group, tracking type and units. Users can
