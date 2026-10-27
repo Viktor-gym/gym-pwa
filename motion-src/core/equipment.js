@@ -1,6 +1,8 @@
 import {MeshFactory,disposeGeometry} from './mesh.js';
+import {createTemplateEquipment,TEMPLATE_EQUIPMENT} from './template-equipment.js';
 
 export function createEquipment(T,materials,type){
+  if(TEMPLATE_EQUIPMENT.has(type))return createTemplateEquipment(T,materials,type);
   const root=new T.Group();root.name=`equipment-${type}`;const f=new MeshFactory(T,materials),handles=[];
   const ring=(parent,radius,tube,z)=>{const mesh=f.mesh(new T.TorusGeometry(radius,tube,10,48),materials.metal,parent);mesh.position.z=z;return mesh;};
   if(type==='bench-barbell'){

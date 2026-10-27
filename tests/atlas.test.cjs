@@ -10,8 +10,8 @@ vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-motion-v48.js'),'utf
 vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-repdb-v49.js'),'utf8'),scope);
 const original=JSON.parse(JSON.stringify(scope.window.GYM_EXERCISE_LIBRARY));
 vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-legacy-v51.js'),'utf8'),scope);
-vm.runInNewContext(fs.readFileSync(path.join(root,'gym-motion-catalog-v53.js'),'utf8'),scope);
-vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-atlas-v53.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'gym-motion-catalog-v54.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-atlas-v54.js'),'utf8'),scope);
 const atlas=scope.window.GymAtlas;
 test('library has unique entries and valid local image assets',()=>{
  assert.equal(atlas.entries.length,899);
@@ -117,15 +117,19 @@ test('photo library is restored exactly and v50 saved variants remain resolvable
  const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
  assert(!index.includes('exercise-poses-v50.js'));
  assert(index.includes('exercise-legacy-v51.js')&&index.includes('app-v53.js'));
- assert(!fs.readFileSync(path.join(root,'exercise-atlas-v53.js'),'utf8').includes('bindPoses'));
+ assert(!fs.readFileSync(path.join(root,'exercise-atlas-v54.js'),'utf8').includes('bindPoses'));
 });
 
-test('only the two approved exact movements use the shared mannequin',()=>{
- assert.equal(scope.window.GYM_CUSTOM_MOTIONS.length,2);
+test('eight unanimated exact movements are added without replacing existing 3D or equipment variants',()=>{
+ assert.equal(scope.window.GYM_CUSTOM_MOTIONS.length,10);
  assert.equal(atlas.customMotion(atlas.match('Жим штанги лежачи')).clipId,'bench-press');
  assert.equal(atlas.customMotion(atlas.byId.get('Dumbbell_Bicep_Curl')).clipId,'dumbbell-curl');
- for(const id of ['Incline_Dumbbell_Press','Dumbbell_Bench_Press','Seated_Dumbbell_Curl','Standing_Biceps_Cable_Curl'])assert(!atlas.customMotion(atlas.byId.get(id)));
- assert.equal(atlas.entries.filter(atlas.hasAnimation).length,69);
+ for(const id of ['Side_Lateral_Raise','Triceps_Pushdown_-_Rope_Attachment','Dumbbell_Bench_Press','Seated_Dumbbell_Curl','Standing_Biceps_Cable_Curl','Leverage_Chest_Press'])assert(!atlas.customMotion(atlas.byId.get(id)));
+ for(const item of scope.window.GYM_CUSTOM_MOTIONS.slice(2))assert(!atlas.byId.get(item.catalogId).motion,'do not replace existing 3D');
+ assert.equal(atlas.match('Жим у Hammer').id,'Leverage_Chest_Press');
+ assert.equal(atlas.match('Жим у Hammer під кутом').id,'Leverage_Incline_Chest_Press');
+ assert.equal(atlas.customMotion(atlas.match('Жим у Hammer під кутом')).clipId,'hammer-incline-press');
+ assert.equal(atlas.entries.filter(atlas.hasAnimation).length,77);
  for(const item of scope.window.GYM_CUSTOM_MOTIONS)assert(fs.existsSync(path.join(root,item.poster)));
- assert(fs.existsSync(path.join(root,'gym-motion-v53.js')));
+ assert(fs.existsSync(path.join(root,'gym-motion-v54.js')));
 });

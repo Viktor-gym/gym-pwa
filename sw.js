@@ -4,10 +4,10 @@
 
 // bump version when you publish updates
 importScripts('./exercise-precache-v47.js','./exercise-repdb-precache-v49.js');
-const CACHE = 'gym-pwa-v53-shared-mannequin';
+const CACHE = 'gym-pwa-v54-strength-guides';
 const MEDIA_CACHE = 'gym-pwa-exercise-media-v1';
-const ASSETS = ['./index.html','./app-v53.js','./studio-v53.css','./body-metrics-v52.js','./exercise-library-v47.js','./exercise-motion-v48.js','./exercise-repdb-v49.js','./exercise-legacy-v51.js','./exercise-atlas-v53.js','./gym-motion-catalog-v53.js','./gym-motion-v53.js','./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
-const MOTION_ASSETS=[...Array.from({length:50},(_,index)=>String(index+51).padStart(4,'0')).flatMap(id=>['./assets/motion/'+id+'.jpg','./assets/motion/'+id+'.mp4']),'./assets/gym-motion/bench-press.jpg','./assets/gym-motion/dumbbell-curl.jpg'];
+const ASSETS = ['./index.html','./app-v53.js','./studio-v53.css','./body-metrics-v52.js','./exercise-library-v47.js','./exercise-motion-v48.js','./exercise-repdb-v49.js','./exercise-legacy-v51.js','./exercise-atlas-v54.js','./gym-motion-catalog-v54.js','./gym-motion-v54.js','./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
+const MOTION_ASSETS=[...Array.from({length:50},(_,index)=>String(index+51).padStart(4,'0')).flatMap(id=>['./assets/motion/'+id+'.jpg','./assets/motion/'+id+'.mp4']),...['bench-press','dumbbell-curl','incline-barbell-press','incline-dumbbell-press','barbell-curl','cable-preacher-curl','lying-triceps-press','cable-crossover','concentration-curl','hammer-incline-press'].map(id=>'./assets/gym-motion/'+id+'.jpg')];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(Promise.all([

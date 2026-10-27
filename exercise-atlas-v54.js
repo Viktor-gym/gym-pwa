@@ -17,11 +17,11 @@
   const equipmentNames = {barbell:'Штанга',dumbbell:'Гантелі',cable:'Блок',machine:'Тренажер','body only':'Власна вага',kettlebells:'Гирі',bands:'Еспандер','exercise ball':'Фітбол','medicine ball':'Медбол','e-z curl bar':'EZ-гриф',foam_roll:'Ролер',other:'Інше'};
   Object.assign(muscleNames,{'lower legs':'Литки',supraspinatus:'Надостьовий м’яз','upper traps':'Верх трапецій',legs:'Ноги',hips:'Стегна',mobility:'Рухливість','posterior chain':'Задній м’язовий ланцюг',cardio:'Кардіо'});
   const units = {strength:['кг × повтори','kg × reps'],reps:['повтори','reps'],time:['хвилини','minutes'],distance:['км + хвилини','km + minutes']};
-  const indexed = entries.map(entry => ({entry,terms:[entry.name,entry.name_ua,...entry.aliases].filter(Boolean).map(normalize)}));
+  const indexed = entries.map(entry => ({entry,terms:[entry.name,entry.name_ua,customMotion(entry)?.name_ua,...entry.aliases,...(customMotion(entry)?.aliases||[])].filter(Boolean).map(normalize)}));
   const exact = new Map();
   indexed.forEach(({entry,terms}) => terms.forEach(term => exact.set(term,entry)));
   legacy.forEach(entry=>[entry.name,entry.name_ua,...entry.aliases].filter(Boolean).forEach(name=>{const key=normalize(name);if(!exact.has(key))exact.set(key,entry);}));
-  const label = (entry,lang='ua') => lang === 'en' ? entry.name : entry.name_ua || entry.name;
+  const label = (entry,lang='ua') => lang === 'en' ? entry.name : customMotion(entry)?.name_ua || entry.name_ua || entry.name;
   const category = (id,lang='ua') => (categories[id] || categories.other)[lang === 'en' ? 1 : 0];
   const unitLabel = (type,lang='ua') => (units[type] || units.strength)[lang === 'en' ? 1 : 0];
   function match(exercise) {
@@ -97,7 +97,7 @@
     const head=options.title || label(entry,lang);
     overlay.innerHTML=`<section class="atlasDialog" role="dialog" aria-modal="true" aria-labelledby="atlasTitle" tabindex="-1">
       <div class="atlasDialogHead"><div><span class="atlasEyebrow">${en?'MOVEMENT ATLAS':'АТЛАС РУХІВ'}</span><h2 id="atlasTitle">${esc(head)}</h2><p>${esc(entry?entry.name:(en?'Your custom exercise':'Твоя власна вправа'))}</p></div><button class="btn atlasClose" aria-label="${en?'Close':'Закрити'}">✕</button></div>
-      ${entry?`<div class="atlasGuideGrid"><div>${mediaMarkup(entry,en)}</div>
+      ${entry?`${variantMarkup(entry,en)}<div class="atlasGuideGrid"><div>${mediaMarkup(entry,en)}</div>
       <aside class="atlasMusclePanel"><h3>${en?'Muscles at work':'Які м’язи працюють'}</h3>${muscleMap(entry,lang)}<div class="atlasLegend"><span><i></i>${en?'Primary':'Основні'}</span><span><i></i>${en?'Secondary':'Допоміжні'}</span></div>${muscleList(entry.primaryMuscles,lang,'primary')}${muscleList(entry.secondaryMuscles,lang,'secondary')}</aside></div>
       <div class="atlasFacts"><span>${esc(category(entry.muscleGroup,lang))}</span><span>${esc(en?entry.equipment||'Other':equipmentNames[entry.equipment]||entry.equipment||'Інше')}</span><span>${esc(unitLabel(entry.trackingType,lang))}</span></div>
       ${instructionsMarkup(entry,en)}`:`<div class="atlasUnmatched"><div>◇</div><h3>${en?'Choose a matching movement':'Підбери відповідний рух'}</h3><p>${en?'There is no exact library match for this name. Keep your exercise or choose the correct variant in Edit.':'Для цієї назви немає точного відповідника. Власна вправа збережена; у редагуванні можна вибрати правильний варіант із бібліотеки.'}</p></div>`}
@@ -118,6 +118,7 @@
     overlay.addEventListener('click',event=>{if(event.target===overlay) close();});
     overlay.querySelector('[data-edit]')?.addEventListener('click',()=>{close();options.onEdit();});
     overlay.querySelector('[data-add]')?.addEventListener('click',()=>{close();options.onAdd(entry);});
+    overlay.querySelectorAll('[data-guide-variant]').forEach(button=>button.addEventListener('click',()=>{const variant=byId.get(button.dataset.guideVariant);close();open(variant,{...options,title:label(variant,lang)});}));
     bindMedia(overlay,controller.signal,en,entry);
     dialog.addEventListener('keydown',event=>{
       if(event.key==='Escape'){event.stopPropagation();close();}
@@ -131,6 +132,11 @@
     return {close};
   }
   document.addEventListener('error',event=>{if(event.target instanceof HTMLImageElement&&event.target.closest('.atlasThumb'))event.target.classList.add('atlasPhotoFailed');},true);
+  function variantMarkup(entry,en){
+    const variants=[...customMotions.values()].filter(item=>item.relatedCatalogIds?.includes(entry.id));
+    if(!variants.length)return '';
+    return `<div class="atlasFootnote"><p>${en?'This guide shows the level press. Looking for the upward incline variant?':'Цей показ — горизонтальний жим. Для жиму під кутом вгору відкрий інший варіант:'}</p>${variants.map(item=>`<button class="btn" data-guide-variant="${esc(item.catalogId)}">${esc(label(byId.get(item.catalogId),en?'en':'ua'))} · 3D</button>`).join('')}</div>`;
+  }
   function mediaMarkup(entry,en,original=false){
     const own=customMotion(entry);
     if(own&&!original)return `<div class="atlasStage atlasCustomStage" data-clip-id="${esc(own.clipId)}"><img class="atlasCustomPoster" src="${esc(own.poster)}" alt="${esc(label(entry,en?'en':'ua'))}"><span class="atlasStageCaption">3D · GymTracker</span></div><div class="atlasPlayback atlasCustomControls"><button class="btn primary" data-play>${en?'▶ Play':'▶ Показ руху'}</button><button class="btn" data-restart>${en?'From start':'Спочатку'}</button><button class="btn" data-speed aria-label="${en?'Animation speed':'Швидкість анімації'}">1×</button><button class="btn" data-angle>${en?'View':'Ракурс'}</button></div><label class="atlasScrub"><span>${en?'Movement':'Рух'}</span><input type="range" min="0" max="1000" value="0" step="1" data-seek aria-label="${en?'Animation position':'Позиція руху'}"><output data-progress>0%</output></label><p class="atlasFootnote">${en?'Shared 3D mannequin. Pause, slow down or change the view to inspect the motion.':'Спільний 3D-манекен. Зупини показ, сповільни або зміни ракурс, щоб роздивитися рух.'}</p>`;
