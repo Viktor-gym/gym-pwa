@@ -1,7 +1,7 @@
 # GymTracker Pro PWA
 
 HTML, CSS and vanilla JavaScript; static GitHub Pages deployment. The current
-release is `app-v48.js` with the separate `studio-v48.css` design and exercise atlas.
+release is `app-v49.js` with the separate `studio-v48.css` design and exercise atlas.
 
 ## Development
 
@@ -9,7 +9,7 @@ Serve this folder with any local HTTP server. No build step or API key is requir
 For example: `npx http-server . -p 8080`.
 
 Run library regression checks: `node --test tests/atlas.test.cjs`.
-Syntax checks: `node --check app-v48.js`, `node --check exercise-atlas-v48.js`,
+Syntax checks: `node --check app-v49.js`, `node --check exercise-atlas-v49.js`,
 and `node --check sw.js`.
 
 ## Exercise Atlas
@@ -27,12 +27,22 @@ scrubber. A filter shows only animated entries. Respect reduced-motion settings.
 No animation is substituted for a different equipment or movement variant.
 Unavailable animations show clearly labelled static positions, not a fake replay.
 
-Primary/secondary muscle highlighting is on a separate front/back map, not painted
-onto the character. Anatomy colours are coral/amber. The free pack is licensed for
+The front/back muscle map uses coral/amber for primary/secondary muscles.
+Vital characters do not have painted muscle highlights. The free pack is licensed for
 app use, NOT open-source or public domain. See `assets/motion/SOURCE.md` before
 reusing any artwork. No Fitness Online assets or paid packages are included.
 
-Animations (50 muted MP4 containers, about 5.3 MB) and JPEG posters are bundled.
+`exercise-repdb-v49.js` adds 18 further unique 3D animations from the 22-exercise
+RepDB preview, bringing the catalog to 899 movements with **68 animated guides**.
+Four already-covered movements are not duplicated. RepDB characters also show
+muscle colouring. The supplied CC BY-NC 4.0 license permits personal/non-commercial
+use with attribution. This restriction was explicitly accepted by the owner.
+**Before any commercial app, ads or paid-client use, remove/replace the RepDB
+media/data or obtain separate rights.** No purchase has been made. Credits are
+visible in the library and each RepDB guide. See `assets/repdb-motion/SOURCE.md`
+and `LICENSE.md`. Existing exact animations and user exercise settings stay intact.
+
+Animations (68 muted H.264 MP4 containers) and JPEG posters are bundled.
 The media cache saves these plus photos of 84 common movements (168 JPEGs, about
 11 MB) after a successful online update. Service worker byte-range responses allow
 offline iPhone/Safari playback. Missing media remains retryable online; app updates
@@ -62,3 +72,10 @@ collapsed until opened.
 
 Before a release, update the references in index.html and sw.js together. Keep
 media-cache naming stable to preserve previously downloaded exercise photos.
+
+## Next Search
+
+See `EXERCISE-MEDIA-NOTES.md` for the requested reminder, missing movement
+priorities, sources already checked and license limitations. Keep the existing
+illustration/technique when no exact new animation is found. This note does not
+schedule any background job.
