@@ -14,3 +14,9 @@ Do not purchase assets without explicit approval. Never commit personal exports,
 sample profiles or test screenshots. Preserve existing localStorage and IDs.
 
 Work on the PWA; do not sync changes into Capacitor/iOS unless requested.
+
+Custom body metrics (v52) are profile-local bodyMetrics definitions plus
+body[].custom values. Preserve both in JSON import/export and profile merges.
+Never relabel recorded values with different units or merge unlike units.
+Hiding a metric retains its history. Pressure is a paired value, not a scalar;
+do not add medical interpretation, normal-range labels or new health advice.

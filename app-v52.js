@@ -11,6 +11,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const $ = (q) => document.querySelector(q);
   const $$ = (q) => Array.from(document.querySelectorAll(q));
+  const BodyMetrics = window.GymBodyMetrics;
 
   const STORAGE_KEY = "gymPwaData_v3";
   const APP_STORAGE_KEY = "gymPwaApp_v4";
@@ -307,6 +308,7 @@ document.addEventListener("DOMContentLoaded", () => {
       favorites: [],
       customCategories: [],
       body: [],         // {id, date, weight, forearm, chest, waist, legs}
+      bodyMetrics: [],  // Optional per-profile definitions; values live in body[].custom.
       goals: [],
       plannedWorkouts: [],
       workoutTemplates: [],
@@ -391,6 +393,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
       });
 
+    s.bodyMetrics = BodyMetrics.normalizeMetrics(s.bodyMetrics);
     s.body = s.body.filter(Boolean).map(m => ({
       ...m,
       id: String(m.id || uid()),
@@ -400,7 +403,8 @@ document.addEventListener("DOMContentLoaded", () => {
       forearm: parseNum(m.forearm),
       chest: parseNum(m.chest),
       waist: parseNum(m.waist),
-      legs: parseNum(m.legs)
+      legs: parseNum(m.legs),
+      ...(m.custom&&typeof m.custom==='object'?{custom:BodyMetrics.normalizeValues(m.custom)}:{})
     }));
 
     s.favorites = [...new Set(s.favorites.map(String))];
@@ -532,7 +536,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function bodyFingerprint(measure){
     const day=new Date(measure?.date||0).toISOString().slice(0,10);
-    return [day,parseNum(measure?.weight),parseNum(measure?.forearm),parseNum(measure?.chest),parseNum(measure?.waist),parseNum(measure?.legs)].join("|");
+    return [day,parseNum(measure?.weight),parseNum(measure?.forearm),parseNum(measure?.chest),parseNum(measure?.waist),parseNum(measure?.legs),BodyMetrics.fingerprint(measure?.custom)].join("|");
   }
 
   function goalFingerprint(goal){
@@ -542,7 +546,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function mergeProfileData(targetRaw,incomingRaw){
     const target=migrate(targetRaw);
     const incoming=migrate(incomingRaw);
-    const stats={exercises:0,workouts:0,body:0,goals:0,categories:0};
+    const stats={exercises:0,workouts:0,body:0,goals:0,categories:0,bodyMetrics:0,bodyUpdated:0};
+    const metricMerge=BodyMetrics.mergeDefinitions(target.bodyMetrics,incoming.bodyMetrics,()=>`metric-${uid()}`);
+    target.bodyMetrics=metricMerge.metrics;
+    stats.bodyMetrics=metricMerge.added;
     const exerciseIdMap=new Map();
     const byId=new Map(target.exercises.map(ex=>[ex.id,ex]));
     const byKey=new Map(target.exercises.map(ex=>[exMergeKey(ex),ex]));
@@ -596,8 +603,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const bodyKeys=new Set(target.body.map(bodyFingerprint));
     incoming.body.forEach(measure=>{
       const copy={...measure};
+      if(copy.custom)copy.custom=BodyMetrics.remapValues(copy.custom,metricMerge.idMap);
       const key=bodyFingerprint(copy);
       if(bodyKeys.has(key)) return;
+      const same=target.body.find(record=>record.id===copy.id);
+      if(same&&bodyFingerprint({...same,custom:{}})===bodyFingerprint({...copy,custom:{}})){
+        const combined=BodyMetrics.combineValues(same.custom,copy.custom);
+        if(combined){if(BodyMetrics.fingerprint(combined)===BodyMetrics.fingerprint(same.custom))return;bodyKeys.delete(bodyFingerprint(same));same.custom=combined;bodyKeys.add(bodyFingerprint(same));stats.bodyUpdated++;return;}
+      }
       if(bodyIds.has(copy.id)) copy.id=uid();
       target.body.push(copy);
       bodyIds.add(copy.id);
@@ -4544,93 +4557,91 @@ document.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(d.getTime()) ? d.toISOString() : new Date().toISOString();
   }
 
-  function viewBody(){
-    const el = document.createElement("div");
+  function bodyMetricFields(){
+    const en=state.lang==='en';
+    return (state.bodyMetrics||[]).filter(metric=>!metric.archived).map((metric,index)=>{
+      const title=`${escapeHtml(metric.name)} <small>${escapeHtml(metric.unit)}</small>`;
+      if(metric.type==='pressure')return `<fieldset class="bodyField bodyPressureField"><legend>${title}</legend><div class="bodyPressureInputs">${['systolic','diastolic'].map((part,i)=>`<label for="bodyCustom${index}${i}">${en?(i?'Lower':'Upper'):(i?'Нижній':'Верхній')}<input id="bodyCustom${index}${i}" class="btn" inputmode="decimal" data-body-metric="${escapeHtml(metric.id)}" data-part="${part}" placeholder="${i?'80':'120'}"></label>`).join('')}</div></fieldset>`;
+      return `<div class="bodyField"><label for="bodyCustom${index}">${title}</label><input id="bodyCustom${index}" class="btn" inputmode="decimal" data-body-metric="${escapeHtml(metric.id)}" placeholder="—"></div>`;
+    }).join('');
+  }
 
-    el.appendChild(card(`
-      <div class="detailHeader">
-        <div class="detailTitle">
-          <h2>${t("body")}</h2>
-          <div class="sub">${state.lang==="en" ? "Weight + measurements" : "Вага + об’єми"}</div>
-        </div>
-      </div>
+  function bodyMetricManager(){
+    const en=state.lang==='en',metrics=state.bodyMetrics||[];
+    if(!metrics.length)return '';
+    return `<details class="bodyMetricManager"><summary>${en?'My custom metrics':'Мої показники'} · ${metrics.length}</summary><div class="bodyMetricList">${metrics.map(metric=>`<div class="bodyMetricRow"><div><strong>${escapeHtml(metric.name)}</strong><small>${escapeHtml(metric.unit)}${metric.archived?(en?' · hidden':' · приховано'):''}</small></div><div class="row"><button class="btn" data-edit-body-metric="${escapeHtml(metric.id)}">${en?'Edit':'Змінити'}</button><button class="btn" data-archive-body-metric="${escapeHtml(metric.id)}">${metric.archived?(en?'Restore':'Повернути'):(en?'Hide':'Приховати')}</button></div></div>`).join('')}</div><p class="muted">${en?'Hiding a metric keeps its history and exported data.':'Приховування не видаляє історію та дані в експорті.'}</p></details>`;
+  }
 
-      <div class="sectionCard bodyMeasureCard">
-        <div class="sectionTitle">${t("addMeasure")}</div>
-        <div class="bodyGrid bodyMeasureGrid">
-          <div class="bodyField bodyDateField">
-            <div class="muted">${t("bodyDate")}</div>
-            <input id="bDate" class="btn" type="date" value="${isoToday()}" />
-          </div>
-          <div class="bodyField">
-            <div class="muted">${t("bodyWeight")}</div>
-            <input id="bWeight" class="btn" inputmode="decimal" placeholder="90.5" />
-          </div>
-          <div class="bodyField">
-            <div class="muted">${t("bodyForearm")}</div>
-            <input id="bForearm" class="btn" inputmode="decimal" placeholder="—" />
-          </div>
-          <div class="bodyField">
-            <div class="muted">${t("bodyChest")}</div>
-            <input id="bChest" class="btn" inputmode="decimal" placeholder="—" />
-          </div>
-          <div class="bodyField">
-            <div class="muted">${t("bodyWaist")}</div>
-            <input id="bWaist" class="btn" inputmode="decimal" placeholder="—" />
-          </div>
-          <div class="bodyField">
-            <div class="muted">${t("bodyLegs")}</div>
-            <input id="bLegs" class="btn" inputmode="decimal" placeholder="—" />
-          </div>
-          <div class="bodyActions">
-            <button class="btn primary" id="bSave">💾 ${t("save")}</button>
-          </div>
-        </div>
-      </div>
-    `));
+  function openBodyMetricEditor(metricId,onSaved){
+    const en=state.lang==='en',metric=(state.bodyMetrics||[]).find(item=>item.id===metricId);
+    const locked=metric&&(state.body||[]).some(record=>BodyMetrics.hasValue(record,metric));
+    const profileId=appShell.activeProfileId,previous=document.activeElement,controller=new AbortController();
+    const overlay=document.createElement('div');overlay.className='bodyMetricOverlay';
+    overlay.innerHTML=`<section class="card bodyMetricDialog" role="dialog" aria-modal="true" aria-labelledby="bodyMetricTitle" tabindex="-1"><div class="detailHeader"><h2 id="bodyMetricTitle">${metric?(en?'Edit metric':'Змінити показник'):(en?'Custom metric':'Свій показник')}</h2><button class="btn" data-close aria-label="${en?'Close':'Закрити'}">✕</button></div>${!metric?`<div class="bodyMetricPresets"><button class="btn" data-preset="hips">${en?'Glutes':'Сідниці'}</button><button class="btn" data-preset="pulse">${en?'Heart rate':'Пульс'}</button><button class="btn" data-preset="pressure">${en?'Blood pressure':'Тиск'}</button></div>`:''}<div class="bodyMetricEditorFields"><label>${en?'Name':'Назва'}<input class="btn" id="bodyMetricName" maxlength="80" value="${escapeHtml(metric?.name||'')}" placeholder="${en?'E.g. neck circumference':'Наприклад, обхват шиї'}"></label><label>${en?'Format':'Формат'}<select class="btn" id="bodyMetricType" ${locked?'disabled':''}><option value="number">${en?'One number':'Одне число'}</option><option value="pressure">${en?'Blood pressure: upper / lower':'Тиск: верхній / нижній'}</option></select></label><label>${en?'Unit':'Одиниці виміру'}<input class="btn" id="bodyMetricUnit" maxlength="24" list="bodyMetricUnits" value="${escapeHtml(metric?.unit||'')}" placeholder="${en?'cm, bpm, mmHg…':'см, уд/хв, мм рт. ст.…'}" ${locked?'disabled':''}></label><datalist id="bodyMetricUnits">${(en?['cm','kg','bpm','mmHg','%','°C']:['см','кг','уд/хв','мм рт. ст.','%','°C']).map(unit=>`<option value="${unit}">`).join('')}</datalist></div><p class="muted">${locked?(en?'This metric already has history. To use another unit or format, create a new metric; old values will not be relabelled.':'Цей показник уже має історію. Для інших одиниць або формату створи новий показник: старі значення не будуть перепозначені.'):(en?'Choose any name and unit. Values are recorded as entered, without medical interpretation.':'Обери свою назву й одиниці. Значення зберігаються як введені, без медичної оцінки.')}</p><p id="bodyMetricError" class="bodyInputError" role="alert" hidden></p><div class="bodyMetricDialogActions"><button class="btn" data-close>${en?'Cancel':'Скасувати'}</button><button class="btn primary" id="bodyMetricSave">${t('save')}</button></div></section>`;
+    document.body.appendChild(overlay);
+    const modal=overlay.querySelector('.bodyMetricDialog'),name=overlay.querySelector('#bodyMetricName'),unit=overlay.querySelector('#bodyMetricUnit'),type=overlay.querySelector('#bodyMetricType');
+    type.value=metric?.type||'number';
+    const close=()=>{controller.abort();overlay.remove();if(previous?.isConnected)previous.focus();else $('#bAddMetric')?.focus();};
+    overlay.querySelectorAll('[data-close]').forEach(button=>button.onclick=close);
+    overlay.onclick=event=>{if(event.target===overlay)close();};
+    modal.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){event.stopPropagation();close();}
+      if(event.key==='Tab'){const fields=[...modal.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled)')],first=fields[0],last=fields[fields.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}
+    },{signal:controller.signal});
+    const presets={hips:[en?'Glutes':'Сідниці',en?'cm':'см','number'],pulse:[en?'Heart rate':'Пульс',en?'bpm':'уд/хв','number'],pressure:[en?'Blood pressure':'Тиск',en?'mmHg':'мм рт. ст.','pressure']};
+    overlay.querySelectorAll('[data-preset]').forEach(button=>button.onclick=()=>{[name.value,unit.value,type.value]=presets[button.dataset.preset];name.focus();});
+    type.onchange=()=>{if(type.value==='pressure'&&!unit.value.trim())unit.value=en?'mmHg':'мм рт. ст.';};
+    overlay.querySelector('#bodyMetricSave').onclick=()=>{
+      if(appShell.activeProfileId!==profileId){close();return;}
+      const candidate={...(metric||{}),id:metric?.id||`metric-${uid()}`,name:name.value.trim(),unit:locked?metric.unit:unit.value.trim(),type:locked?metric.type:type.value,archived:metric?.archived||false};
+      const error=overlay.querySelector('#bodyMetricError');
+      if(!candidate.name||!candidate.unit){error.textContent=en?'Enter a name and unit.':'Вкажи назву та одиниці виміру.';error.hidden=false;return;}
+      const duplicate=(state.bodyMetrics||[]).find(item=>item.id!==candidate.id&&BodyMetrics.metricKey(item)===BodyMetrics.metricKey(candidate));
+      if(duplicate){error.textContent=en?'This metric already exists. Restore it from My custom metrics if hidden.':'Такий показник уже є. Якщо він прихований, поверни його в «Мої показники».';error.hidden=false;return;}
+      if(metric)Object.assign(metric,candidate);else state.bodyMetrics.push(candidate);
+      save();close();onSaved();
+    };
+    name.focus();
+  }
 
-    el.appendChild(card(`
-      <div class="sectionTitle" style="margin:0 0 10px">${t("bodyProgress")}</div>
-      <div class="bodyCharts">
-        <div class="bodyTrendCard primary" id="chartBodyWeight"></div>
-        <div class="bodyTrendCard" id="chartBodyForearm"></div>
-        <div class="bodyTrendCard" id="chartBodyChest"></div>
-        <div class="bodyTrendCard" id="chartBodyWaist"></div>
-        <div class="bodyTrendCard" id="chartBodyLegs"></div>
-      </div>
-    `));
-
-    el.appendChild(card(`
-      <div class="sectionTitle" style="margin:0 0 10px">${t("bodyHistory")}</div>
-      <div class="row" style="flex-direction:column; align-items:stretch; gap:10px" id="bodyHist"></div>
-    `));
-
+  function viewBody(draft=[]){
+    const el=document.createElement('div'),en=state.lang==='en';el.className='bodyView';
+    const refresh=()=>{
+      const inputs=[...el.querySelectorAll('.bodyMeasureGrid input')].map(input=>({id:input.id,metric:input.dataset.bodyMetric,part:input.dataset.part||'',value:input.value}));
+      const replacement=viewBody(inputs);el.replaceWith(replacement);replacement.querySelector('#bAddMetric')?.focus({preventScroll:true});
+    };
+    const fields=[['bWeight','bodyWeight','90.5'],['bForearm','bodyForearm','—'],['bChest','bodyChest','—'],['bWaist','bodyWaist','—'],['bLegs','bodyLegs','—']];
+    el.appendChild(card(`<div class="detailHeader"><div class="detailTitle"><h2>${t('body')}</h2><div class="sub">${en?'Weight, measurements and your own metrics':'Вага, заміри та власні показники'}</div></div></div><div class="sectionCard bodyMeasureCard"><div class="bodyMeasureHeading"><div class="sectionTitle">${t('addMeasure')}</div><button class="btn" id="bAddMetric">+ ${en?'Custom metric':'Свій показник'}</button></div><div class="bodyGrid bodyMeasureGrid"><div class="bodyField bodyDateField"><label for="bDate">${t('bodyDate')}</label><input id="bDate" class="btn" type="date" value="${isoToday()}"></div>${fields.map(([id,label,placeholder])=>`<div class="bodyField"><label for="${id}">${t(label)}</label><input id="${id}" class="btn" inputmode="decimal" placeholder="${placeholder}"></div>`).join('')}${bodyMetricFields()}<div class="bodyActions"><button class="btn primary" id="bSave">${t('save')}</button></div></div><p id="bodyFormError" class="bodyInputError" role="alert" hidden></p>${bodyMetricManager()}</div>`));
+    const customCharts=(state.bodyMetrics||[]).filter(metric=>!metric.archived).map((metric,index)=>!(state.body||[]).some(record=>BodyMetrics.hasValue(record,metric))?'':metric.type==='pressure'?`<div class="bodyTrendCard customBodyTrend" id="chartBodyCustom${index}Upper"></div><div class="bodyTrendCard customBodyTrend" id="chartBodyCustom${index}Lower"></div>`:`<div class="bodyTrendCard customBodyTrend" id="chartBodyCustom${index}"></div>`).join('');
+    const fixedCharts=[['weight','Weight'],['forearm','Forearm'],['chest','Chest'],['waist','Waist'],['legs','Legs']].filter(([key])=>(state.body||[]).some(record=>record[key]>0)).map(([,name])=>`<div class="bodyTrendCard ${name==='Weight'?'primary':''}" id="chartBody${name}"></div>`).join('');
+    el.appendChild(card(`<div class="sectionTitle" style="margin:0 0 10px">${t('bodyProgress')}</div><div class="bodyCharts">${fixedCharts+customCharts||`<div class="muted">${t('noData')}</div>`}</div>`));
+    el.appendChild(card(`<div class="sectionTitle" style="margin:0 0 10px">${t('bodyHistory')}</div><div class="row" style="flex-direction:column;align-items:stretch;gap:10px" id="bodyHist"></div>`));
     setTimeout(()=>{
-      const saveBtn = $("#bSave");
-      if (saveBtn) saveBtn.onclick = ()=>{
-        const date = parseDateInput($("#bDate")?.value);
-        const entry = {
-          id: uid(),
-          createdAt: Date.now(),   // <-- додай це
-          date,
-          weight: parseNum($("#bWeight")?.value),
-          forearm: parseNum($("#bForearm")?.value),
-          chest: parseNum($("#bChest")?.value),
-          waist: parseNum($("#bWaist")?.value),
-          legs: parseNum($("#bLegs")?.value),
-        };
-        // allow saving even if only weight is filled
-        if (!(entry.weight>0 || entry.forearm>0 || entry.chest>0 || entry.waist>0 || entry.legs>0)) return;
-        state.body.unshift(entry);
-        state.recommendations=buildProgramRecommendations();
-        save();
-        render();
+      if(!el.isConnected)return;
+      for(const saved of draft){const input=[...el.querySelectorAll('.bodyMeasureGrid input')].find(node=>saved.metric?node.dataset.bodyMetric===saved.metric&&(node.dataset.part||'')===saved.part:node.id===saved.id);if(input)input.value=saved.value;}
+      el.querySelector('#bAddMetric').onclick=()=>openBodyMetricEditor(null,refresh);
+      el.querySelectorAll('[data-edit-body-metric]').forEach(button=>button.onclick=()=>openBodyMetricEditor(button.dataset.editBodyMetric,refresh));
+      el.querySelectorAll('[data-archive-body-metric]').forEach(button=>button.onclick=()=>{
+        const metric=state.bodyMetrics.find(item=>item.id===button.dataset.archiveBodyMetric);
+        if(!metric.archived&&!confirm(en?'Hide this metric? Its history will stay saved.':'Приховати показник? Його історія залишиться збереженою.'))return;
+        metric.archived=!metric.archived;save();refresh();
+      });
+      el.querySelector('#bSave').onclick=()=>{
+        const pairs=[],error=el.querySelector('#bodyFormError');error.hidden=true;
+        for(const metric of (state.bodyMetrics||[]).filter(item=>!item.archived)){
+          const inputs=[...el.querySelectorAll('[data-body-metric]')].filter(input=>input.dataset.bodyMetric===metric.id);
+          const parsed=inputs.map(input=>BodyMetrics.parseInput(input.value));
+          if(parsed.every(value=>value.empty))continue;
+          if(parsed.some(value=>value.empty||value.invalid)){error.textContent=`${metric.name}: `+(metric.type==='pressure'?(en?'enter both upper and lower numbers.':'введи обидва числа: верхній і нижній тиск.'):(en?'enter a valid number.':'введи коректне число.'));error.hidden=false;return;}
+          pairs.push([metric.id,metric.type==='pressure'?Object.fromEntries(inputs.map((input,index)=>[input.dataset.part,parsed[index].value])):parsed[0].value]);
+        }
+        const entry={id:uid(),createdAt:Date.now(),date:parseDateInput(el.querySelector('#bDate').value),weight:parseNum(el.querySelector('#bWeight').value),forearm:parseNum(el.querySelector('#bForearm').value),chest:parseNum(el.querySelector('#bChest').value),waist:parseNum(el.querySelector('#bWaist').value),legs:parseNum(el.querySelector('#bLegs').value)};
+        if(pairs.length)entry.custom=Object.fromEntries(pairs);
+        if(!(entry.weight>0||entry.forearm>0||entry.chest>0||entry.waist>0||entry.legs>0||pairs.length)){error.textContent=en?'Enter at least one measurement.':'Внеси хоча б один показник.';error.hidden=false;return;}
+        state.body.unshift(entry);state.recommendations=buildProgramRecommendations();save();render();
       };
-
-      renderBodyHistory();
-      drawBodyAll();
+      renderBodyHistory();drawBodyAll();
     },0);
-
     return el;
   }
 
@@ -4668,6 +4679,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (m.chest>0) parts.push(`🫁 ${fmtNum(m.chest)}cm`);
       if (m.waist>0) parts.push(`⭕ ${fmtNum(m.waist)}cm`);
       if (m.legs>0) parts.push(`🦵 ${fmtNum(m.legs)}cm`);
+      for(const metric of state.bodyMetrics||[]){
+        if(!BodyMetrics.hasValue(m,metric))continue;
+        const value=m.custom[metric.id],text=metric.type==='pressure'?`${fmtNum(value.systolic)} / ${fmtNum(value.diastolic)}`:fmtNum(value);
+        parts.push(`${escapeHtml(metric.name)}: ${text} ${escapeHtml(metric.unit)}`);
+      }
       return `
         <div class="itemRow">
           <div class="left">
@@ -4680,7 +4696,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           </div>
           <div class="row">
-            <button class="btn" data-delm="${m.id}">🗑</button>
+            <button class="btn" data-delm="${escapeHtml(m.id)}">🗑</button>
           </div>
         </div>
       `;
@@ -4712,12 +4728,22 @@ document.addEventListener("DOMContentLoaded", () => {
     drawSimpleLineWithLabels("chartBodyChest", cPts, "rgba(167, 139, 250, .95)");
     drawSimpleLineWithLabels("chartBodyWaist", waPts, "rgba(251, 113, 133, .95)");
     drawSimpleLineWithLabels("chartBodyLegs", lPts, "rgba(255, 200, 87, .95)");
+    (state.bodyMetrics||[]).filter(metric=>!metric.archived).forEach((metric,index)=>{
+      const records=data.filter(record=>BodyMetrics.hasValue(record,metric));
+      const points=part=>records.map(record=>({y:part?record.custom[metric.id][part]:record.custom[metric.id],label:fmtDate(record.date)}));
+      const meta={icon:'◉',ua:metric.name,en:metric.name,unit:metric.unit};
+      if(metric.type==='pressure'){
+        const upper=state.lang==='en'?'Upper':'Верхній',lower=state.lang==='en'?'Lower':'Нижній';
+        drawSimpleLineWithLabels(`chartBodyCustom${index}Upper`,points('systolic'),'#aabdff',{...meta,ua:`${metric.name} · ${upper}`,en:`${metric.name} · ${upper}`});
+        drawSimpleLineWithLabels(`chartBodyCustom${index}Lower`,points('diastolic'),'#f0c16d',{...meta,ua:`${metric.name} · ${lower}`,en:`${metric.name} · ${lower}`});
+      }else drawSimpleLineWithLabels(`chartBodyCustom${index}`,points(),'#aabdff',meta);
+    });
   }
 
-  function drawSimpleLineWithLabels(canvasId, pts, stroke){
+  function drawSimpleLineWithLabels(canvasId, pts, stroke, customMeta=null){
     const box = $("#"+canvasId);
     if (!box) return;
-    const meta = {
+    const meta = customMeta || {
       chartBodyWeight: { icon:"⚖️", ua:"Вага", en:"Weight", unit:"kg" },
       chartBodyForearm: { icon:"🦾", ua:"Передпліччя", en:"Forearm", unit:"cm" },
       chartBodyChest: { icon:"◫", ua:"Груди", en:"Chest", unit:"cm" },
@@ -4725,7 +4751,7 @@ document.addEventListener("DOMContentLoaded", () => {
       chartBodyLegs: { icon:"◒", ua:"Ноги", en:"Legs", unit:"cm" }
     }[canvasId];
     if (!pts || !pts.length){
-      box.innerHTML = `<div class="bodyTrendName">${meta.icon} ${state.lang==="en"?meta.en:meta.ua}</div><div class="muted" style="margin-top:12px">${t("noData")}</div>`;
+      box.innerHTML = `<div class="bodyTrendName">${meta.icon} ${escapeHtml(state.lang==="en"?meta.en:meta.ua)}</div><div class="muted" style="margin-top:12px">${t("noData")}</div>`;
       return;
     }
     const data = recentPoints(pts.map(p=>({value:p.y,label:p.label})),8);
@@ -4745,8 +4771,8 @@ document.addEventListener("DOMContentLoaded", () => {
     box.innerHTML = `
       <div class="bodyTrendTop">
         <div>
-          <div class="bodyTrendName">${meta.icon} ${state.lang==="en"?meta.en:meta.ua}</div>
-          <div class="bodyTrendValue">${fmtNum(last)} <small style="font-size:.48em;color:var(--muted)">${meta.unit}</small></div>
+          <div class="bodyTrendName">${meta.icon} ${escapeHtml(state.lang==="en"?meta.en:meta.ua)}</div>
+          <div class="bodyTrendValue">${fmtNum(last)} <small style="font-size:.48em;color:var(--muted)">${escapeHtml(meta.unit)}</small></div>
         </div>
         ${values.length>1?`<div class="chartDelta ${delta<0?"down":""}">${delta>=0?"+":""}${fmtNum(delta)}</div>`:""}
       </div>
@@ -4951,12 +4977,12 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       {
         title:en?"5. Add body measurements":"5. Додай заміри тіла",
-        sub:en?"Use the same conditions for comparable data":"Роби заміри в однакових умовах",
+        sub:en?"Standard fields and your own metrics with units":"Стандартні та власні показники з одиницями",
         copy:en
-          ? "In Body choose the date, then enter only the measurements you took. Empty fields are allowed. For a clean trend, measure at the same time of day."
-          : "У «Тіло» спочатку обери дату, потім внеси лише ті показники, які виміряв. Порожні поля дозволені. Для чесного графіка вимірюйся приблизно в однаковий час.",
-        example:en?"Weight 89 kg · waist 90 cm. You do not have to fill every field.":"Вага 89 кг · талія 90 см. Заповнювати всі поля не обов’язково.",
-        mini:`<div class="miniTitle">${en?"Body measurement":"Заміри тіла"}</div><div class="miniField">09.06.2026</div><div class="miniRow"><div class="miniField">89 kg</div><div class="miniField">90 cm</div></div><div class="miniButton" style="margin-top:6px;text-align:center">${en?"Save":"Зберегти"}</div>`
+          ? "In Body choose the date and fill only the measurements you took. Tap + Custom metric to enter a name, format and unit, or use Glutes / Heart rate / Blood pressure presets. One-number fields accept decimals, including zero. Blood pressure has separate upper and lower inputs; both must be entered together. Saving adds values to history and their own charts; pressure uses two clearly labelled charts. In My custom metrics, edit names or hide/restore fields without deleting their history. Once values exist, units and format are locked: create a new metric for different units so old values are not relabelled. Definitions, units, hidden status and values are included in full/profile JSON exports. Merge matches the name, unit and format, does not convert units, preserves different values and avoids exact duplicates. Each trainer client has an independent set of metrics. These are records, not medical interpretation."
+          : "У «Тіло» обери дату й заповни лише виміряні показники. Натисни «+ Свій показник»: вкажи назву, формат та одиниці або вибери заготовку «Сідниці», «Пульс», «Тиск». Числові поля приймають десяткові значення, зокрема нуль. Для тиску є окремі поля верхнього й нижнього значення: заповнюються обидва разом. Після збереження значення є в історії та власних графіках; для тиску — два окремо підписані графіки. У «Мої показники» можна змінити назву або приховати й повернути поле без видалення історії. Якщо вже є значення, одиниці й формат заблоковані: для інших одиниць створи новий показник, щоб не перепозначити старі дані. Назви, одиниці, прихований статус і значення входять у повний та окремий JSON-експорт. Доповнення профілю зіставляє назву, одиниці й формат, не переводить одиниці, зберігає різні значення й не дублює однакові записи. Кожен клієнт тренера має свій набір показників. Це облік, а не медична оцінка.",
+        example:en?"+ Custom metric → Heart rate → bpm → Save. Enter 68; or Blood pressure → 120 / 80 mmHg. Other fields may stay empty.":"+ Свій показник → Пульс → уд/хв → Зберегти. Внеси 68; або Тиск → 120 / 80 мм рт. ст. Інші поля можна не заповнювати.",
+        mini:`<div class="miniTitle">${en?'Body · own metrics':'Тіло · власні показники'}</div><div class="miniButton">+ ${en?'Custom metric':'Свій показник'}</div><div class="miniRow"><div class="miniField">${en?'Glutes':'Сідниці'} 100 cm</div><div class="miniField">${en?'Heart rate':'Пульс'} 68</div></div><div class="miniField">${en?'Blood pressure':'Тиск'} 120 / 80</div><div class="miniButton" style="margin-top:6px;text-align:center">${en?'Save':'Зберегти'}</div>`
       },
       {
         title:en?"6. Set goals and read progress":"6. Постав цілі й аналізуй прогрес",
@@ -5386,8 +5412,8 @@ document.addEventListener("DOMContentLoaded", () => {
           render();
           const s=merged.stats;
           alert(state.lang==="en"
-            ? `Profile merged: +${s.workouts} workouts, +${s.body} body records, +${s.goals} goals, +${s.exercises} exercises.`
-            : `Профіль доповнено: +${s.workouts} тренувань, +${s.body} замірів тіла, +${s.goals} цілей, +${s.exercises} вправ.`);
+            ? `Profile merged: +${s.workouts} workouts, +${s.body} body records, +${s.bodyMetrics} custom metrics, ${s.bodyUpdated} body records supplemented, +${s.goals} goals, +${s.exercises} exercises.`
+            : `Профіль доповнено: +${s.workouts} тренувань, +${s.body} замірів тіла, +${s.bodyMetrics} власних показників, ${s.bodyUpdated} замірів доповнено, +${s.goals} цілей, +${s.exercises} вправ.`);
         }catch{
           alert(t("importFail"));
         }finally{

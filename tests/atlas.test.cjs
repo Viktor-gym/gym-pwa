@@ -50,7 +50,7 @@ test('units follow the movement, muscle annotations use source metadata',()=>{
 test('public source does not bundle profile backups or private sample references',()=>{
  const files=fs.readdirSync(root);
  assert(!files.some(name=>name.startsWith('gym-tracker-profile-')));
- const app=fs.readFileSync(path.join(root,'app-v51.js'),'utf8');
+ const app=fs.readFileSync(path.join(root,'app-v52.js'),'utf8');
  assert(!app.includes('gym_pva/111'));
  assert(app.includes('gymPwaData_v3')&&app.includes('gymPwaApp_v4'));
 });
@@ -115,6 +115,6 @@ test('photo library is restored exactly and v50 saved variants remain resolvable
  assert.equal(atlas.search('',{limit:1000}).length,899);
  const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
  assert(!index.includes('exercise-poses-v50.js'));
- assert(index.includes('exercise-legacy-v51.js')&&index.includes('app-v51.js'));
+ assert(index.includes('exercise-legacy-v51.js')&&index.includes('app-v52.js'));
  assert(!fs.readFileSync(path.join(root,'exercise-atlas-v51.js'),'utf8').includes('bindPoses'));
 });

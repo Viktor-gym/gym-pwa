@@ -1,15 +1,15 @@
 # GymTracker Pro PWA
 
 HTML, CSS and vanilla JavaScript; static GitHub Pages deployment. The current
-release is app-v51.js with studio-v51.css and exercise-atlas-v51.js.
+release is app-v52.js with studio-v52.css and exercise-atlas-v51.js.
 
 ## Development
 
 Serve this folder with a local HTTP server. No build step or API key is needed.
 Example: `npx http-server . -p 8080`.
 
-Run `node --test tests/atlas.test.cjs` for catalog regression checks.
-Syntax: `node --check app-v51.js`, `node --check exercise-atlas-v51.js`,
+Run `node --test tests/atlas.test.cjs tests/body-metrics.test.cjs` for regression checks.
+Syntax: `node --check app-v52.js`, `node --check body-metrics-v52.js`, `node --check exercise-atlas-v51.js`,
 `node --check exercise-legacy-v51.js`, `node --check sw.js`.
 
 ## Exercise Guides
@@ -54,8 +54,37 @@ The stable media cache retains downloaded exercise photos and animations.
 other source photos load on demand and cache for later viewing (240 remote
 images maximum). Three-frame media is no longer downloaded. Service worker
 byte-range support remains intact for offline iPhone/Safari animation playback.
-The core cache is gym-pwa-v51-photo-guides. index.html and sw.js references must
+The core cache is gym-pwa-v52-custom-body. index.html and sw.js references must
 be released together. Missing media can be retried online.
+
+## Custom Body Metrics
+
+Body adds a profile-local Custom metric editor with a name, arbitrary unit and
+one-number or upper/lower blood-pressure format. Glutes, heart-rate and pressure
+presets only fill these fields; they are not medical interpretation. Partial
+records are supported, zero is not treated as missing, decimals accept dot or
+comma, and pressure requires both components. No new health calculation, medical
+recommendation, animation, HealthKit or iOS integration is added.
+
+Custom values appear in history and labelled charts after the first record.
+Pressure uses two charts; custom deltas are neutral, not good/bad judgements.
+The form keeps a full-width date and two columns. Empty charts are not shown.
+Metric names can be edited; hidden fields can be restored without data deletion.
+Once values exist, type/units cannot be changed in place: create a new metric
+instead, so old readings never acquire a different unit label.
+
+Optional profile field: bodyMetrics [{id,name,unit,type,archived}]. Optional
+measurement field: custom {[metricId]:number|{systolic,diastolic}}. The original
+weight/forearm/chest/waist/legs fields and all record IDs remain unchanged.
+body-metrics-v52.js handles strict parsing, normalization and definition/value
+matching; it has no network access. Every trainer client has independent fields.
+
+Full/profile JSON exports and import retain definitions, units, hidden state and
+values. Merge matches name + exact unit + format, remaps conflicting IDs, never
+converts units and fingerprints custom values. Compatible same-ID partial
+records are supplemented; conflicting readings are retained as a separate record.
+Reimporting the same data does not repeatedly add records or metric definitions.
+Old exports without custom fields continue to work.
 
 ## Data And Privacy
 
