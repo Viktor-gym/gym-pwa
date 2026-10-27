@@ -4,10 +4,10 @@
 
 // bump version when you publish updates
 importScripts('./exercise-precache-v47.js','./exercise-repdb-precache-v49.js');
-const CACHE = 'gym-pwa-v52-custom-body';
+const CACHE = 'gym-pwa-v53-shared-mannequin';
 const MEDIA_CACHE = 'gym-pwa-exercise-media-v1';
-const ASSETS = ['./index.html','./app-v52.js','./studio-v52.css','./body-metrics-v52.js','./exercise-library-v47.js','./exercise-motion-v48.js','./exercise-repdb-v49.js','./exercise-legacy-v51.js','./exercise-atlas-v51.js','./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
-const MOTION_ASSETS=Array.from({length:50},(_,index)=>String(index+51).padStart(4,'0')).flatMap(id=>['./assets/motion/'+id+'.jpg','./assets/motion/'+id+'.mp4']);
+const ASSETS = ['./index.html','./app-v53.js','./studio-v53.css','./body-metrics-v52.js','./exercise-library-v47.js','./exercise-motion-v48.js','./exercise-repdb-v49.js','./exercise-legacy-v51.js','./exercise-atlas-v53.js','./gym-motion-catalog-v53.js','./gym-motion-v53.js','./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
+const MOTION_ASSETS=[...Array.from({length:50},(_,index)=>String(index+51).padStart(4,'0')).flatMap(id=>['./assets/motion/'+id+'.jpg','./assets/motion/'+id+'.mp4']),'./assets/gym-motion/bench-press.jpg','./assets/gym-motion/dumbbell-curl.jpg'];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(Promise.all([
@@ -43,7 +43,7 @@ self.addEventListener("fetch", (e) => {
     return;
   }
   const isMotionPoster=url.origin===self.location.origin && /\/assets\/(?:motion\/\d{4}|repdb-motion\/[a-z0-9-]+)\.jpg$/.test(url.pathname);
-  const isMedia=isMotionPoster || (url.origin===self.location.origin && /\/assets\/(?:exercises|poses)\//.test(url.pathname)) || (url.origin==='https://raw.githubusercontent.com' && url.pathname.startsWith('/yuhonas/free-exercise-db/'));
+  const isMedia=isMotionPoster || (url.origin===self.location.origin && /\/assets\/(?:exercises|poses|gym-motion)\//.test(url.pathname)) || (url.origin==='https://raw.githubusercontent.com' && url.pathname.startsWith('/yuhonas/free-exercise-db/'));
   if(isMedia){
     const network=()=>fetch(e.request).then(async response=>{
       if(response.ok || response.type==='opaque'){

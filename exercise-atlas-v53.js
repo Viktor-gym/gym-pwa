@@ -4,6 +4,9 @@
   const entries = window.GYM_EXERCISE_LIBRARY || [];
   const legacy = window.GYM_LEGACY_EXERCISES || [];
   const byId = new Map([...entries,...legacy].map(entry => [entry.id, entry]));
+  const customMotions=new Map((window.GYM_CUSTOM_MOTIONS||[]).map(motion=>[motion.catalogId,motion]));
+  const customMotion=entry=>entry?customMotions.get(entry.id)||null:null;
+  const hasAnimation=entry=>Boolean(entry?.motion||customMotion(entry));
   const base = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const normalize = value => String(value || '').normalize('NFKC').toLowerCase().replace(/[’'`ʼ]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -44,10 +47,10 @@
     if(!image) return '';
     return entry.localImages ? './assets/exercises/' + image : base + image;
   }
-  const previewUrl = entry => entry.motion?.poster || imageUrl(entry);
+  const previewUrl = entry => customMotion(entry)?.poster || entry.motion?.poster || imageUrl(entry);
   function thumbnail(entry,lang='ua',interactive=true) {
     if(!entry) return '';
-    return `<span class="atlasThumb" ${interactive?`data-atlas-id="${esc(entry.id)}" role="button" tabindex="0" aria-label="${esc((lang==='en'?'How to: ':'Як виконувати: ')+label(entry,lang))}"`:''}><span class="atlasThumbFallback" aria-hidden="true">◇</span>${previewUrl(entry)?`<img src="${esc(previewUrl(entry))}" alt="${esc(label(entry,lang))}" loading="lazy" decoding="async">`:''}${entry.motion?'<span class="atlasThumbPlay" aria-hidden="true">▶</span>':''}</span>`;
+    return `<span class="atlasThumb" ${interactive?`data-atlas-id="${esc(entry.id)}" role="button" tabindex="0" aria-label="${esc((lang==='en'?'How to: ':'Як виконувати: ')+label(entry,lang))}"`:''}><span class="atlasThumbFallback" aria-hidden="true">◇</span>${previewUrl(entry)?`<img src="${esc(previewUrl(entry))}" alt="${esc(label(entry,lang))}" loading="lazy" decoding="async">`:''}${hasAnimation(entry)?'<span class="atlasThumbPlay" aria-hidden="true">▶</span>':''}</span>`;
   }
   const regionPaths = {
     front: {
@@ -103,7 +106,7 @@
     </section>`;
     document.body.append(overlay);
     const dialog=overlay.querySelector('.atlasDialog');
-    if(entry&&!entry.motion&&!entry.images.length){
+    if(entry&&!hasAnimation(entry)&&!entry.images.length){
       const stage=overlay.querySelector('.atlasStage');
       stage.querySelectorAll('img,.atlasStageCaption').forEach(node=>node.remove());
       const message=stage.querySelector('.atlasImageError');message.hidden=false;message.textContent=en?'The source does not have photographs for this movement yet. Your exercise and results are preserved.':'Джерело поки не має фото цього руху. Твоя вправа й результати збережені.';
@@ -115,7 +118,7 @@
     overlay.addEventListener('click',event=>{if(event.target===overlay) close();});
     overlay.querySelector('[data-edit]')?.addEventListener('click',()=>{close();options.onEdit();});
     overlay.querySelector('[data-add]')?.addEventListener('click',()=>{close();options.onAdd(entry);});
-    bindMedia(overlay,controller.signal,en);
+    bindMedia(overlay,controller.signal,en,entry);
     dialog.addEventListener('keydown',event=>{
       if(event.key==='Escape'){event.stopPropagation();close();}
       if(event.key==='Tab'){
@@ -128,12 +131,20 @@
     return {close};
   }
   document.addEventListener('error',event=>{if(event.target instanceof HTMLImageElement&&event.target.closest('.atlasThumb'))event.target.classList.add('atlasPhotoFailed');},true);
-  function mediaMarkup(entry,en){
+  function mediaMarkup(entry,en,original=false){
+    const own=customMotion(entry);
+    if(own&&!original)return `<div class="atlasStage atlasCustomStage" data-clip-id="${esc(own.clipId)}"><img class="atlasCustomPoster" src="${esc(own.poster)}" alt="${esc(label(entry,en?'en':'ua'))}"><span class="atlasStageCaption">3D · GymTracker</span></div><div class="atlasPlayback atlasCustomControls"><button class="btn primary" data-play>${en?'▶ Play':'▶ Показ руху'}</button><button class="btn" data-restart>${en?'From start':'Спочатку'}</button><button class="btn" data-speed aria-label="${en?'Animation speed':'Швидкість анімації'}">1×</button><button class="btn" data-angle>${en?'View':'Ракурс'}</button></div><label class="atlasScrub"><span>${en?'Movement':'Рух'}</span><input type="range" min="0" max="1000" value="0" step="1" data-seek aria-label="${en?'Animation position':'Позиція руху'}"><output data-progress>0%</output></label><p class="atlasFootnote">${en?'Shared 3D mannequin. Pause, slow down or change the view to inspect the motion.':'Спільний 3D-манекен. Зупини показ, сповільни або зміни ракурс, щоб роздивитися рух.'}</p>`;
     const error=`<div class="atlasImageError" hidden role="status">${en?'Not downloaded yet. Open this exercise online to save the demonstration.':'Матеріал ще не завантажений. Відкрий вправу з інтернетом, щоб зберегти показ.'}</div>`;
     if(entry.motion)return `<div class="atlasStage atlasMotionStage">${error}<video class="atlasMotion" src="${esc(entry.motion.src)}" poster="${esc(entry.motion.poster)}" preload="metadata" playsinline muted loop aria-label="${esc((en?'3D exercise animation: ':'3D-анімація вправи: ')+label(entry,en?'en':'ua'))}"></video><span class="atlasStageCaption">3D ${en?'ANIMATION':'АНІМАЦІЯ'}</span></div><div class="atlasPlayback"><button class="btn primary" data-play>${en?'▶ Play':'▶ Показ руху'}</button><button class="btn" data-restart>${en?'From start':'Спочатку'}</button><button class="btn" data-speed aria-label="${en?'Animation speed':'Швидкість анімації'}">1×</button></div><label class="atlasScrub"><span>${en?'Movement':'Рух'}</span><input type="range" min="0" max="1000" value="0" step="1" data-seek aria-label="${en?'Animation position':'Позиція руху'}"><output data-progress>0%</output></label><p class="atlasFootnote">${en?'Animated 3D character, not human footage. A muscle map is available below.':'Анімований 3D-персонаж, не відеозйомка людини. Карта м’язів доступна нижче.'}</p>`;
     return `<div class="atlasStage" data-phase="0">${error}${entry.images.length?`<img class="atlasPhase first" src="${esc(imageUrl(entry,0))}" alt="${en?'Starting position':'Початкова позиція'}"><img class="atlasPhase second" src="${esc(imageUrl(entry,1))}" alt="${en?'Second position':'Друга позиція'}">`:''}<span class="atlasStageCaption">${en?'POSITION REFERENCE':'ОРІЄНТИР ПОЗИЦІЇ'}</span></div><div class="atlasPlayback"><button class="btn" data-phase-button="0" aria-pressed="true">01 ${en?'Start':'Початок'}</button><button class="btn" data-phase-button="1" aria-pressed="false">02 ${en?'Finish':'Завершення'}</button></div><p class="atlasFootnote">${en?'No exact animation in the free collection yet. Static positions and technique are available; no unrelated motion is substituted.':'Точної анімації в безкоштовній колекції поки немає. Доступні статичні позиції й техніка, без підміни іншим рухом.'}</p>`;
   }
-  function bindMedia(overlay,signal,en){
+  function bindMedia(overlay,signal,en,entry){
+    if(overlay.querySelector('.atlasCustomStage')){
+      const host=overlay.querySelector('.atlasGuideGrid>div');
+      const fallback=()=>{if(signal.aborted)return;host.innerHTML=mediaMarkup(entry,en,true);host.dataset.motionFallback='true';bindMedia(overlay,signal,en,entry);};
+      try{if(!window.GymMotion?.mount)throw new Error('Motion runtime unavailable');GymMotion.mount(host,{clipId:customMotion(entry).clipId,lang:en?'en':'ua',signal,onFallback:fallback});}catch{fallback();}
+      return;
+    }
     const video=overlay.querySelector('video'),error=overlay.querySelector('.atlasImageError');
     if(!video){
       overlay.querySelectorAll('[data-phase-button]').forEach(button=>button.onclick=()=>{overlay.querySelector('.atlasStage').dataset.phase=button.dataset.phaseButton;overlay.querySelectorAll('[data-phase-button]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));});
@@ -159,10 +170,14 @@
     return `<details class="atlasInstructions" ${entry.instructions_ua||en?'open':''}><summary>${en?'How to perform':'Як виконувати'}${!en&&!entry.instructions_ua?' · EN':''}</summary><ol>${steps.map(step=>`<li>${esc(step)}</li>`).join('')}</ol></details>`;
   }
   function sourceMarkup(entry,en){
+    if(customMotion(entry))return `<p class="atlasFootnote">${en?'Model and motion: GymTracker Pro · original procedural 3D.':'Модель і рух: GymTracker Pro · власний процедурний 3D-показ.'} <a href="./assets/gym-motion/THREE-LICENSE.txt" target="_blank" rel="noopener noreferrer">Three.js · MIT</a></p><details class="atlasFootnote"><summary>${en?'Original fallback sources':'Джерела резервних матеріалів'}</summary>${originalSourceMarkup(entry,en)}</details>`;
+    return originalSourceMarkup(entry,en);
+  }
+  function originalSourceMarkup(entry,en){
     if(!entry)return '';
     if(entry.sourceProvider==='workout-guide')return `<a class="atlasSource" href="https://github.com/bryllim/workout-guide" target="_blank" rel="noopener noreferrer">${en?'Saved movement metadata:':'Дані збереженого руху:'} Workout Guide · Bryl Lim · CC BY-SA 4.0</a><p class="atlasFootnote"><a href="./assets/poses/ATTRIBUTION.md" target="_blank" rel="noopener noreferrer">${en?'Credits':'Авторство'}</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a></p>`;
     if(entry.motion?.provider==='repdb')return `<a class="atlasSource" href="https://repdb.co/preview/" target="_blank" rel="noopener noreferrer">Exercise data & images: RepDB (https://repdb.co)</a><p class="atlasFootnote"><a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC 4.0</a> · ${en?'Personal / non-commercial use only. Resized and transcoded from the preview animation.':'Лише особисте / некомерційне використання. Анімацію зменшено й перекодовано з preview-набору.'}</p>`;
     return `<a class="atlasSource" href="${entry.motion?'https://vitalanimations.com/free-pack':'https://github.com/yuhonas/free-exercise-db'}" target="_blank" rel="noopener noreferrer">${entry.motion?(en?'3D motion: Vital Animations · Free50 pack':'3D-анімація: Vital Animations · безкоштовний набір Free50'):(en?'Photos and movement data: Free Exercise DB · Unlicense':'Фото та дані рухів: Free Exercise DB · Unlicense')}</a>`;
   }
-  window.GymAtlas={entries,byId,match,search,label,category,unitLabel,thumbnail,imageUrl,previewUrl,open,normalize,escape:esc,muscleNames};
+  window.GymAtlas={entries,byId,match,search,label,category,unitLabel,thumbnail,imageUrl,previewUrl,open,normalize,escape:esc,muscleNames,customMotion,hasAnimation};
 })();

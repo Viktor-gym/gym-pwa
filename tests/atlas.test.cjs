@@ -10,7 +10,8 @@ vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-motion-v48.js'),'utf
 vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-repdb-v49.js'),'utf8'),scope);
 const original=JSON.parse(JSON.stringify(scope.window.GYM_EXERCISE_LIBRARY));
 vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-legacy-v51.js'),'utf8'),scope);
-vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-atlas-v51.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'gym-motion-catalog-v53.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-atlas-v53.js'),'utf8'),scope);
 const atlas=scope.window.GymAtlas;
 test('library has unique entries and valid local image assets',()=>{
  assert.equal(atlas.entries.length,899);
@@ -50,7 +51,7 @@ test('units follow the movement, muscle annotations use source metadata',()=>{
 test('public source does not bundle profile backups or private sample references',()=>{
  const files=fs.readdirSync(root);
  assert(!files.some(name=>name.startsWith('gym-tracker-profile-')));
- const app=fs.readFileSync(path.join(root,'app-v52.js'),'utf8');
+ const app=fs.readFileSync(path.join(root,'app-v53.js'),'utf8');
  assert(!app.includes('gym_pva/111'));
  assert(app.includes('gymPwaData_v3')&&app.includes('gymPwaApp_v4'));
 });
@@ -111,10 +112,20 @@ test('photo library is restored exactly and v50 saved variants remain resolvable
   assert(!entry.poseGuide&&!entry.motion);
   assert(!atlas.entries.some(e=>e.id===entry.id),'legacy variants are not offered as new library entries');
  }
- assert.equal(atlas.previewUrl(atlas.match('Жим штанги лежачи')),atlas.imageUrl(atlas.match('Жим штанги лежачи')));
+ assert.equal(atlas.previewUrl(atlas.match('Жим штанги лежачи')),atlas.customMotion(atlas.match('Жим штанги лежачи')).poster);
  assert.equal(atlas.search('',{limit:1000}).length,899);
  const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
  assert(!index.includes('exercise-poses-v50.js'));
- assert(index.includes('exercise-legacy-v51.js')&&index.includes('app-v52.js'));
- assert(!fs.readFileSync(path.join(root,'exercise-atlas-v51.js'),'utf8').includes('bindPoses'));
+ assert(index.includes('exercise-legacy-v51.js')&&index.includes('app-v53.js'));
+ assert(!fs.readFileSync(path.join(root,'exercise-atlas-v53.js'),'utf8').includes('bindPoses'));
+});
+
+test('only the two approved exact movements use the shared mannequin',()=>{
+ assert.equal(scope.window.GYM_CUSTOM_MOTIONS.length,2);
+ assert.equal(atlas.customMotion(atlas.match('Жим штанги лежачи')).clipId,'bench-press');
+ assert.equal(atlas.customMotion(atlas.byId.get('Dumbbell_Bicep_Curl')).clipId,'dumbbell-curl');
+ for(const id of ['Incline_Dumbbell_Press','Dumbbell_Bench_Press','Seated_Dumbbell_Curl','Standing_Biceps_Cable_Curl'])assert(!atlas.customMotion(atlas.byId.get(id)));
+ assert.equal(atlas.entries.filter(atlas.hasAnimation).length,69);
+ for(const item of scope.window.GYM_CUSTOM_MOTIONS)assert(fs.existsSync(path.join(root,item.poster)));
+ assert(fs.existsSync(path.join(root,'gym-motion-v53.js')));
 });
