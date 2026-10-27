@@ -1,8 +1,10 @@
 import {alignBarGrip,frameQuaternion,phaseAt,pressProgress,curlProgress} from './math.js';
 import {TEMPLATE_CLIPS} from './template-clips.js';
+import {FULL_LIST_CLIPS} from './full-list-clips.js';
 
 export const EXERCISES=Object.freeze({
   ...TEMPLATE_CLIPS,
+  ...FULL_LIST_CLIPS,
   'bench-press':{
     id:'bench-press',name:'Жим штанги лежачи',duration:4.8,equipment:'bench-barbell',
     muscles:{primary:['chest','triceps'],secondary:['frontDelts']},

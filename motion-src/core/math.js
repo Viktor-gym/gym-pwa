@@ -60,3 +60,14 @@ export function alignBarGrip(T,shoulder,grip,pole,axis,offset,upperLength,lowerL
   }
   return rotation;
 }
+
+export function alignNeutralGrip(T,shoulder,grip,pole,side,offset,upperLength,lowerLength){
+  const palm=new T.Vector3(-side,0,0);
+  let rotation=frameQuaternion(T,new T.Vector3(0,0,1),new T.Vector3(0,-side,0));
+  for(let i=0;i<16;i++){
+    const wrist=grip.clone().sub(offset.clone().applyQuaternion(rotation));
+    const solved=solveTwoBone(T,shoulder,wrist,pole,upperLength,lowerLength),forward=solved.end.clone().sub(solved.joint).normalize();
+    rotation=frameQuaternion(T,forward,new T.Vector3().crossVectors(forward,palm));
+  }
+  return rotation;
+}

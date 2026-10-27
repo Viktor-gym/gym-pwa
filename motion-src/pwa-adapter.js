@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {createViewer} from './core/viewer.js';
+import {gripLabel} from './core/grips.js';
 
 export function mount(host,{clipId,lang='ua',signal,onFallback}){
   const en=lang==='en',stage=host.querySelector('.atlasCustomStage');
@@ -20,6 +21,11 @@ export function mount(host,{clipId,lang='ua',signal,onFallback}){
       seek.value=String(Math.round(position*1000));host.querySelector('[data-progress]').textContent=Math.round(position*100)+'%';
     };
     viewer.onChange(update);viewer.setExercise(clipId);
+    const hint=host.querySelector('.atlasFootnote'),label=gripLabel(viewer.engine.clip,lang);
+    if(hint&&label){hint.dataset.grip='true';hint.textContent=(en?'Grip: ':'Хват: ')+label+'. '+hint.textContent;}
+    const gripButton=document.createElement('button');gripButton.className='btn';gripButton.dataset.gripView='true';gripButton.textContent=en?'Grip detail':'Деталі хвату';gripButton.setAttribute('aria-pressed','false');
+    gripButton.onclick=()=>{const detailed=viewer.toggleGripView();gripButton.textContent=detailed?(en?'Whole movement':'Уся вправа'):(en?'Grip detail':'Деталі хвату');gripButton.setAttribute('aria-pressed',String(detailed));};
+    host.querySelector('.atlasCustomControls').append(gripButton);
     stage.querySelector('.atlasCustomPoster').hidden=true;
     host.gymMotion=viewer;stage.dataset.ready='true';
     play.onclick=()=>viewer.snapshot().playing?viewer.pause():viewer.play();

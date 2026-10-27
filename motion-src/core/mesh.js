@@ -31,6 +31,7 @@ export function createMaterials(T,colors){
   const neutral=new T.Color().lerpColors(colors.foreground,colors.background,0.38);
   const materials={
     skin:standard(neutral),sculpt:standard(neutral.clone().multiplyScalar(0.85)),
+    palm:standard(neutral.clone().multiplyScalar(1.14),0.76),nail:standard(neutral.clone().multiplyScalar(1.27),0.48),
     tinted:standard(new T.Color(1,1,1)),
     cloth:standard(neutral.clone().multiplyScalar(0.25),0.94),
     pad:standard(neutral.clone().multiplyScalar(0.18),0.88),

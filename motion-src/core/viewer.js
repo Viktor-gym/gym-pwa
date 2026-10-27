@@ -12,13 +12,26 @@ export function createViewer(T,stage,getColors){
   const fill=new T.DirectionalLight(new T.Color(1,1,1),0.8);fill.position.set(3,3,-4);scene.add(fill);
   const dark=colors.foreground.r+colors.foreground.g+colors.foreground.b<colors.background.r+colors.background.g+colors.background.b?colors.foreground:colors.background;
   const floor=new T.Mesh(new T.PlaneGeometry(8,8),new T.ShadowMaterial({color:dark,opacity:0.13}));floor.rotation.x=-Math.PI/2;floor.position.y=0.005;floor.receiveShadow=true;scene.add(floor);
-  let playing=!matchMedia('(prefers-reduced-motion: reduce)').matches,speed=1,time=0,view=0,disposed=false,last=performance.now(),frameId=0;
+  let playing=!matchMedia('(prefers-reduced-motion: reduce)').matches,speed=1,time=0,view=0,gripView=false,disposed=false,last=performance.now(),frameId=0;
   const listeners=new Set(),controller=new AbortController();
   const notify=()=>listeners.forEach(fn=>fn({playing,speed,time,clip:engine.clip,view}));
-  function draw(){if(!disposed)renderer.render(scene,camera);}
+  function draw(){
+    if(disposed)return;
+    if(gripView&&engine.grips?.length){
+      const grip=engine.grips.find(grip=>grip.side===1),target=grip.position;
+      const meta=engine.clip.camera,axis=new T.Vector3(1,0,0).applyQuaternion(grip.rotation);
+      const offset=new T.Vector3(...meta.views[view%meta.views.length]).sub(new T.Vector3(...meta.target));
+      offset.addScaledVector(axis,-offset.dot(axis));
+      if(engine.clip.equipment==='trap-bar')offset.set(0.08,1,0.14);
+      if(offset.lengthSq()<0.01)offset.set(0,0,1).applyQuaternion(grip.rotation);
+      offset.normalize().multiplyScalar(1.1);
+      camera.position.copy(target).add(offset);camera.lookAt(target);
+    }
+    renderer.render(scene,camera);
+  }
   function resize(){
     const width=stage.clientWidth;if(!width||!engine.clip)return;
-    const height=width/1.25,half=engine.clip.camera.height/2;renderer.setSize(width,height,false);
+    const height=width/1.25,half=gripView?0.21:engine.clip.camera.height/2;renderer.setSize(width,height,false);
     camera.left=-half*1.25;camera.right=half*1.25;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();draw();
   }
   function updateView(){const meta=engine.clip.camera;camera.position.set(...meta.views[view%meta.views.length]);camera.lookAt(new T.Vector3(...meta.target));resize();}
@@ -26,11 +39,12 @@ export function createViewer(T,stage,getColors){
   const api={
     engine,renderer,scene,camera,
     onChange(fn){listeners.add(fn);return ()=>listeners.delete(fn);},
-    setExercise(id){engine.setExercise(id);time=0;view=0;last=performance.now();updateView();notify();},
+    setExercise(id){engine.setExercise(id);time=0;view=0;gripView=false;last=performance.now();updateView();notify();},
     renderAt(seconds){if(disposed)return;time=seconds;playing=false;engine.poseAt(time);draw();notify();},
     play(){playing=true;last=performance.now();notify();},pause,
     setSpeed(value){if(![0.5,1].includes(value))throw new Error('Unsupported speed');speed=value;notify();},
     nextView(){view=(view+1)%engine.clip.camera.views.length;updateView();notify();},
+    toggleGripView(){gripView=!gripView;updateView();notify();return gripView;},
     updateTheme(){
       const next=getColors(),updated=createMaterials(T,next);
       for(const [key,value]of Object.entries(updated)){if(value?.isMaterial){materials[key].color.copy(value.color);value.dispose();}}
@@ -39,7 +53,7 @@ export function createViewer(T,stage,getColors){
       const shadow=next.foreground.r+next.foreground.g+next.foreground.b<next.background.r+next.background.g+next.background.b?next.foreground:next.background;
       floor.material.color.copy(shadow);draw();
     },
-    snapshot(){return {playing,speed,time,view,exerciseId:engine.clip.id,modelId:engine.model.root.uuid};},
+    snapshot(){return {playing,speed,time,view,gripView,exerciseId:engine.clip.id,modelId:engine.model.root.uuid};},
     dispose(){
       if(disposed)return;disposed=true;cancelAnimationFrame(frameId);controller.abort();observer.disconnect();listeners.clear();engine.dispose();
       floor.geometry.dispose();floor.material.dispose();for(const value of Object.values(materials))if(value?.isMaterial)value.dispose();renderer.dispose();renderer.domElement.remove();

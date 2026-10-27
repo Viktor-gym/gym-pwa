@@ -50,7 +50,7 @@ export const TEMPLATE_CLIPS={
       for(const side of [-1,1]){
         const shoulder=point(T,pose,[side*d.shoulderWidth/2,d.shoulderHeight,0.008]);
         const elbow=shoulder.clone().add(new T.Vector3(side*0.025,-d.upperArm,0.015).normalize().multiplyScalar(d.upperArm));
-        pose.hands[side]=bentHand(T,d,shoulder,elbow,new T.Vector3(0,-Math.cos(angle),Math.sin(angle)),new T.Vector3(1,0,0));
+        pose.hands[side]=bentHand(T,d,shoulder,elbow,new T.Vector3(0,-Math.cos(angle),Math.sin(angle)),new T.Vector3(-1,0,0));
       }
       return barCenter(T,pose);
     }
@@ -65,7 +65,7 @@ export const TEMPLATE_CLIPS={
       for(const side of [-1,1]){
         const shoulder=point(T,pose,[side*d.shoulderWidth/2,d.shoulderHeight,0.008]);
         const elbow=shoulder.clone().add(new T.Vector3(0,-0.8,0.6).multiplyScalar(d.upperArm));
-        pose.hands[side]=bentHand(T,d,shoulder,elbow,new T.Vector3(0,-Math.cos(angle),Math.sin(angle)),new T.Vector3(1,0,0));
+        pose.hands[side]=bentHand(T,d,shoulder,elbow,new T.Vector3(0,-Math.cos(angle),Math.sin(angle)),new T.Vector3(-1,0,0));
       }
       return barCenter(T,pose);
     }
@@ -111,7 +111,7 @@ export const TEMPLATE_CLIPS={
       const pose={pelvis:new T.Vector3(0,0.58,0),trunk:new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),0.70),hands:{},feet:feet(T,0.39,0.42)};
       const shoulder=point(T,pose,[d.shoulderWidth/2,d.shoulderHeight,0.008]);
       const elbow=shoulder.clone().add(new T.Vector3(0.065,-0.31,0.123).normalize().multiplyScalar(d.upperArm));
-      pose.hands[1]=bentHand(T,d,shoulder,elbow,new T.Vector3(0,-Math.cos(angle),Math.sin(angle)),new T.Vector3(1,0,0));
+      pose.hands[1]=bentHand(T,d,shoulder,elbow,new T.Vector3(0,-Math.cos(angle),Math.sin(angle)),new T.Vector3(-1,0,0));
       const resting=point(T,pose,[-d.shoulderWidth/2,d.shoulderHeight,0.008]),target=new T.Vector3(-0.42,0.59,0.44),pole=new T.Vector3(-0.46,0.80,0.27);
       const joint=solveTwoBone(T,resting,target,pole,d.upperArm,d.forearm).joint,rotation=frameQuaternion(T,target.clone().sub(joint),new T.Vector3(1,0,0));
       pose.hands[-1]={grip:new T.Vector3(...d.handGrip).applyQuaternion(rotation).add(target),rotation,pole,closure:0.25};
@@ -136,3 +136,5 @@ export const TEMPLATE_CLIPS={
     }
   }
 };
+
+export {camera,point,feet,flat,barCenter};
