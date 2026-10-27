@@ -1,101 +1,72 @@
 # GymTracker Pro PWA
 
 HTML, CSS and vanilla JavaScript; static GitHub Pages deployment. The current
-release is `app-v50.js` with `studio-v50.css` and the exercise atlas.
-Publication approved by the owner on 2026-10-27 after local verification.
+release is app-v51.js with studio-v51.css and exercise-atlas-v51.js.
 
 ## Development
 
-Serve this folder with any local HTTP server. No build step or API key is required.
-For example: `npx http-server . -p 8080`.
+Serve this folder with a local HTTP server. No build step or API key is needed.
+Example: `npx http-server . -p 8080`.
 
-Run library regression checks: `node --test tests/atlas.test.cjs`.
-Syntax checks: `node --check app-v50.js`, `node --check exercise-atlas-v50.js`,
-and `node --check sw.js`.
+Run `node --test tests/atlas.test.cjs` for catalog regression checks.
+Syntax: `node --check app-v51.js`, `node --check exercise-atlas-v51.js`,
+`node --check exercise-legacy-v51.js`, `node --check sw.js`.
 
-## Exercise Atlas
+## Exercise Guides
 
-`exercise-library-v47.js` contains 876 public library entries, of which 873 have
-source photographs. There are 84 curated Ukrainian names and aliases for common
-movements; other names and full instructions remain in their source English.
-Ukrainian search also expands common equipment and movement terms.
+The visible library is restored to the 899-entry pre-v50 catalog. It keeps all
+68 smooth 3D animations unchanged: 50 Vital Free50 and 18 RepDB previews.
+Other entries use their original two still photographs, with manual 01 Start /
+02 Finish buttons. No three-frame drawings, slideshow, interpolation or photo
+animation is loaded. List cards always use one still poster or photograph.
 
-`exercise-motion-v48.js` augments the catalog to 890 movements with 50 exact
-3D animations from the free Vital Animations Free50 pack. All 50 are animated
-characters, not recordings of people. A list card always displays a single static
-poster; opening it shows continuous motion with pause/restart, 0.5x speed and a
-scrubber. A filter shows only animated entries. Respect reduced-motion settings.
-No animation is substituted for a different equipment or movement variant.
-Unavailable animations show clearly labelled static positions, not a fake replay.
+Opening a 3D entry offers play/pause, restart, 0.5x speed and a scrubber.
+Reduced-motion starts paused. The filter shows only the 68 smooth animations.
+Front/back muscle maps retain source primary/secondary labels in coral/amber.
+An exact photo or animation is never replaced with a different exercise variant.
 
-The front/back muscle map uses coral/amber for primary/secondary muscles.
-Vital characters do not have painted muscle highlights. The free pack is licensed for
-app use, NOT open-source or public domain. See `assets/motion/SOURCE.md` before
-reusing any artwork. No Fitness Online assets or paid packages are included.
+The base Free Exercise DB has 876 entries, 873 with source photos (Unlicense).
+Common Ukrainian names and equipment terms are searchable. Most full technique
+instructions remain in their source English; curated common guides include UA.
+The Vital pack is licensed for app use, NOT open-source or public domain.
+See assets/exercises/SOURCE.md and assets/motion/SOURCE.md for details.
 
-`exercise-repdb-v49.js` adds 18 further unique 3D animations from the 22-exercise
-RepDB preview, bringing that catalog to 899 movements with **68 smooth animated guides**.
-Four already-covered movements are not duplicated. RepDB characters also show
-muscle colouring. The supplied CC BY-NC 4.0 license permits personal/non-commercial
-use with attribution. This restriction was explicitly accepted by the owner.
-**Before any commercial app, ads or paid-client use, remove/replace the RepDB
-media/data or obtain separate rights.** No purchase has been made. Credits are
-visible in the library and each RepDB guide. See `assets/repdb-motion/SOURCE.md`
-and `LICENSE.md`. Existing exact animations and user exercise settings stay intact.
+RepDB artwork and metadata are CC BY-NC 4.0, accepted for personal/non-commercial
+use only with visible attribution. Before commercial app, advertising or
+paid-client use, remove/replace those materials or obtain separate rights.
+No purchases or Fitness Online artwork are included. See assets/repdb-motion/.
 
-`exercise-poses-v50.js` adds **261 three-position illustrated guides**, linking
-83 existing entries and adding 178 equipment/movement variants. Total catalog:
-**1,077 entries; 68 smooth 3D animations + 261 illustrated sequences**. These are
-different demonstration types, not 329 smooth 3D animations. All 68 existing 3D
-entries and assets remain unchanged. Missing exact guides retain their current
-photographs and instructions; no broad muscle-group substitution is used.
+## Compatibility With v50
 
-The three drawings cycle only inside the opened guide, with play/pause, manual
-01/02/03 positions and 0.5x speed. Lists use one still poster. Reduced-motion
-starts paused, hidden pages pause and closing releases the timer. Filters select
-3D, illustrated sequences, both, or all movements. New source-only entries have
-no written technique and say so; linked entries retain existing instructions.
+The owner rejected the three-position presentation after testing. It has been
+removed from the app, not from users' saved training data. The 178 extra variants
+remain resolvable through exercise-legacy-v51.js when a saved catalogId refers to
+one. They are not offered in the new-exercise library. A saved variant without
+exact photographs shows an explicit unavailable notice; no image is guessed.
+Workout Guide metadata keeps its CC BY-SA 4.0 attribution in assets/poses/.
+Existing 899-entry names, photographs, guides and all 68 motion records are
+identical to the pre-v50 catalog. No user exercise is automatically renamed.
 
-Drawings: Workout Guide by Bryl Lim / Everkinetic, **CC BY-SA 4.0**. Derived
-sprites and posters retain that license. See `assets/poses/SOURCE.md`, original
-LICENSE-ASSETS, ATTRIBUTION.md and per-frame ATTRIBUTION.json for source URLs and
-modifications. No new purchases or human recordings are included.
+## Offline Use
 
-Animations (68 muted H.264 MP4 containers) and JPEG posters are bundled.
-The media cache saves these plus photos of 84 common movements (168 JPEGs, about
-11 MB) plus 522 WebP pose sprites/posters (about 13 MB) after a successful online
-update. Media downloads are optional and can be retried online. Service worker byte-range responses allow
-offline iPhone/Safari playback. Missing media remains retryable online; app updates
-do not depend on every optional media download succeeding. Other photos load on
-demand from the public source; up to 240 remote images are cached. See
-`assets/exercises/SOURCE.md` and `LICENSE.txt` for the Unlicense photo source.
+The stable media cache retains downloaded exercise photos and animations.
+168 common JPEGs and all 68 animations/posters are optional precache assets;
+other source photos load on demand and cache for later viewing (240 remote
+images maximum). Three-frame media is no longer downloaded. Service worker
+byte-range support remains intact for offline iPhone/Safari animation playback.
+The core cache is gym-pwa-v51-photo-guides. index.html and sw.js references must
+be released together. Missing media can be retried online.
 
-Typing a name in the exercise editor displays photo suggestions immediately.
-Selecting one fills both names, muscle group, tracking type and units. Users can
-edit those fields or save their own unmatched exercise. A `catalogId` references
-the selected movement; `none` explicitly keeps an exercise unlinked. Existing
-exercises are matched by exact names/aliases on display, never by muscle group
-alone. New library entries are added to the selected profile only when requested.
+## Data And Privacy
 
-## Existing Data And Privacy
+Storage keys remain gymPwaData_v3 and gymPwaApp_v4. Exercise and workout IDs,
+sets, completion marks, measurements, goals, profiles, plans, templates and JSON
+formats are unchanged. Existing catalogId references remain supported. The
+library does not replace a user's exercise list or upload their workout data.
 
-The storage keys remain `gymPwaData_v3` and `gymPwaApp_v4`. Workout IDs, exercise IDs,
-sets, body records, goals, client profiles, plans and templates retain their current
-formats. No library import replaces a user's exercise list. `catalogId` is an
-optional exercise property preserved by JSON export/import and profile merge.
+Never publish personal exports, sample profiles, backups or test screenshots.
+No iOS/Capacitor sync in this release. The in-app UA/EN guide documents the photo
+restoration and stays collapsed until opened.
 
-User backups and profile examples are not deployment assets. No workout data is
-uploaded by the atlas. Remote image requests use only public catalog image paths.
-The service worker updates app/media caches and does not clear localStorage.
-The in-app guide describes the new workflows for both users and trainers and stays
-collapsed until opened.
-
-Before a release, update the references in index.html and sw.js together. Keep
-media-cache naming stable to preserve previously downloaded exercise photos.
-
-## Next Search
-
-See `EXERCISE-MEDIA-NOTES.md` for the requested reminder, missing movement
-priorities, sources already checked and license limitations. Keep the existing
-illustration/technique when no exact new animation is found. This note does not
-schedule any background job.
+See EXERCISE-MEDIA-NOTES.md for future smooth-animation search priorities.
+Do not reintroduce the rejected three-frame pack without a new user request.

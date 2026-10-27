@@ -10,8 +10,9 @@ are next revisited. This is a project note, not a scheduled background task.
 - Keep catalog matching separate from stored exercise IDs, workouts, clients,
   sets, goals and JSON exports. Never publish private profile examples.
 - Keep one still illustration per list card; animate only inside its guide.
-- Keep the 68 smooth 3D guides intact. Approved fallback: the exact three-position
-  Workout Guide illustration, clearly labelled as a sequence, not smooth motion.
+- Keep the 68 smooth 3D guides intact. The owner rejected the three-frame
+  Workout Guide presentation after testing. Restore the original pair of still
+  photos; no drawn slideshow, no automatic switching between photos.
 
 ## Search Next
 
@@ -32,10 +33,11 @@ smooth motion, muscles and technique. Its artwork is not a reusable asset pack.
 - Free Exercise DB: 876 original catalog entries with static photographs;
   Unlicense. Keep as the fallback, not a fake animation made from two photos.
 - Workout Guide / Everkinetic: 302 source exercises, CC BY-SA 4.0 artwork;
-  v50 integrates 261 three-frame guides (83 existing links,
-  178 new variants), omitting 41 already-covered/duplicate mappings. Original
-  source metadata and per-frame attribution retained. Not continuous 3D and
-  not added to the count of 68 smooth animations. Total catalog: 1,077 entries.
+  v50 integrated 261 three-frame guides (83 existing links, 178 new variants).
+  Rejected by the owner on 2026-10-27. v51 restores the 899-entry photo/3D
+  library and does not load those drawings or playback code. Compatibility
+  metadata for 178 variants remains in exercise-legacy-v51.js for existing
+  saved catalogIds only, not new library suggestions. Source credits remain.
 - OpenGym3D: promising CC0 motion/MakeHuman pipeline, currently limited live
   exercise coverage and drafts. Recheck readiness and each clip's license.
 - Wikimedia Commons: inspect each file. Many clips are real-person footage,
@@ -50,7 +52,9 @@ Document any new coverage limit honestly and update the in-app guide.
 
 ## Release Approval
 
-v50 was verified locally first; the owner approved GitHub/Pages publication on
-2026-10-27. No iOS/Capacitor changes in this pass.
+v50 was published on 2026-10-27. The owner then requested the photo restoration
+in v51. No iOS/Capacitor changes in this pass.
 Backup before these changes: `work/backups/pwa-before-poses-20261027`, outside
 the deployment directory. Never add the private test profile to this repository.
+Backup before v51: work/backups/pwa-before-photo-restore-20261027, also outside
+the deployment directory. Preserve user records; do not roll back localStorage.

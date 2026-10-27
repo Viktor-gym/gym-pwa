@@ -3,16 +3,16 @@
 // - cache bust via CACHE version
 
 // bump version when you publish updates
-importScripts('./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./exercise-poses-precache-v50.js');
-const CACHE = 'gym-pwa-v50-pose-guides';
+importScripts('./exercise-precache-v47.js','./exercise-repdb-precache-v49.js');
+const CACHE = 'gym-pwa-v51-photo-guides';
 const MEDIA_CACHE = 'gym-pwa-exercise-media-v1';
-const ASSETS = ['./index.html','./app-v50.js','./studio-v50.css','./exercise-library-v47.js','./exercise-motion-v48.js','./exercise-repdb-v49.js','./exercise-poses-v50.js','./exercise-atlas-v50.js','./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./exercise-poses-precache-v50.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
+const ASSETS = ['./index.html','./app-v51.js','./studio-v51.css','./exercise-library-v47.js','./exercise-motion-v48.js','./exercise-repdb-v49.js','./exercise-legacy-v51.js','./exercise-atlas-v51.js','./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
 const MOTION_ASSETS=Array.from({length:50},(_,index)=>String(index+51).padStart(4,'0')).flatMap(id=>['./assets/motion/'+id+'.jpg','./assets/motion/'+id+'.mp4']);
 
 self.addEventListener("install", (e) => {
   e.waitUntil(Promise.all([
     caches.open(CACHE).then(c=>c.addAll(ASSETS)),
-    caches.open(MEDIA_CACHE).then(c=>Promise.allSettled([...self.GYM_PHOTO_ASSETS,...MOTION_ASSETS,...self.GYM_REPDB_ASSETS,...self.GYM_POSE_ASSETS].map(async url=>{if(!await c.match(url))await c.add(url);})))
+    caches.open(MEDIA_CACHE).then(c=>Promise.allSettled([...self.GYM_PHOTO_ASSETS,...MOTION_ASSETS,...self.GYM_REPDB_ASSETS].map(async url=>{if(!await c.match(url))await c.add(url);})))
   ]));
   self.skipWaiting();
 });

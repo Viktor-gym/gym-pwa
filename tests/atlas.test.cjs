@@ -9,12 +9,12 @@ vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-library-v47.js'),'ut
 vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-motion-v48.js'),'utf8'),scope);
 vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-repdb-v49.js'),'utf8'),scope);
 const original=JSON.parse(JSON.stringify(scope.window.GYM_EXERCISE_LIBRARY));
-vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-poses-v50.js'),'utf8'),scope);
-vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-atlas-v50.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-legacy-v51.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-atlas-v51.js'),'utf8'),scope);
 const atlas=scope.window.GymAtlas;
 test('library has unique entries and valid local image assets',()=>{
- assert.equal(atlas.entries.length,1077);
- assert.equal(new Set(atlas.entries.map(x=>x.id)).size,1077);
+ assert.equal(atlas.entries.length,899);
+ assert.equal(new Set(atlas.entries.map(x=>x.id)).size,899);
  for(const entry of atlas.entries){
    assert(entry.name&&Array.isArray(entry.images)&&entry.primaryMuscles.length>=1);
    assert(['strength','reps','time','distance'].includes(entry.trackingType));
@@ -50,7 +50,7 @@ test('units follow the movement, muscle annotations use source metadata',()=>{
 test('public source does not bundle profile backups or private sample references',()=>{
  const files=fs.readdirSync(root);
  assert(!files.some(name=>name.startsWith('gym-tracker-profile-')));
- const app=fs.readFileSync(path.join(root,'app-v50.js'),'utf8');
+ const app=fs.readFileSync(path.join(root,'app-v51.js'),'utf8');
  assert(!app.includes('gym_pva/111'));
  assert(app.includes('gymPwaData_v3')&&app.includes('gymPwaApp_v4'));
 });
@@ -102,24 +102,19 @@ test('all existing 3D entries are unchanged, not replaced with illustrated seque
  for(const [name,id]of before)assert.equal(atlas.match(name)?.id,id,'existing exact name: '+name);
 });
 
-test('261 illustrated guides keep static posters and source attribution',()=>{
- const illustrated=atlas.entries.filter(e=>e.poseGuide);
- assert.equal(illustrated.length,261);
- const credits=JSON.parse(fs.readFileSync(path.join(root,'assets/poses/ATTRIBUTION.json'),'utf8'));
- assert.equal(credits.length,261);
- for(const entry of illustrated){
-  assert.equal(entry.poseGuide.frameCount,3);
-  assert.equal(entry.poseGuide.license,'CC BY-SA 4.0');
-  assert.equal(atlas.previewUrl(entry),entry.poseGuide.poster);
-  for(const name of [entry.poseGuide.sprite,entry.poseGuide.poster]){
-   const file=fs.readFileSync(path.join(root,name));
-   assert.equal(file.subarray(0,4).toString(),'RIFF');assert.equal(file.subarray(8,12).toString(),'WEBP');
-  }
-  assert(!atlas.thumbnail(entry).includes('<video'));
-  assert(credits.some(c=>c.slug===entry.poseGuide.slug));
+test('photo library is restored exactly and v50 saved variants remain resolvable',()=>{
+ assert.deepEqual(JSON.parse(JSON.stringify(atlas.entries)),original);
+ assert.equal(scope.window.GYM_LEGACY_EXERCISES.length,178);
+ for(const entry of scope.window.GYM_LEGACY_EXERCISES){
+  assert.equal(atlas.match({id:'saved-user-exercise',catalogId:entry.id}).id,entry.id);
+  assert.equal(entry.sourceProvider,'workout-guide');
+  assert(!entry.poseGuide&&!entry.motion);
+  assert(!atlas.entries.some(e=>e.id===entry.id),'legacy variants are not offered as new library entries');
  }
- assert(atlas.match('Жим штанги лежачи').poseGuide);
- assert(atlas.byId.get('pose-weighted-pull-up').poseGuide);
- assert.notEqual(atlas.match('Підтягування').id,'pose-weighted-pull-up');
- assert.equal(atlas.search('',{limit:atlas.entries.length}).length,1077);
+ assert.equal(atlas.previewUrl(atlas.match('Жим штанги лежачи')),atlas.imageUrl(atlas.match('Жим штанги лежачи')));
+ assert.equal(atlas.search('',{limit:1000}).length,899);
+ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ assert(!index.includes('exercise-poses-v50.js'));
+ assert(index.includes('exercise-legacy-v51.js')&&index.includes('app-v51.js'));
+ assert(!fs.readFileSync(path.join(root,'exercise-atlas-v51.js'),'utf8').includes('bindPoses'));
 });
