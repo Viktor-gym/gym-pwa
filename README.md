@@ -1,15 +1,17 @@
 # GymTracker Pro PWA
 
 HTML, CSS and vanilla JavaScript; static GitHub Pages deployment. The current
-release is app-v52.js with studio-v52.css and exercise-atlas-v51.js.
+release uses app-v53.js, studio-v53.css and exercise-atlas-v54.js. Version
+suffixes on library/metrics/motion modules identify different active components,
+not multiple copies of the application. Only one app entry script is retained.
 
 ## Development
 
 Serve this folder with a local HTTP server. No build step or API key is needed.
 Example: `npx http-server . -p 8080`.
 
-Run `node --test tests/atlas.test.cjs tests/body-metrics.test.cjs` for regression checks.
-Syntax: `node --check app-v52.js`, `node --check body-metrics-v52.js`, `node --check exercise-atlas-v51.js`,
+Run `npm test` for regression checks.
+Syntax: `node --check app-v53.js`, `node --check body-metrics-v52.js`, `node --check exercise-atlas-v54.js`,
 `node --check exercise-legacy-v51.js`, `node --check sw.js`.
 
 ## Exercise Guides
@@ -21,7 +23,7 @@ Other entries use their original two still photographs, with manual 01 Start /
 animation is loaded. List cards always use one still poster or photograph.
 
 Opening a 3D entry offers play/pause, restart, 0.5x speed and a scrubber.
-Reduced-motion starts paused. The filter shows only the 68 smooth animations.
+Reduced-motion starts paused. The filter includes original and native animations.
 Front/back muscle maps retain source primary/secondary labels in coral/amber.
 An exact photo or animation is never replaced with a different exercise variant.
 
@@ -54,7 +56,7 @@ The stable media cache retains downloaded exercise photos and animations.
 other source photos load on demand and cache for later viewing (240 remote
 images maximum). Three-frame media is no longer downloaded. Service worker
 byte-range support remains intact for offline iPhone/Safari animation playback.
-The core cache is gym-pwa-v52-custom-body. index.html and sw.js references must
+The core cache version is declared in sw.js. index.html and sw.js references must
 be released together. Missing media can be retried online.
 
 ## Custom Body Metrics

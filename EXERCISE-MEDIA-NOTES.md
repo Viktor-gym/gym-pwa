@@ -82,6 +82,7 @@ the deployment directory. Preserve user records; do not roll back localStorage.
 
 Six new guides are initially included: seated dumbbell curl, incline hammer
 curl, one-arm bench row, standing hammer curl, barbell curl and EZ-bar curl.
+v59 adds reviewed lateral raise and reverse-grip barbell curl: eight of50.
 Each has three actual camera videos, matching posters, source pose/grip checks
 and online/offline browser verification. Standing arm skinning was reviewed
 separately; it does not alter the approved bench scenes or saved user records.
