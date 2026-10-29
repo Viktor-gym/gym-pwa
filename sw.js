@@ -4,7 +4,7 @@
 
 // bump version when you publish updates
 importScripts('./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./gym-motion-precache-v55.js','./native-motion-precache-v56.js');
-const CACHE = 'gym-pwa-v59-native-strength';
+const CACHE = 'gym-pwa-v60-native-strength';
 const MEDIA_CACHE = 'gym-pwa-exercise-media-v1';
 const ASSETS = ['./index.html','./app-v53.js','./studio-v53.css','./body-metrics-v52.js','./muscle-load-v56.js','./native-motion-catalog-v56.js','./native-motion-precache-v56.js','./exercise-library-v47.js','./exercise-motion-v48.js','./exercise-repdb-v49.js','./exercise-legacy-v51.js','./exercise-atlas-v54.js','./gym-motion-catalog-v55.js','./gym-motion-v55.js','./gym-motion-precache-v55.js','./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
 const MOTION_ASSETS=[...Array.from({length:50},(_,index)=>String(index+51).padStart(4,'0')).flatMap(id=>['./assets/motion/'+id+'.jpg','./assets/motion/'+id+'.mp4']),...(self.GYM_SHARED_MOTION_ASSETS||[]),...(self.GYM_NATIVE_MOTION_ASSETS||[])];

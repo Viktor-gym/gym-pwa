@@ -83,6 +83,12 @@ the deployment directory. Preserve user records; do not roll back localStorage.
 Six new guides are initially included: seated dumbbell curl, incline hammer
 curl, one-arm bench row, standing hammer curl, barbell curl and EZ-bar curl.
 v59 adds reviewed lateral raise and reverse-grip barbell curl: eight of50.
+v60 adds front dumbbell raise, dumbbell shrug, bent-over two-dumbbell row,
+bodyweight squat, forward dumbbell lunge and reverse dumbbell lunge.
+Fourteen of the selected fifty guides now have three rendered camera views;
+including the earlier fourteen bench guides, the native catalog contains28.
+The floor split-squat prototype and preacher prototypes are withheld: they
+do not yet pass the exact-variant and body/support contact review.
 Each has three actual camera videos, matching posters, source pose/grip checks
 and online/offline browser verification. Standing arm skinning was reviewed
 separately; it does not alter the approved bench scenes or saved user records.
