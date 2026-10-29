@@ -89,6 +89,10 @@ Fourteen of the selected fifty guides now have three rendered camera views;
 including the earlier fourteen bench guides, the native catalog contains28.
 The floor split-squat prototype and preacher prototypes are withheld: they
 do not yet pass the exact-variant and body/support contact review.
+v61 adds the bent-over barbell row with overhand and reverse grips after
+extending the lower endpoint and rechecking shaft/body clearance. Sixteen
+of the selected fifty are published, thirty native guides in total, each
+with three real cameras. Preacher curls remain withheld, not certified.
 Each has three actual camera videos, matching posters, source pose/grip checks
 and online/offline browser verification. Standing arm skinning was reviewed
 separately; it does not alter the approved bench scenes or saved user records.
