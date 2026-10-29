@@ -93,6 +93,11 @@ v61 adds the bent-over barbell row with overhand and reverse grips after
 extending the lower endpoint and rechecking shaft/body clearance. Sixteen
 of the selected fifty are published, thirty native guides in total, each
 with three real cameras. Preacher curls remain withheld, not certified.
+v62 corrects a curl hinge-frame reversal in barbell, EZ-bar and reverse-grip
+barbell curls. The lower endpoint no longer crosses behind the upper-arm axis.
+All49 baked poses must keep a positive forward hinge normal. Corrected media
+uses new `hinge-v2` URLs so older phone caches cannot reuse the faulty clips.
+This is a correction of three existing guides, not three additional exercises.
 Each has three actual camera videos, matching posters, source pose/grip checks
 and online/offline browser verification. Standing arm skinning was reviewed
 separately; it does not alter the approved bench scenes or saved user records.
