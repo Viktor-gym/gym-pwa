@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
       nextWorkout: "Рекомендації на наступне тренування",
       volumeProgress: "Прогрес обʼєму",
       muscleSplit: "Розподіл навантаження",
-      muscleSplitHint: "Частка обʼєму по групах",
+      muscleSplitHint: "Приблизний розподіл: 70% основним і 30% допоміжним м’язам; у межах ролі — порівну. Без допоміжних — 100% основним. Це умовна модель, не вимір роботи м’язів.",
       trainedOnly: "Вправи (тільки з заняттями)",
       weightProgress: "Прогрес ваги",
       history: "Історія",
@@ -190,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
       nextWorkout: "Next workout recommendations",
       volumeProgress: "Volume progress",
       muscleSplit: "Muscle split",
-      muscleSplitHint: "Share of volume by muscle group",
+      muscleSplitHint: "Estimated split: 70% to primary and 30% to secondary muscles, equally within each role. Without secondary muscles, 100% goes to primary muscles. This is a heuristic, not a measurement of muscle work.",
       trainedOnly: "Exercises (trained only)",
       weightProgress: "Weight progress",
       history: "History",
@@ -4249,18 +4249,21 @@ document.addEventListener("DOMContentLoaded", () => {
   function drawMusclePie(workouts){
     const box = $("#chartMusclePie");
     if (!box) return;
-    const totals = {};
-    for (const w of workouts){
-      for (const it of (w.items||[])){
-        const ex = state.exercises.find(e=>e.id===it.exerciseId);
-        const cat = ex?.category || "other";
-        totals[cat] = (totals[cat]||0) + volumeOfSets(it.sets);
-      }
-    }
-
-    const entries = Object.entries(totals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-    if (!entries.length) return void (box.innerHTML = `<div class="muted">${t("noData")}</div>`);
-    const total = entries.reduce((a,[,v])=>a+v,0);
+    const load = window.GymMuscleLoad;
+    if (!load) return void (box.innerHTML = `<div class="muted">${t("noData")}</div>`);
+    const en = state.lang === "en";
+    const mode = drawMusclePie.mode === "sets" ? "sets" : "volume";
+    const result = load.aggregate(workouts,state.exercises,{
+      mode, volumeOfSets, lookup:ex=>window.GymAtlas?.match(ex)
+    });
+    const entries = result.rows;
+    const total = result.total;
+    const percentages = load.percentages(entries);
+    const unit = mode === "sets" ? (en ? "sets" : "підх.") : "kg × reps";
+    const valueLabel = value => mode === "sets" ? fmtNum(Math.round(value*10)/10) : fmtVol(value);
+    const controls = `<div class="row" style="gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      ${["volume","sets"].map(key=>`<button type="button" class="btn ${mode===key?"primary":""}" data-load-mode="${key}" aria-pressed="${mode===key}">${key==="volume"?(en?"Volume":"Об’єм"):(en?"Sets":"Підходи")}</button>`).join("")}
+    </div>`;
     const colors = [
       ["#8b5cf6","#c4b5fd","rgba(139,92,246,.45)"],
       ["#0891b2","#67e8f9","rgba(34,211,238,.4)"],
@@ -4271,20 +4274,30 @@ document.addEventListener("DOMContentLoaded", () => {
       ["#7c3aed","#ddd6fe","rgba(167,139,250,.38)"]
     ];
     box.innerHTML = `
+      ${controls}
       <div class="chartHeader">
-        <div><div class="muted">${state.lang==="en" ? "Total load" : "Сумарне навантаження"}</div><div class="chartBig">${fmtVol(total)} <small style="font-size:.48em;color:var(--muted)">kg</small></div></div>
+        <div><div class="muted">${en ? "Total before estimated allocation" : "Загалом до умовного розподілу"}</div><div class="chartBig">${valueLabel(total)} <small style="font-size:.48em;color:var(--muted)">${unit}</small></div></div>
       </div>
       <div class="distribution">
-        ${entries.map(([cat,v],i)=>{
-          const pct = Math.round(v/total*100);
+        ${entries.map((entry,i)=>{
+          const pct = percentages[i];
+          const v = entry.value;
           const palette = colors[i%colors.length];
           return `<div class="distRow">
-            <div class="distName">${escapeHtml(catName(cat))}<small>${fmtVol(v)} kg</small></div>
+            <div class="distName">${escapeHtml(load.label(entry.id,state.lang,catName))}<small>≈ ${valueLabel(v)} ${unit}</small></div>
             <div class="distTrack"><span class="distFill" style="width:${Math.max(2,pct)}%;--bar-color:${palette[0]};--bar-color-light:${palette[1]};--bar-glow:${palette[2]}"></span></div>
-            <div class="distValue" title="${fmtVol(v)} kg">${pct}%</div>
+            <div class="distValue" title="≈ ${valueLabel(v)} ${unit}">${pct}%</div>
           </div>`;
         }).join("")}
-      </div>`;
+      </div>
+      ${!entries.length?`<div class="muted">${t("noData")}</div>`:""}
+      <div class="muted" style="margin-top:12px">${mode==="sets"
+        ? (en?"Fractional sets reflect the estimated allocation; time and distance are not converted to kilograms.":"Дробові підходи — результат умовного розподілу; час і дистанція не переводяться в кілограми.")
+        : (en?"Volume includes recorded weight × reps only. For unweighted or timed exercises, choose Sets.":"Об’єм враховує лише записану вагу × повтори. Для вправ без ваги або на час обери «Підходи».")}
+      ${result.unmatched>0?(en?" Unmatched exercises stay in their own category without guessing muscles.":" Нерозпізнані вправи залишаються у своїй категорії без вгадування м’язів."):""}</div>`;
+    box.querySelectorAll("[data-load-mode]").forEach(button=>{
+      button.onclick=()=>{drawMusclePie.mode=button.dataset.loadMode;drawMusclePie(workouts);};
+    });
   }
 
   function renderStatsExercisesOnlyTrained(){
@@ -5054,8 +5067,8 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       {
         title:en?"Explore 3D motion and working muscles":"Дивись 3D-рух і задіяні м’язи",
-        sub:en?`${GymAtlas.entries.length} movements · 68 free 3D animations`:`${GymAtlas.entries.length} рухів · 68 безкоштовних 3D-анімацій`,
-        copy:en?"Open Exercises → Movement library, filter by group and search a name. Each list card shows one still illustration. With 3D animation only shows 68 exact movements: 50 Vital Free50 and 18 additional RepDB previews. Open a card for a looping 3D demonstration: pause, restart, slow to 0.5× or scrub. These are animated characters, not human footage. Coral/amber on the separate muscle map marks primary/secondary muscles; RepDB models also highlight muscles on the character. RepDB media and metadata are CC BY-NC 4.0: personal/non-commercial use only, with visible attribution. A paid app, advertising or commercial client use requires removing/replacing those assets or obtaining separate rights; no purchases have been made. For exercises without a smooth animation, the original two still photographs are restored: choose 01 Start or 02 Finish manually. No drawn three-frame slideshow is used. Variants saved from the previous illustrated pack remain in your exercises, workouts, plans, templates and JSON imports; their IDs are preserved by a compatibility catalog. They are no longer offered as new library suggestions. If an exact photo is unavailable, the guide says so instead of showing a different exercise. Exact animations are not available for every exercise: those cards retain their existing static positions and technique without substituting another movement. Bundled demonstrations and common photos cache after a successful online update; uncached materials need internet. Reduced-motion mode starts paused. Add a movement to My exercises here, then to a workout from Workout. All of this works for the selected trainer profile without replacing its history.":"Відкрий «Вправи» → «Бібліотека рухів», обери групу й назву. У списку — одна статична ілюстрація на вправу. Фільтр «Лише з 3D-анімацією» показує 68 точних рухів: 50 Vital Free50 і 18 додаткових RepDB. Усередині — циклічний 3D-показ: пауза, початок, швидкість 0.5× і повзунок позиції. Це анімовані персонажі, не зйомка людей. На карті м’язів кораловим позначені основні, бурштиновим — допоміжні; у моделях RepDB м’язи також підсвічуються на персонажі. Матеріали й дані RepDB мають CC BY-NC 4.0: лише особисте / некомерційне використання із зазначенням автора. Для платного застосунку, реклами чи комерційної роботи з клієнтами ці матеріали треба прибрати / замінити або окремо отримати відповідні права; нічого не купувалося. Для вправ без плавної анімації повернуто попередні дві статичні фотографії: вручну натисни 01 «Початок» або 02 «Завершення». Мальованого трикадрового показу більше немає. Варіанти, додані з попереднього набору, залишаються у твоїх вправах, тренуваннях, планах, шаблонах та JSON-імпорті: їхні ID збережені в каталозі сумісності. У нових підказках бібліотеки цей набір більше не пропонується. Якщо точного фото немає, це явно зазначено, без підміни іншою вправою. Не для всіх вправ знайдено анімацію: у таких залишаються наявні статичні позиції й техніка, без підміни іншим рухом. Вбудовані демонстрації та фото основних рухів кешуються після успішного оновлення з інтернетом; незавантажені матеріали потребують мережі. У режимі зменшення руху показ починається на паузі. Додай вправу до «Мої вправи», а в заняття — через «Тренування». Атлас працює і для вибраного профілю тренера, без заміни його історії.",
+        sub:en?`${GymAtlas.entries.length} movements · original 68 + native bench guides`:`${GymAtlas.entries.length} рухів · початкові 68 + нові покази з лавкою`,
+        copy:en?"Open Exercises → Movement library, filter by group and search. Each card has one still illustration; open it for the full guide. The original 68 animations remain unchanged, alongside 14 native bench-series guides including the previously reviewed barbell bench press. Use pause, restart, 0.5× speed and the position slider. On native characters, stronger coral marks primary muscles and pale coral marks secondary muscles; this is an illustration, not measured activation. Not every exercise has an animation. Without one, use the two still positions and written technique; no unrelated exercise is substituted. If a new native video cannot load, the exact original positions remain available. Reduced-motion mode starts paused. Bundled media is cached after a successful online update; uncached material needs internet. Existing saved exercises, workouts, templates, plans, IDs and profile imports are retained. Add exercises to a session from Workout; tap the illustration to review technique. RepDB's 18 previews remain CC BY-NC 4.0, personal/non-commercial only with attribution. Commercial use requires replacement or separate rights; no assets were purchased. Atlas and guide work within the selected user/trainer profile without replacing history.":"Відкрий «Вправи» → «Бібліотека рухів», обери групу й назву. У кожній картці — одна статична ілюстрація; після натискання відкривається повний показ. Початкові 68 анімацій збережені, поряд додано 14 показів нової серії з лавкою, включно з раніше узгодженим жимом штанги лежачи. Доступні пауза, початок, швидкість 0.5× і повзунок позиції. На новій моделі насичений кораловий позначає основні м’язи, світліший — допоміжні; це ілюстрація, не вимір активації. Не кожна вправа має анімацію: для інших лишаються дві статичні позиції та опис техніки, без підміни іншим рухом. Якщо нове відео не завантажилося, доступні оригінальні позиції цієї вправи. У режимі зменшення руху показ починається на паузі. Вбудовані матеріали кешуються після успішного оновлення з інтернетом; незавантажені потребують мережі. Усі збережені вправи, тренування, шаблони, плани, ID та імпорт профілів збережені. Додавай вправи до заняття через «Тренування», а натисканням на ілюстрацію переглядай техніку. 18 матеріалів RepDB залишаються CC BY-NC 4.0: лише особисте / некомерційне використання із зазначенням автора; для комерційного потрібна заміна або окремі права. Нічого не купувалося. Атлас та інструкція працюють для вибраного профілю користувача чи тренера, без заміни історії.",
         example:en?"Type Bench → select Dumbbell Bench Press → fields fill in → Create. Tap its photo during a workout to review technique. An unmatched custom movement stays in your list without a guessed image.":"Введи «Жим» → вибери жим гантелей лежачи → поля заповняться → «Створити». У тренуванні натисни фото, щоб згадати техніку. Власна незнайома вправа залишиться у списку без випадково підібраного фото.",
         mini:`<div class="miniTitle">${en?'3D movement atlas':'3D-атлас рухів'}</div><div class="miniField">${en?'Arnold… → illustrated suggestions':'Арнольда… → підказки з ілюстраціями'}</div><div class="miniRow"><div class="miniButton">▶ 3D · 0.5×</div><div class="miniField">${en?'Primary / secondary muscles':'Основні / допоміжні м’язи'}</div></div>`
       },
@@ -5110,7 +5123,7 @@ document.addEventListener("DOMContentLoaded", () => {
         copy:en
           ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Statistics has week/month/year/all filters, insight cards, weekly rhythm bars, load trend, one calorie progress graph, muscle split, type balance and exercise details. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
           :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. «Статистика» має фільтри тиждень/місяць/рік/все, інсайти, ритм по тижнях, тренд навантаження, один графік прогресу калорій, розподіл по групах, баланс типів вправ і деталі кожної вправи. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
-        example:en?"Use Main focus trend to see what dominated each week, Calories progress to estimate energy cost, and Type balance to notice if cardio or reps work disappeared.":"Дивись «Тренд основного фокусу», щоб бачити, що домінувало кожного тижня, «Прогрес калорій» для оцінки енерговитрат і «Баланс типів вправ», щоб помітити, якщо зникло кардіо чи вправи на повтори.",
+        example:en?"Muscle split offers Volume (weight × reps) or Sets, including unweighted/timed work. Linked library movements allocate 70% to primary and 30% to secondary muscles, equally within each role; without secondary muscles, 100% goes to primary. These are estimates, not measured muscle work. Unknown movements stay in their own category. Example: 100 kg × 8 close-grip bench reps allocate 560 to triceps and 120 each to chest/shoulders; total stays 800.":"У «Розподілі навантаження» обери «Об’єм» (вага × повтори) або «Підходи», зокрема для вправ без ваги чи на час. Для вправ із бібліотеки умовно 70% іде основним, 30% — допоміжним м’язам, порівну всередині ролі; без допоміжних — 100% основним. Це оцінка, а не вимір роботи м’язів. Власні нерозпізнані вправи залишаються у своїй категорії. Приклад: 100 кг × 8 у вузькому жимі дає 560 трицепсу та по 120 грудям і дельтам; сума лишається 800.",
         mini:`<div class="miniRow"><div class="miniStat">${en?"Rhythm":"Ритм"}<strong>▁▃▆█</strong></div><div class="miniStat">${en?"Balance":"Баланс"}<strong>64%</strong></div></div>`
       },
       {

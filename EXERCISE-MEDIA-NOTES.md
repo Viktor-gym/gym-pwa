@@ -58,3 +58,24 @@ Backup before these changes: `work/backups/pwa-before-poses-20261027`, outside
 the deployment directory. Never add the private test profile to this repository.
 Backup before v51: work/backups/pwa-before-photo-restore-20261027, also outside
 the deployment directory. Preserve user records; do not roll back localStorage.
+
+## Native Bench Series v56
+
+14 exact rendered guides, including the previously reviewed bench press, are
+packaged separately from the original68 motion entries. Catalog entries and
+saved exercise IDs are not mutated. Native concentration curl is withheld for
+remaining leg contact; the existing incline-curl animation is retained rather
+than replaced by an unfinished native version. Source Blender files, private
+exports and internal review reports are not part of the public application.
+
+Native guides use one poster in lists, H264 motion in the detail dialog, paused
+reduced-motion mode, exact-photo fallback on video failure, and cached byte
+range responses for offline/iPhone playback. Credits and upstream2D-render
+exception are in assets/native-bench/v56/. No third-party FitnessOnline media
+was copied. No purchases or iOS changes.
+
+Muscle statistics are derived at display time using the existing exact catalog
+primary/secondary metadata. The70/30 allocation is an explicitly disclosed
+heuristic, not a physiological measurement. Volume and set views are separate;
+unknown custom movements retain their own category. No data migration or new
+localStorage keys. The user/trainer in-app guide documents both additions.
