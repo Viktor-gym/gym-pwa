@@ -1,5 +1,22 @@
 # Next Exercise Media Search
 
+## Latest Owner Direction (2026-10-29)
+
+Unify all exercise animations on the approved native character, including the
+68 external guides. Replace them incrementally only after exact-movement review;
+until then the working external guide stays active. This supersedes the earlier
+instruction to preserve those media permanently, not the data/ID safety rules.
+Native Blender scenes and reproducible sources are kept locally under
+`work/gym-realistic-model`; see `SOURCE-FILES.md` there. Never publish private
+profile exports. Alternate camera renders are not new exercise counts.
+
+The v57 camera release adds two real rendered views to each of the 14 native
+guides (28 additional clips; three camera views per exercise). The Angle button
+preserves phase, speed and paused/playing state. This is not a free-orbit 3D
+viewer. Same saved character/animation scenes, not a different mannequin or
+mirrored stills. UA/EN in-app guidance includes these controls. Native MP4 byte
+range handling covers both primary and alternate files for offline/iPhone use.
+
 Updated: 2026-10-27. Requested follow-up: repeat the search when exercise visuals
 are next revisited. This is a project note, not a scheduled background task.
 

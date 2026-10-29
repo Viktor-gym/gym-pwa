@@ -164,6 +164,29 @@
     const playButton=overlay.querySelector('[data-play]'),seek=overlay.querySelector('[data-seek]');
     const update=()=>{playButton.textContent=video.paused?(en?'▶ Play':'▶ Показ руху'):(en?'Ⅱ Pause':'Ⅱ Пауза');};
     const play=()=>{if(video.error){video.load();}video.play().then(()=>{error.hidden=true;}).catch(()=>{update();if(video.error)error.hidden=false;});};
+    const native=nativeMotion(entry);
+    const views=native?.views?.length>1?native.views:null;
+    let viewIndex=0,viewToken=0,angleButton,pendingViewState=null;
+    const viewLabel=()=>{if(angleButton)angleButton.textContent=(en?'View: ':'Ракурс: ')+(en?views[viewIndex].label_en:views[viewIndex].label_ua);};
+    const selectView=(index,preserved)=>{
+      const state=preserved||pendingViewState||{time:Number.isFinite(video.currentTime)?video.currentTime:0,rate:video.playbackRate,playing:!video.paused};
+      pendingViewState=state;
+      const {time,rate,playing:wasPlaying}=state,token=++viewToken;
+      video.pause();viewIndex=index;viewLabel();
+      video.poster=views[index].poster;video.src=views[index].src;
+      video.addEventListener('loadedmetadata',()=>{
+        if(signal.aborted||token!==viewToken)return;
+        if(Number.isFinite(video.duration))video.currentTime=Math.min(time,Math.max(0,video.duration-.01));
+        pendingViewState=null;video.playbackRate=rate;if(wasPlaying&&!document.hidden)play();else update();
+      },{once:true,signal});
+      video.load();
+    };
+    if(views){
+      angleButton=document.createElement('button');angleButton.type='button';angleButton.className='btn';
+      angleButton.dataset.nativeAngle='';angleButton.setAttribute('aria-label',en?'Change camera angle':'Змінити ракурс');
+      viewLabel();angleButton.onclick=()=>selectView((viewIndex+1)%views.length);
+      overlay.querySelector('.atlasPlayback').append(angleButton);
+    }
     playButton.onclick=()=>video.paused?play():video.pause();
     overlay.querySelector('[data-restart]').onclick=()=>{if(Number.isFinite(video.duration)){video.currentTime=0;play();}};
     overlay.querySelector('[data-speed]').onclick=event=>{video.playbackRate=video.playbackRate===1?0.5:1;event.currentTarget.textContent=video.playbackRate+'×';};
@@ -172,6 +195,7 @@
     video.addEventListener('play',update,{signal});video.addEventListener('pause',update,{signal});
     video.addEventListener('error',()=>{
       const host=overlay.querySelector('.atlasGuideGrid>div');
+      if(views&&viewIndex>0){selectView(0,pendingViewState);return;}
       if(nativeMotion(entry)&&!host.dataset.nativeFallback){
         host.dataset.nativeFallback='true';video.pause();video.removeAttribute('src');
         host.innerHTML=mediaMarkup(entry,en,true);bindMedia(overlay,signal,en,entry);return;

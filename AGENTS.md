@@ -3,7 +3,12 @@
 For the next exercise-visual update, read `EXERCISE-MEDIA-NOTES.md` and repeat
 the search for missing free animations. Keep the existing exact illustration
 and technique if no suitable new motion is found; never guess a different move.
-Keep the existing 68 smooth 3D guides. The owner rejected Workout Guide's
+The owner requested a unified native character on 2026-10-29, including eventual
+replacement of the original 68 smooth guides. Keep each existing guide active
+until its exact native replacement passes review; do not remove them wholesale
+or globally change matching priority for unfinished replacements. Native sources
+and scene provenance are archived separately in work/gym-realistic-model.
+The owner rejected Workout Guide's
 three-position drawings on 2026-10-27. Use the original two still photographs
 instead; do not reintroduce the illustrated sequence without a new request.
 Keep exercise-legacy-v51.js so catalogIds saved from v50 remain resolvable.

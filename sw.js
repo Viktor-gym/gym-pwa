@@ -4,7 +4,7 @@
 
 // bump version when you publish updates
 importScripts('./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./gym-motion-precache-v55.js','./native-motion-precache-v56.js');
-const CACHE = 'gym-pwa-v56-native-bench';
+const CACHE = 'gym-pwa-v57-native-views';
 const MEDIA_CACHE = 'gym-pwa-exercise-media-v1';
 const ASSETS = ['./index.html','./app-v53.js','./studio-v53.css','./body-metrics-v52.js','./muscle-load-v56.js','./native-motion-catalog-v56.js','./native-motion-precache-v56.js','./exercise-library-v47.js','./exercise-motion-v48.js','./exercise-repdb-v49.js','./exercise-legacy-v51.js','./exercise-atlas-v54.js','./gym-motion-catalog-v55.js','./gym-motion-v55.js','./gym-motion-precache-v55.js','./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
 const MOTION_ASSETS=[...Array.from({length:50},(_,index)=>String(index+51).padStart(4,'0')).flatMap(id=>['./assets/motion/'+id+'.jpg','./assets/motion/'+id+'.mp4']),...(self.GYM_SHARED_MOTION_ASSETS||[]),...(self.GYM_NATIVE_MOTION_ASSETS||[])];
@@ -30,7 +30,7 @@ self.addEventListener("fetch", (e) => {
   if(e.request.method!=='GET') return;
   const url=new URL(e.request.url);
   // iPhone media playback requests byte ranges, including during offline playback.
-  if(url.origin===self.location.origin && /\/assets\/(?:motion\/\d{4}|repdb-motion\/[a-z0-9-]+|native-bench\/v56\/[a-z0-9-]+)\.mp4$/.test(url.pathname)){
+  if(url.origin===self.location.origin && /\/assets\/(?:motion\/\d{4}|repdb-motion\/[a-z0-9-]+|native-bench\/(?:v56|v57-views)\/[a-z0-9-]+)\.mp4$/.test(url.pathname)){
     e.respondWith((async()=>{
       const media=await caches.open(MEDIA_CACHE);
       let full=await media.match(url.href);
@@ -42,7 +42,7 @@ self.addEventListener("fetch", (e) => {
     })().catch(()=>Response.error()));
     return;
   }
-  const isMotionPoster=url.origin===self.location.origin && /\/assets\/(?:motion\/\d{4}|repdb-motion\/[a-z0-9-]+|native-bench\/v56\/[a-z0-9-]+)\.jpg$/.test(url.pathname);
+  const isMotionPoster=url.origin===self.location.origin && /\/assets\/(?:motion\/\d{4}|repdb-motion\/[a-z0-9-]+|native-bench\/(?:v56|v57-views)\/[a-z0-9-]+)\.jpg$/.test(url.pathname);
   const isMedia=isMotionPoster || (url.origin===self.location.origin && /\/assets\/(?:exercises|poses|gym-motion)\//.test(url.pathname)) || (url.origin==='https://raw.githubusercontent.com' && url.pathname.startsWith('/yuhonas/free-exercise-db/'));
   if(isMedia){
     const network=()=>fetch(e.request).then(async response=>{
