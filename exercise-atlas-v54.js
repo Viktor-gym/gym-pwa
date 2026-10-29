@@ -7,7 +7,7 @@
   const customMotions=new Map((window.GYM_CUSTOM_MOTIONS||[]).map(motion=>[motion.catalogId,motion]));
   const customMotion=entry=>entry?customMotions.get(entry.id)||null:null;
   const nativeMotions=new Map((window.GYM_NATIVE_MOTIONS||[]).map(motion=>[motion.catalogId,motion]));
-  const nativeMotion=entry=>entry&&!entry.motion?nativeMotions.get(entry.id)||null:null;
+  const nativeMotion=entry=>{const clip=entry&&nativeMotions.get(entry.id);return clip&&(!entry.motion||clip.reviewedReplacement===true)?clip:null;};
   const hasAnimation=entry=>Boolean(entry?.motion||nativeMotion(entry)||customMotion(entry));
   const base = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -164,7 +164,7 @@
     const playButton=overlay.querySelector('[data-play]'),seek=overlay.querySelector('[data-seek]');
     const update=()=>{playButton.textContent=video.paused?(en?'▶ Play':'▶ Показ руху'):(en?'Ⅱ Pause':'Ⅱ Пауза');};
     const play=()=>{if(video.error){video.load();}video.play().then(()=>{error.hidden=true;}).catch(()=>{update();if(video.error)error.hidden=false;});};
-    const native=nativeMotion(entry);
+    const native=overlay.querySelector('.atlasGuideGrid>div')?.dataset.nativeFallback?null:nativeMotion(entry);
     const views=native?.views?.length>1?native.views:null;
     let viewIndex=0,viewToken=0,angleButton,pendingViewState=null;
     const viewLabel=()=>{if(angleButton)angleButton.textContent=(en?'View: ':'Ракурс: ')+(en?views[viewIndex].label_en:views[viewIndex].label_ua);};

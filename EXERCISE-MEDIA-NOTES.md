@@ -78,6 +78,21 @@ the deployment directory. Preserve user records; do not roll back localStorage.
 
 ## Native Bench Series v56
 
+## Native Strength Continuation v58
+
+Six new guides are initially included: seated dumbbell curl, incline hammer
+curl, one-arm bench row, standing hammer curl, barbell curl and EZ-bar curl.
+Each has three actual camera videos, matching posters, source pose/grip checks
+and online/offline browser verification. Standing arm skinning was reviewed
+separately; it does not alter the approved bench scenes or saved user records.
+Additional candidates remain local until every camera and check passes. This
+is a partial delivery from the planned50, not50 completed exercises.
+
+An exact reviewedReplacement flag can select a native guide ahead of an old
+motion for that catalog ID only. The original68 metadata and media remain
+intact; a failed native replacement falls back to the original guide. No
+blanket replacement of the68, private exports, Blender sources or iOS changes.
+
 14 exact rendered guides, including the previously reviewed bench press, are
 packaged separately from the original68 motion entries. Catalog entries and
 saved exercise IDs are not mutated. Native concentration curl is withheld for
