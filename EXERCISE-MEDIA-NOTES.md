@@ -1,5 +1,18 @@
 # Next Exercise Media Search
 
+## Curated Catalog v64 (2026-10-30)
+
+Owner removed a named movement list and all untranslated catalog choices.
+Exception: completed in-house native/shared-character 3D guides stay available,
+including the wide-grip bench press. Downloaded third-party motion alone does
+not qualify for this exception. Ten native movements received Ukrainian names;
+shared-guide Ukrainian labels are also copied into their catalog fields.
+The public selection catalog now has 112 movements, all with Ukrainian names.
+Search/autocomplete, category browsing and counts use that same catalog in both
+UI languages. Historical IDs/name resolution and original media remain available
+for saved workouts and imported profiles; no localStorage migration or deletion.
+The owner-defined removals are not anatomical or equipment-quality judgements.
+
 ## Latest Owner Direction (2026-10-29)
 
 Unify all exercise animations on the approved native character, including the
@@ -98,6 +111,10 @@ barbell curls. The lower endpoint no longer crosses behind the upper-arm axis.
 All49 baked poses must keep a positive forward hinge normal. Corrected media
 uses new `hinge-v2` URLs so older phone caches cannot reuse the faulty clips.
 This is a correction of three existing guides, not three additional exercises.
+v63 explicitly versions the HTML catalog request and precaches that same URL,
+so an older installed worker cannot serve the old catalog for the revised page.
+Worker imports bypass the HTTP cache, with a throttled update check on resume.
+No forced reload occurs during a workout and profile storage is unchanged.
 Each has three actual camera videos, matching posters, source pose/grip checks
 and online/offline browser verification. Standing arm skinning was reviewed
 separately; it does not alter the approved bench scenes or saved user records.

@@ -14,14 +14,14 @@ vm.runInNewContext(fs.readFileSync(path.join(root,'gym-motion-catalog-v55.js'),'
 vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-atlas-v54.js'),'utf8'),scope);
 const atlas=scope.window.GymAtlas;
 test('library has unique entries and valid local image assets',()=>{
- assert.equal(atlas.entries.length,899);
- assert.equal(new Set(atlas.entries.map(x=>x.id)).size,899);
+ assert.equal(atlas.entries.length,111);
+ assert.equal(new Set(atlas.entries.map(x=>x.id)).size,111);
  for(const entry of atlas.entries){
    assert(entry.name&&Array.isArray(entry.images)&&entry.primaryMuscles.length>=1);
    assert(['strength','reps','time','distance'].includes(entry.trackingType));
    for(const image of entry.images){assert(!image.includes('..'));if(entry.localImages)assert(fs.existsSync(path.join(root,'assets/exercises',image)));}
  }
- assert.equal(atlas.entries.filter(entry=>!entry.images.length&&!entry.motion&&!entry.poseGuide).length,3);
+ assert.equal(atlas.entries.filter(entry=>!entry.images.length&&!entry.motion&&!entry.poseGuide).length,0);
  assert.equal(atlas.imageUrl(atlas.byId.get('Kettlebell_Halo')),'');
 });
 test('equipment and variants are kept distinct',()=>{
@@ -56,10 +56,10 @@ test('public source does not bundle profile backups or private sample references
  assert(app.includes('gymPwaData_v3')&&app.includes('gymPwaApp_v4'));
 });
 
-test('68 exact 3D motions use local static posters and valid small H264 containers',()=>{
+test('remaining exact 3D motions use local static posters and valid small H264 containers',()=>{
  const animated=atlas.entries.filter(entry=>entry.motion);
- assert.equal(animated.length,68);
- assert.equal(animated.filter(e=>e.motion.provider==='repdb').length,18);
+ assert.equal(animated.length,53);
+ assert.equal(animated.filter(e=>e.motion.provider==='repdb').length,12);
  assert(animated.filter(e=>e.motion.provider==='repdb').every(e=>e.motion.license==='CC BY-NC 4.0'));
  for(const entry of animated){
   for(const file of [entry.motion.src,entry.motion.poster])assert(fs.existsSync(path.join(root,file)));
@@ -104,7 +104,10 @@ test('all existing 3D entries are unchanged, not replaced with illustrated seque
 });
 
 test('photo library is restored exactly and v50 saved variants remain resolvable',()=>{
- assert.deepEqual(JSON.parse(JSON.stringify(atlas.entries)),original);
+ for(const entry of original){
+  const saved=JSON.parse(JSON.stringify(atlas.byId.get(entry.id)));
+  assert.deepEqual({...saved,name_ua:entry.name_ua},entry);
+ }
  assert.equal(scope.window.GYM_LEGACY_EXERCISES.length,178);
  for(const entry of scope.window.GYM_LEGACY_EXERCISES){
   assert.equal(atlas.match({id:'saved-user-exercise',catalogId:entry.id}).id,entry.id);
@@ -113,7 +116,7 @@ test('photo library is restored exactly and v50 saved variants remain resolvable
   assert(!atlas.entries.some(e=>e.id===entry.id),'legacy variants are not offered as new library entries');
  }
  assert.equal(atlas.previewUrl(atlas.match('Жим штанги лежачи')),atlas.customMotion(atlas.match('Жим штанги лежачи')).poster);
- assert.equal(atlas.search('',{limit:1000}).length,899);
+ assert.equal(atlas.search('',{limit:1000}).length,111);
  const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
  assert(!index.includes('exercise-poses-v50.js'));
  assert(index.includes('exercise-legacy-v51.js')&&index.includes('app-v53.js'));
@@ -130,7 +133,7 @@ test('all new exact movements preserve existing 3D and distinct equipment varian
  assert.equal(atlas.match('Жим у Hammer під кутом').id,'Leverage_Incline_Chest_Press');
  assert.equal(atlas.customMotion(atlas.match('Жим у Hammer під кутом')).clipId,'hammer-incline-press');
  assert.equal(atlas.match('Тяга верхнього блоку однією рукою').id,'Kneeling_Single-Arm_High_Pulley_Row');
- assert.equal(atlas.entries.filter(atlas.hasAnimation).length,88);
+ assert.equal(atlas.entries.filter(atlas.hasAnimation).length,73);
  for(const item of scope.window.GYM_CUSTOM_MOTIONS)assert(fs.existsSync(path.join(root,item.poster)));
  assert(fs.existsSync(path.join(root,'gym-motion-v55.js')));
 });

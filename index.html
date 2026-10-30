@@ -838,15 +838,24 @@
   <script defer src="exercise-legacy-v51.js"></script>
   <script defer src="gym-motion-catalog-v55.js"></script>
   <script defer src="gym-motion-v55.js"></script>
-  <script defer src="native-motion-catalog-v56.js"></script>
-  <script defer src="exercise-atlas-v54.js"></script>
+  <script defer src="native-motion-catalog-v56.js?v=63"></script>
+  <script defer src="exercise-atlas-v54.js?v=64"></script>
   <script defer src="body-metrics-v52.js"></script>
   <script defer src="muscle-load-v56.js"></script>
   <script defer src="app-v53.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(registration => {
+        let lastCheck = Date.now();
+        const checkForUpdate = () => {
+          if (document.visibilityState !== 'visible' || Date.now() - lastCheck < 60000) return;
+          lastCheck = Date.now();
+          registration.update().catch(() => {});
+        };
+        window.addEventListener('pageshow', checkForUpdate);
+        document.addEventListener('visibilitychange', checkForUpdate);
+      }).catch(()=>{});
     }
   </script>
 </body>

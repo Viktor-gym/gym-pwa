@@ -1,14 +1,50 @@
 /* GymTracker exercise atlas. All matching and muscle maps run on device. */
 (() => {
   'use strict';
-  const entries = window.GYM_EXERCISE_LIBRARY || [];
+  const ukrainianNames = {
+    Dumbbell_Bench_Press_with_Neutral_Grip:'Жим гантелей лежачи нейтральним хватом',
+    Dumbbell_Rear_Lunge:'Випади назад з гантелями',
+    'EZ-Bar_Curl':'Згинання з EZ-грифом',
+    Incline_Dumbbell_Bench_With_Palms_Facing_In:'Жим гантелей під кутом нейтральним хватом',
+    Incline_Hammer_Curls:'Молоткові згинання на похилій лавці',
+    Lying_Dumbbell_Tricep_Extension:'Розгинання рук з гантелями лежачи',
+    One_Arm_Dumbbell_Bench_Press:'Жим гантелі однією рукою лежачи',
+    Reverse_Barbell_Curl:'Згинання зі штангою зворотним хватом',
+    'Reverse_Grip_Bent-Over_Rows':'Тяга штанги в нахилі зворотним хватом',
+    Seated_Dumbbell_Curl:'Згинання з гантелями сидячи'
+  };
+  const savedEntries = (window.GYM_EXERCISE_LIBRARY || []).map(entry => {
+    const name=ukrainianNames[entry.id] || entry.name_ua || (window.GYM_CUSTOM_MOTIONS||[]).find(motion=>motion.catalogId===entry.id)?.name_ua;
+    return name ? {...entry,name_ua:name} : entry;
+  });
   const legacy = window.GYM_LEGACY_EXERCISES || [];
-  const byId = new Map([...entries,...legacy].map(entry => [entry.id, entry]));
+  const byId = new Map([...savedEntries,...legacy].map(entry => [entry.id, entry]));
   const customMotions=new Map((window.GYM_CUSTOM_MOTIONS||[]).map(motion=>[motion.catalogId,motion]));
   const customMotion=entry=>entry?customMotions.get(entry.id)||null:null;
   const nativeMotions=new Map((window.GYM_NATIVE_MOTIONS||[]).map(motion=>[motion.catalogId,motion]));
   const nativeMotion=entry=>{const clip=entry&&nativeMotions.get(entry.id);return clip&&(!entry.motion||clip.reviewedReplacement===true)?clip:null;};
   const hasAnimation=entry=>Boolean(entry?.motion||nativeMotion(entry)||customMotion(entry));
+  // Curate new choices only. Historical catalog IDs and names must still resolve.
+  const removedIds = new Set([
+    'repdb-running','Machine_Preacher_Curls','Leverage_High_Row','motion-0094',
+    'Leverage_Shoulder_Press','Machine_Bench_Press','Wide-Grip_Barbell_Bench_Press',
+    'Cable_Rear_Delt_Fly','Preacher_Curl','repdb-cat-cow','motion-0070','motion-0072',
+    'motion-0065','repdb-side-lying-lateral-raise','Flat_Bench_Lying_Leg_Raise',
+    'motion-0071','Flat_Bench_Leg_Pull-In','Plank','motion-0066','Seated_Triceps_Press',
+    'Ab_Roller','Russian_Twist','Crunches','Cable_Crunch','Split_Squat_with_Dumbbells',
+    'repdb-one-arm-kettlebell-row','EZ-Bar_Skullcrusher','Walking_Treadmill','Butt_Lift_Bridge',
+    '3_4_Sit-Up','90_90_Hamstring','Ab_Crunch_Machine','Adductor','Adductor_Groin',
+    'Air_Bike','All_Fours_Quad_Stretch','Alternate_Hammer_Curl','Alternate_Heel_Touchers',
+    'Ankle_Circles','Ankle_On_The_Knee','Anterior_Tibialis-SMR','Arm_Circles',
+    'Atlas_Stone_Trainer','Atlas_Stones','Axle_Deadlift'
+  ]);
+  const entries = savedEntries.filter(entry => {
+    // The owner's exception covers our completed native/shared-character guides,
+    // not downloaded third-party animations.
+    if(nativeMotion(entry)||customMotion(entry)) return true;
+    return !removedIds.has(entry.id) && !/\balternating\b/i.test(entry.name) && /[А-Яа-яІіЇїЄєҐґ]/u.test(entry.name_ua||'');
+  });
+  const availableIds = new Set(entries.map(entry=>entry.id));
   const base = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const normalize = value => String(value || '').normalize('NFKC').toLowerCase().replace(/[’'`ʼ]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -19,7 +55,7 @@
   const equipmentNames = {barbell:'Штанга',dumbbell:'Гантелі',cable:'Блок',machine:'Тренажер','body only':'Власна вага',kettlebells:'Гирі',bands:'Еспандер','exercise ball':'Фітбол','medicine ball':'Медбол','e-z curl bar':'EZ-гриф',foam_roll:'Ролер',other:'Інше'};
   Object.assign(muscleNames,{'lower legs':'Литки',supraspinatus:'Надостьовий м’яз','upper traps':'Верх трапецій',legs:'Ноги',hips:'Стегна',mobility:'Рухливість','posterior chain':'Задній м’язовий ланцюг',cardio:'Кардіо'});
   const units = {strength:['кг × повтори','kg × reps'],reps:['повтори','reps'],time:['хвилини','minutes'],distance:['км + хвилини','km + minutes']};
-  const indexed = entries.map(entry => ({entry,terms:[entry.name,entry.name_ua,customMotion(entry)?.name_ua,...entry.aliases,...(customMotion(entry)?.aliases||[])].filter(Boolean).map(normalize)}));
+  const indexed = savedEntries.map(entry => ({entry,terms:[entry.name,entry.name_ua,customMotion(entry)?.name_ua,...entry.aliases,...(customMotion(entry)?.aliases||[])].filter(Boolean).map(normalize)}));
   const exact = new Map();
   indexed.forEach(({entry,terms}) => terms.forEach(term => exact.set(term,entry)));
   legacy.forEach(entry=>[entry.name,entry.name_ua,...entry.aliases].filter(Boolean).forEach(name=>{const key=normalize(name);if(!exact.has(key))exact.set(key,entry);}));
@@ -39,7 +75,7 @@
     const dictionary=[[/^жим/,'press'],[/^присід/,'squat'],[/^розвед/,'flyes'],[/^згин/,'curl'],[/^розгин/,'extension'],[/^шраг/,'shrug'],[/^гантел/,'dumbbell'],[/^штанг/,'barbell'],[/^гир/,'kettlebell'],[/^сидяч|^сидячи/,'seated'],[/^стояч|^стоячи/,'standing'],[/^лежач|^лежачи/,'lying'],[/^тренажер/,'machine'],[/^блок/,'cable'],[/^біцепс/,'bicep'],[/^трицепс|^тріцепс/,'triceps'],[/^похило|^кутом/,'incline'],[/^вузьк/,'close grip'],[/^широк/,'wide grip']];
     const translated=tokens.filter(token=>!['з','зі','із','на','в','у','під','для','та','рук','руки'].includes(token)).map(token=>dictionary.find(([pattern])=>pattern.test(token))?.[1]||token).join(' ');
     const variants=[q,translated].filter(Boolean).map(value=>value.split(' '));
-    return indexed.filter(({entry}) => !options.category || options.category === 'all' || entry.muscleGroup === options.category).map(({entry,terms}) => {
+    return indexed.filter(({entry}) => availableIds.has(entry.id) && (!options.category || options.category === 'all' || entry.muscleGroup === options.category)).map(({entry,terms}) => {
       const score = !q ? (entry.name_ua ? 5 : 1) : Math.max(...terms.map(term => term === q ? 1000 : term.startsWith(q) ? 700-q.length/100 : term.includes(q) ? 500 : variants.some(words=>words.every(token=>term.includes(token))) ? 300 : 0));
       return {entry,score};
     }).filter(item => item.score > 0).sort((a,b) => b.score-a.score || label(a.entry,options.lang).localeCompare(label(b.entry,options.lang))).slice(0,options.limit || 60).map(item => item.entry);
