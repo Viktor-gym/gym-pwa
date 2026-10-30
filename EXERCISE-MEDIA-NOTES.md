@@ -1,5 +1,25 @@
 # Next Exercise Media Search
 
+## Smith Batch v65 (2026-10-30)
+
+Two exact native guides: Smith_Machine_Bench_Press and
+Smith_Machine_Overhead_Shoulder_Press. Each has3 actual camera renders and49
+saved-pose checks. Publication approval is limited to these exact scene hashes,
+not universal anatomical or manufacturer CAD certification. Checks cover bone
+length/rotation continuity, signed hinges, shaft/body and machine/body surfaces,
+measured heel/forefoot and upholstery support proximity. Soft upholstery overlap
+is not claimed to be a pressure simulation or zero foam/skin overlap.
+
+Owner approved the equipment/athlete previews and requested testing/publication.
+Bench root lowered13.5mm with ankle IK retained to close the measured pelvis gap;
+machine geometry was not reshaped. All native Blender sources and detailed
+audits remain local under equipment_pipeline/output, never in this public repo.
+32 native guides are published after this batch. The old exact guides remain
+available if needed; no profile/storage migration is performed.
+
+Remove only Seated_Leg_Curl from new choices at the owner's latest clarification.
+Keep Lying_Leg_Curls and Leg_Extensions, and keep old saved IDs resolvable.
+
 ## Curated Catalog v64 (2026-10-30)
 
 Owner removed a named movement list and all untranslated catalog choices.

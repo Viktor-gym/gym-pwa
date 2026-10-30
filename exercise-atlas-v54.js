@@ -36,7 +36,7 @@
     '3_4_Sit-Up','90_90_Hamstring','Ab_Crunch_Machine','Adductor','Adductor_Groin',
     'Air_Bike','All_Fours_Quad_Stretch','Alternate_Hammer_Curl','Alternate_Heel_Touchers',
     'Ankle_Circles','Ankle_On_The_Knee','Anterior_Tibialis-SMR','Arm_Circles',
-    'Atlas_Stone_Trainer','Atlas_Stones','Axle_Deadlift'
+    'Atlas_Stone_Trainer','Atlas_Stones','Axle_Deadlift','Seated_Leg_Curl'
   ]);
   const entries = savedEntries.filter(entry => {
     // The owner's exception covers our completed native/shared-character guides,
