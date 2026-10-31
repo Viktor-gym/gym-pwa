@@ -177,7 +177,10 @@
   }
   function mediaMarkup(entry,en,original=false){
     const native=!original&&nativeMotion(entry);
-    if(native)return mediaMarkup({...entry,motion:native},en,true);
+    if(native){
+      const note=native.motionQA?.staticSoftSupportApproximation?`<p class="atlasFootnote">${en?'This demonstration uses a straight bar. Soft pad contact is illustrative; fallback photos may show an EZ bar.':'Показ із прямою штангою. Контакт із м’якою подушкою схематичний; у резервних фото можливий EZ-гриф.'}</p>`:'';
+      return mediaMarkup({...entry,motion:native},en,true)+note;
+    }
     const own=native?null:customMotion(entry);
     if(own&&!original)return `<div class="atlasStage atlasCustomStage" data-clip-id="${esc(own.clipId)}"><img class="atlasCustomPoster" src="${esc(own.poster)}" alt="${esc(label(entry,en?'en':'ua'))}"><span class="atlasStageCaption">3D · GymTracker</span></div><div class="atlasPlayback atlasCustomControls"><button class="btn primary" data-play>${en?'▶ Play':'▶ Показ руху'}</button><button class="btn" data-restart>${en?'From start':'Спочатку'}</button><button class="btn" data-speed aria-label="${en?'Animation speed':'Швидкість анімації'}">1×</button><button class="btn" data-angle>${en?'View':'Ракурс'}</button></div><label class="atlasScrub"><span>${en?'Movement':'Рух'}</span><input type="range" min="0" max="1000" value="0" step="1" data-seek aria-label="${en?'Animation position':'Позиція руху'}"><output data-progress>0%</output></label><p class="atlasFootnote">${en?'Shared 3D mannequin. Pause, slow down or change the view to inspect the motion.':'Спільний 3D-манекен. Зупини показ, сповільни або зміни ракурс, щоб роздивитися рух.'}</p>`;
     const error=`<div class="atlasImageError" hidden role="status">${en?'Not downloaded yet. Open this exercise online to save the demonstration.':'Матеріал ще не завантажений. Відкрий вправу з інтернетом, щоб зберегти показ.'}</div>`;

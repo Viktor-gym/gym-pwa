@@ -1,5 +1,14 @@
 # Next Exercise Media Search
 
+## Scott Guide v66 (2026-10-31)
+
+Adds Preacher_Curl with a straight bar on the owner-approved model and lowered
+straight arm pad. Three actual camera views; 33 native guides, 112 visible entries.
+All 49 poses pass motion, grip, bone-length and hard-frame regression checks.
+Soft cushion contact is illustrative, not a full surface-physics pass; this
+limitation is retained explicitly in catalog QA metadata and the guide footnote.
+Only rendered MP4/JPEG media is published, not Blender sources or private profiles.
+
 ## Smith Batch v65 (2026-10-30)
 
 Two exact native guides: Smith_Machine_Bench_Press and

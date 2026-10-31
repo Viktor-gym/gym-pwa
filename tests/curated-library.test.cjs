@@ -5,7 +5,7 @@ for(const file of ['exercise-library-v47.js','exercise-motion-v48.js','exercise-
 const atlas=scope.window.GymAtlas;
 
 test('curated catalog and search contain only Ukrainian-named retained movements',()=>{
- assert.equal(atlas.entries.length,111);
+ assert.equal(atlas.entries.length,112);
  const available=new Set(atlas.entries.map(entry=>entry.id));
  for(const entry of atlas.entries){
   assert(/[А-Яа-яІіЇїЄєҐґ]/u.test(entry.name_ua),entry.id);
@@ -19,7 +19,7 @@ test('curated catalog and search contain only Ukrainian-named retained movements
 });
 
 test('explicit removals disappear but completed in-house 3D guides are retained',()=>{
- for(const id of ['repdb-running','Machine_Preacher_Curls','Leverage_High_Row','motion-0094','Leverage_Shoulder_Press','Machine_Bench_Press','Cable_Rear_Delt_Fly','Preacher_Curl','repdb-cat-cow','motion-0070','motion-0072','motion-0065','repdb-side-lying-lateral-raise','Flat_Bench_Lying_Leg_Raise','motion-0071','Flat_Bench_Leg_Pull-In','Plank','motion-0066','Seated_Triceps_Press','Ab_Roller','Russian_Twist','Crunches','Cable_Crunch','Split_Squat_with_Dumbbells','repdb-one-arm-kettlebell-row','EZ-Bar_Skullcrusher','Walking_Treadmill','Butt_Lift_Bridge']){
+ for(const id of ['repdb-running','Machine_Preacher_Curls','Leverage_High_Row','motion-0094','Leverage_Shoulder_Press','Machine_Bench_Press','Cable_Rear_Delt_Fly','repdb-cat-cow','motion-0070','motion-0072','motion-0065','repdb-side-lying-lateral-raise','Flat_Bench_Lying_Leg_Raise','motion-0071','Flat_Bench_Leg_Pull-In','Plank','motion-0066','Seated_Triceps_Press','Ab_Roller','Russian_Twist','Crunches','Cable_Crunch','Split_Squat_with_Dumbbells','repdb-one-arm-kettlebell-row','EZ-Bar_Skullcrusher','Walking_Treadmill','Butt_Lift_Bridge']){
   assert(atlas.byId.has(id),'historical ID must resolve: '+id);
   assert(!atlas.entries.some(e=>e.id===id),id);
  }
@@ -34,8 +34,8 @@ test('new Ukrainian names are searchable and archived history still resolves',()
  assert.equal(atlas.search('Випади назад з гантелями')[0].id,'Dumbbell_Rear_Lunge');
  for(const id of ['Plank','Atlas_Stones','Preacher_Curl'])assert.equal(atlas.match({catalogId:id}).id,id);
  const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
- assert(sw.includes("ASSETS.push('./exercise-atlas-v54.js?v=65')"));
- assert(fs.readFileSync(path.join(root,'index.html'),'utf8').includes('exercise-atlas-v54.js?v=65'));
+ assert(sw.includes("ASSETS.push('./exercise-atlas-v54.js?v=66')"));
+ assert(fs.readFileSync(path.join(root,'index.html'),'utf8').includes('exercise-atlas-v54.js?v=66'));
 });
 
 test('seated leg curl is removed but lying curl, extensions and saved IDs remain',()=>{
