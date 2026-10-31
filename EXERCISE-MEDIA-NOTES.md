@@ -1,5 +1,16 @@
 # Next Exercise Media Search
 
+## Supported Curl v67 (2026-10-31)
+
+Adds Incline_Dumbbell_Curl in three real views on the existing character, with a
+45-degree backrest, corrected arm skinning, stable upper arms and source-bound
+49-pose saved-scene regression. Grip, shaft/body clearance, hard equipment,
+floor and sampled bench support checks pass. This is illustrative contact,
+not a soft-body pressure simulation or continuous collision proof. The original
+motion remains an exact fallback. Total: 34 native guides, 112 visible entries.
+Concentration curl and the lever preacher machine are NOT included: their
+posture/support review is still in progress. No profiles or source models ship.
+
 ## Scott Guide v66 (2026-10-31)
 
 Adds Preacher_Curl with a straight bar on the owner-approved model and lowered

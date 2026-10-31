@@ -5073,6 +5073,13 @@ document.addEventListener("DOMContentLoaded", () => {
         mini:`<div class="miniTitle">${en?'3D movement atlas':'3D-атлас рухів'}</div><div class="miniField">${en?'Arnold… → illustrated suggestions':'Арнольда… → підказки з ілюстраціями'}</div><div class="miniRow"><div class="miniButton">▶ 3D · 0.5×</div><div class="miniField">${en?'Primary / secondary muscles':'Основні / допоміжні м’язи'}</div></div>`
       },
       {
+        title:en?"Incline dumbbell curl: native guide":"Згинання гантелей на похилій лавці: власний показ",
+        sub:en?"45-degree backrest · three camera views":"Спинка 45° · три ракурси",
+        copy:en?"Find Incline Dumbbell Curl in the movement library and open its illustration. Use Angle for Main, Side and Other side; pause or slow the movement to inspect the supported torso, grip and elbow path. This is an illustration, not a prescription for everyone's range of motion. The original guide remains available if the new animation cannot load.":"Знайди згинання з гантелями на похилій лавці в бібліотеці рухів і відкрий ілюстрацію. Кнопка «Ракурс» перемикає основний показ, вигляд збоку та інший бік; пауза й сповільнення допоможуть роздивитися опору спини, хват і рух ліктів. Це ілюстрація, не універсальна рекомендація амплітуди для всіх людей. Якщо нова анімація не завантажиться, залишиться початковий показ цієї вправи.",
+        example:en?"Library → Incline Dumbbell Curl → Angle → 0.5×.":"Бібліотека → згинання на похилій лавці → «Ракурс» → 0.5×.",
+        mini:`<div class="miniTitle">${en?'Incline curl':'Згинання на похилій лавці'}</div><div class="miniField">45° · 3D · 0.5×</div>`
+      },
+      {
         title:en?"Start or continue a workout":"Почни або продовж тренування",
         sub:en?"Build today's list and keep unfinished work":"Склади план дня і не втрачай незавершене",
         copy:en

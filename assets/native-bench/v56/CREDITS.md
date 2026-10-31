@@ -7,6 +7,15 @@ Animation, generic equipment and muscle-region illustration were prepared locall
 Existing 68 third-party animations remain unchanged. In particular the existing incline curl guide is retained; unfinished or colliding native variants are not substituted. Base bench uses the previously reviewed native v9 rendered loop, re-encoded for mobile playback. Other packaged native loops are 48 rendered frames at 16 fps.
 
 Technique references: ACE exercise library https://www.acefitness.org/resources/everyone/exercise-library/ ; NASM exercise library https://www.nasm.org/resource-center/exercise-library/ ; Catalyst Athletics https://www.catalystathletics.com/exercise/850/Incline-Dumbbell-Curl/ . These references are not reused media.
+# Supported Curl v67
+
+Original project render: incline dumbbell curl, three actual camera views.
+Uses the same character and the existing bench; no generated reference sheets,
+manufacturer photos, Blender sources or private profiles are distributed here.
+Saved-scene checks cover 49 poses; soft contact is illustrative, not pressure
+simulation or a continuous swept-volume guarantee. Original fallback credits
+and their license conditions remain unchanged.
+
 # Scott Guide v66
 
 The owner-approved straight-bar preacher curl is now published in three rendered
