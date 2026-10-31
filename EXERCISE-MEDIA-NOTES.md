@@ -1,5 +1,16 @@
 # Next Exercise Media Search
 
+## Concentration Curl v68 (2026-10-31)
+
+Adds Concentration_Curls, right working arm, in three actual camera views.
+The open left support hand remains on the opposite thigh. Working-arm/thigh
+intersections, grip, hard equipment, bone lengths and support patches are checked
+through49 saved poses. A small smooth contact adjustment follows the thigh surface;
+this is an illustrative movement, not a medical range or pressure simulation.
+No continuous swept-volume collision guarantee is made. Original still-position
+fallback remains available. Total:35 native guides,112 visible catalog entries.
+The lever preacher machine is not included in this release.
+
 ## Supported Curl v67 (2026-10-31)
 
 Adds Incline_Dumbbell_Curl in three real views on the existing character, with a

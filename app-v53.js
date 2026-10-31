@@ -5080,6 +5080,13 @@ document.addEventListener("DOMContentLoaded", () => {
         mini:`<div class="miniTitle">${en?'Incline curl':'Згинання на похилій лавці'}</div><div class="miniField">45° · 3D · 0.5×</div>`
       },
       {
+        title:en?"Concentration curl: inspect the working side":"Концентроване згинання: переглянь робочу сторону",
+        sub:en?"Right arm · thigh support · three views":"Права рука · опора на стегно · три ракурси",
+        copy:en?"Open Concentration Curl in the movement library. The right arm performs the curl; the open left hand rests on the opposite thigh. Primary and secondary muscle colors apply to the working arm, not the supporting hand. Switch camera views, pause or use 0.5× to inspect the elbow support and controlled return. The illustration is not a prescribed range of motion. Original reference positions remain available if the new media cannot load.":"Відкрий концентроване згинання в бібліотеці рухів. Працює права рука, відкрита ліва долоня спирається на інше стегно. Підсвітка основних і допоміжних м’язів стосується робочої руки, а не опорної долоні. Перемикай ракурси, зупиняй показ або обирай 0.5×, щоб роздивитися опору біля ліктя та контрольоване повернення. Показ не задає обов’язкової амплітуди для всіх. Якщо нове відео недоступне, залишаться початкові позиції вправи.",
+        example:en?"Library → Concentration Curl → Angle → Pause.":"Бібліотека → концентроване згинання → «Ракурс» → пауза.",
+        mini:`<div class="miniTitle">${en?'Concentration curl':'Концентроване згинання'}</div><div class="miniField">3D · ${en?'Right arm':'Права рука'} · 0.5×</div>`
+      },
+      {
         title:en?"Start or continue a workout":"Почни або продовж тренування",
         sub:en?"Build today's list and keep unfinished work":"Склади план дня і не втрачай незавершене",
         copy:en

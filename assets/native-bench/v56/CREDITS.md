@@ -7,6 +7,14 @@ Animation, generic equipment and muscle-region illustration were prepared locall
 Existing 68 third-party animations remain unchanged. In particular the existing incline curl guide is retained; unfinished or colliding native variants are not substituted. Base bench uses the previously reviewed native v9 rendered loop, re-encoded for mobile playback. Other packaged native loops are 48 rendered frames at 16 fps.
 
 Technique references: ACE exercise library https://www.acefitness.org/resources/everyone/exercise-library/ ; NASM exercise library https://www.nasm.org/resource-center/exercise-library/ ; Catalyst Athletics https://www.catalystathletics.com/exercise/850/Incline-Dumbbell-Curl/ . These references are not reused media.
+# Concentration Curl v68
+
+Original project character and right-arm concentration curl, three camera views.
+Reference sheets and manufacturer photos are not distributed with these renders.
+Saved-frame checks include arm/thigh intersections and illustrative support;
+this is not a continuous collision or soft-body pressure simulation.
+Original still-position sources and their attribution remain available as fallback.
+
 # Supported Curl v67
 
 Original project render: incline dumbbell curl, three actual camera views.
