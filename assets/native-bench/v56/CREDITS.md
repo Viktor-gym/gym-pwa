@@ -31,3 +31,11 @@ views. It supersedes the earlier withheld prototype status for this exact guide.
 Motion/grip/hard-frame checks cover 49 poses; soft cushion contact remains
 illustrative and does not claim full collision validation. Original project
 artwork; no private profiles or source Blender scenes are distributed here.
+# v69 Strength Batch
+
+Five original native-rig guides and three actual camera views per movement:
+Arnold press, standing barbell and dumbbell presses, standing dumbbell curl and
+barbell shrug. No third-party source imagery is redistributed in these videos.
+Technique references: Muscle & Strength seated Arnold press and barbell shrug;
+ACE standing shoulder press and overhead dumbbell-press demonstrations.
+Earlier source attribution and non-commercial fallback restrictions below remain.

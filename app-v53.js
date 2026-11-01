@@ -5087,6 +5087,13 @@ document.addEventListener("DOMContentLoaded", () => {
         mini:`<div class="miniTitle">${en?'Concentration curl':'Концентроване згинання'}</div><div class="miniField">3D · ${en?'Right arm':'Права рука'} · 0.5×</div>`
       },
       {
+        title:en?"New strength guides: inspect movement and grip":"Нові силові покази: роздивись рух і хват",
+        sub:en?"Arnold press · standing presses · curls · shrugs":"Жим Арнольда · жими стоячи · біцепс · шраги",
+        copy:en?"The movement library now includes native guides for the Arnold press, standing barbell and dumbbell presses, standing dumbbell curls and barbell shrugs. Open the exact exercise, use Angle for three real camera views and 0.5× to inspect the grip and return. Existing records, IDs, templates and original fallback demonstrations stay unchanged. Muscle colors illustrate primary and secondary roles, not measured activation or a prescribed range of motion.":"У бібліотеці рухів є власні покази жиму Арнольда, жиму штанги й гантелей стоячи, згинання з гантелями стоячи та шрагів зі штангою. Відкрий саме потрібну вправу, перемикай три ракурси й обирай 0.5×, щоб роздивитися хват і повернення. Записи, ID, шаблони та початкові резервні покази не змінюються. Підсвітка ілюструє роль основних і допоміжних м’язів, а не вимір активації чи обов’язкову для всіх амплітуду.",
+        example:en?"Library → Arnold press → Angle → 0.5× → Pause.":"Бібліотека → жим Арнольда → «Ракурс» → 0.5× → пауза.",
+        mini:`<div class="miniTitle">${en?'Strength guides':'Силові покази'}</div><div class="miniField">3D · 3 ${en?'views':'ракурси'} · 0.5×</div>`
+      },
+      {
         title:en?"Start or continue a workout":"Почни або продовж тренування",
         sub:en?"Build today's list and keep unfinished work":"Склади план дня і не втрачай незавершене",
         copy:en

@@ -195,3 +195,14 @@ primary/secondary metadata. The70/30 allocation is an explicitly disclosed
 heuristic, not a physiological measurement. Volume and set views are separate;
 unknown custom movements retain their own category. No data migration or new
 localStorage keys. The user/trainer in-app guide documents both additions.
+# v69: First Five of the 35-to-50 Batch
+
+Native guides added for Arnold_Dumbbell_Press, Barbell_Shoulder_Press,
+Standing_Dumbbell_Press, Dumbbell_Bicep_Curl and Barbell_Shrug. Total40 native
+guides; visible catalog remains112. Each has49 reopened saved poses, finite
+shaft clipping, surface/grip/support and hinge/continuity review, plus3 distinct
+camera renders. Source/audit hashes bind the staged media to local source files.
+Discrete checks are not continuous collision proof or medical certification.
+The other10 requested candidates are not included in this release. Do not count
+their draft poses or generated views as delivered exercises. Original fallbacks,
+attribution, IDs, history, templates and profiles remain unchanged.
