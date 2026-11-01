@@ -5,13 +5,13 @@ const path=require('node:path');
 const vm=require('node:vm');
 const root=path.resolve(__dirname,'..');
 const scope={window:{},document:{addEventListener(){}}};
-vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-library-v47.js'),'utf8'),scope);
-vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-motion-v48.js'),'utf8'),scope);
-vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-repdb-v49.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'src/exercise-library.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'src/exercise-motion.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'src/exercise-repdb.js'),'utf8'),scope);
 const original=JSON.parse(JSON.stringify(scope.window.GYM_EXERCISE_LIBRARY));
-vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-legacy-v51.js'),'utf8'),scope);
-vm.runInNewContext(fs.readFileSync(path.join(root,'gym-motion-catalog-v55.js'),'utf8'),scope);
-vm.runInNewContext(fs.readFileSync(path.join(root,'exercise-atlas-v54.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'src/exercise-legacy.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'src/gym-motion-catalog.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'src/exercise-atlas.js'),'utf8'),scope);
 const atlas=scope.window.GymAtlas;
 test('library has unique entries and valid local image assets',()=>{
  assert.equal(atlas.entries.length,110);
@@ -51,7 +51,7 @@ test('units follow the movement, muscle annotations use source metadata',()=>{
 test('public source does not bundle profile backups or private sample references',()=>{
  const files=fs.readdirSync(root);
  assert(!files.some(name=>name.startsWith('gym-tracker-profile-')));
- const app=fs.readFileSync(path.join(root,'app-v53.js'),'utf8');
+ const app=fs.readFileSync(path.join(root,'src/app.js'),'utf8');
  assert(!app.includes('gym_pva/111'));
  assert(app.includes('gymPwaData_v3')&&app.includes('gymPwaApp_v4'));
 });
@@ -119,8 +119,9 @@ test('photo library is restored exactly and v50 saved variants remain resolvable
  assert.equal(atlas.search('',{limit:1000}).length,110);
  const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
  assert(!index.includes('exercise-poses-v50.js'));
- assert(index.includes('exercise-legacy-v51.js')&&index.includes('app-v53.js'));
- assert(!fs.readFileSync(path.join(root,'exercise-atlas-v54.js'),'utf8').includes('bindPoses'));
+ assert(index.includes('src="app.js?v=72"'));
+ assert(fs.readFileSync(path.join(root,'app.js'),'utf8').includes('Source: src/exercise-legacy.js'));
+ assert(!fs.readFileSync(path.join(root,'src/exercise-atlas.js'),'utf8').includes('bindPoses'));
 });
 
 test('all new exact movements preserve existing 3D and distinct equipment variants',()=>{
@@ -135,5 +136,5 @@ test('all new exact movements preserve existing 3D and distinct equipment varian
  assert.equal(atlas.match('Тяга верхнього блоку однією рукою').id,'Kneeling_Single-Arm_High_Pulley_Row');
  assert.equal(atlas.entries.filter(atlas.hasAnimation).length,72);
  for(const item of scope.window.GYM_CUSTOM_MOTIONS)assert(fs.existsSync(path.join(root,item.poster)));
- assert(fs.existsSync(path.join(root,'gym-motion-v55.js')));
+ assert(fs.existsSync(path.join(root,'src/gym-motion.js')));
 });

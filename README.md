@@ -1,23 +1,34 @@
 # GymTracker Pro PWA
 
-HTML, CSS and vanilla JavaScript; static GitHub Pages deployment. The current
-release uses app-v53.js, studio-v53.css and exercise-atlas-v54.js. Version
-suffixes on library/metrics/motion modules identify different active components,
-not multiple copies of the application. Only one app entry script is retained.
+HTML, CSS and vanilla JavaScript; static GitHub Pages deployment.
+There is one current browser application: `index.html`, `app.js`, `app.css`,
+`sw.js`, `media-precache.js`, `manifest.json`, and the assets/icons folders.
+No numbered app/module copies are retained in the root directory.
+
+Readable source modules are kept in `src/` without version suffixes. `npm run build`
+combines them in their original order into the single `app.js` and combines the
+offline media lists into `media-precache.js`. It does not change application logic,
+localStorage keys, profile schemas, exercise IDs or media URLs. Asset revision
+names identify distinct reviewed illustrations, not separate app versions.
 
 ## Development
 
 Serve this folder with a local HTTP server. No build step or API key is needed.
 Example: `npx http-server . -p 8080`.
 
-Run `npm test` for regression checks.
-Syntax: `node --check app-v53.js`, `node --check body-metrics-v52.js`, `node --check exercise-atlas-v54.js`,
-`node --check exercise-legacy-v51.js`, `node --check sw.js`.
+After source edits: `npm run build`. Run `npm test`, `npm run check:js`, and
+`npm run check:bundle` for regression, syntax and generated-file checks.
+Commit the generated files together with their sources. Publish one completed
+batch, wait for Pages deployment to finish, then verify the public website.
+The `?v=72` URL parameter and service-worker cache key invalidate old phone caches;
+they do not create additional app files. Do not clear users' localStorage.
 
 ## Exercise Guides
 
-The visible library is restored to the 899-entry pre-v50 catalog. It keeps all
-68 smooth 3D animations unchanged: 50 Vital Free50 and 18 RepDB previews.
+The visible library contains 112 retained, Ukrainian-named exercise entries.
+Historical source catalogs and all 68 original 3D records remain available for
+saved IDs and exact fallbacks: 50 Vital Free50 and 18 RepDB previews. The current
+release also binds 36 reviewed native guides with three actual camera views.
 Other entries use their original two still photographs, with manual 01 Start /
 02 Finish buttons. No three-frame drawings, slideshow, interpolation or photo
 animation is loaded. List cards always use one still poster or photograph.
@@ -42,7 +53,7 @@ No purchases or Fitness Online artwork are included. See assets/repdb-motion/.
 
 The owner rejected the three-position presentation after testing. It has been
 removed from the app, not from users' saved training data. The 178 extra variants
-remain resolvable through exercise-legacy-v51.js when a saved catalogId refers to
+remain resolvable through src/exercise-legacy.js when a saved catalogId refers to
 one. They are not offered in the new-exercise library. A saved variant without
 exact photographs shows an explicit unavailable notice; no image is guessed.
 Workout Guide metadata keeps its CC BY-SA 4.0 attribution in assets/poses/.
@@ -78,7 +89,7 @@ instead, so old readings never acquire a different unit label.
 Optional profile field: bodyMetrics [{id,name,unit,type,archived}]. Optional
 measurement field: custom {[metricId]:number|{systolic,diastolic}}. The original
 weight/forearm/chest/waist/legs fields and all record IDs remain unchanged.
-body-metrics-v52.js handles strict parsing, normalization and definition/value
+src/body-metrics.js handles strict parsing, normalization and definition/value
 matching; it has no network access. Every trainer client has independent fields.
 
 Full/profile JSON exports and import retain definitions, units, hidden state and

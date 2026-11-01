@@ -4,8 +4,8 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
 const root=path.resolve(__dirname,'..'),scope={window:{},document:{addEventListener(){}}};
-for(const file of ['exercise-library-v47.js','exercise-motion-v48.js','exercise-repdb-v49.js',
-  'exercise-legacy-v51.js','gym-motion-catalog-v55.js','exercise-atlas-v54.js','muscle-load-v56.js']){
+for(const file of ['src/exercise-library.js','src/exercise-motion.js','src/exercise-repdb.js',
+  'src/exercise-legacy.js','src/gym-motion-catalog.js','src/exercise-atlas.js','src/muscle-load.js']){
   vm.runInNewContext(fs.readFileSync(path.join(root,file),'utf8'),scope);
 }
 const api=scope.window.GymMuscleLoad,atlas=scope.window.GymAtlas;

@@ -11,7 +11,7 @@ and scene provenance are archived separately in work/gym-realistic-model.
 The owner rejected Workout Guide's
 three-position drawings on 2026-10-27. Use the original two still photographs
 instead; do not reintroduce the illustrated sequence without a new request.
-Keep exercise-legacy-v51.js so catalogIds saved from v50 remain resolvable.
+Keep src/exercise-legacy.js so catalogIds saved from v50 remain resolvable.
 
 RepDB preview assets are CC BY-NC 4.0, accepted for personal/non-commercial use
 only. Check those restrictions before any commercial release or paid-client use.
@@ -19,6 +19,10 @@ Do not purchase assets without explicit approval. Never commit personal exports,
 sample profiles or test screenshots. Preserve existing localStorage and IDs.
 
 Work on the PWA; do not sync changes into Capacitor/iOS unless requested.
+The only browser entry is app.js, generated from unnumbered src/ modules by
+npm run build. Do not create numbered copies of the application or modules.
+Rebuild app.js/media-precache.js after source edits; keep the existing storage
+keys and media URLs. Publish only a completed verified batch, not every edit.
 
 Custom body metrics (v52) are profile-local bodyMetrics definitions plus
 body[].custom values. Preserve both in JSON import/export and profile merges.

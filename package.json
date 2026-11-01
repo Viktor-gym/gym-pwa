@@ -3,8 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:motion": "node motion-src/build.js",
-    "test": "node --test tests/*.test.cjs"
+    "build:motion": "node motion-src/build.js && npm run build",
+    "test": "node --test tests/*.test.cjs",
+    "build": "node scripts/build-app.cjs",
+    "check:bundle": "node scripts/build-app.cjs --check",
+    "check:js": "node --check app.js && node --check sw.js && node --check media-precache.js"
   },
-  "devDependencies": { "esbuild": "0.25.0", "three": "0.186.1" }
+  "devDependencies": {
+    "esbuild": "0.25.0",
+    "three": "0.186.1"
+  }
 }

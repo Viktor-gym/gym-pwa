@@ -38,9 +38,11 @@ async function scenario({cancelStatus, cancelMessage = 'cancel failed', deployme
 
 const run = conclusion => ({id: 42, name: 'pages build and deployment', status: 'completed', conclusion, html_url: 'https://github.com/example/run'});
 
-test('Pages recovery is manual only, without push or chained workflow triggers', () => {
+test('Pages recovery needs manual dispatch or the explicit one-time repair commit', () => {
   assert.match(workflow, /workflow_dispatch:/);
-  assert.doesNotMatch(workflow, /^  (push|workflow_run|schedule):/m);
+  assert.doesNotMatch(workflow, /^  (workflow_run|schedule):/m);
+  assert.match(workflow, /startsWith\(github.event.head_commit.message, 'Publish unified PWA \[recover-pages-once\]'\)/);
+  assert.match(workflow, /paths: \[.github\/workflows\/recover-pages.yml\]/);
   assert.match(workflow, /permissions: \{\}/);
   assert.doesNotMatch(workflow, /contents: write/);
 });

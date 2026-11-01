@@ -1,7 +1,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const scope={window:{}};
-vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../body-metrics-v52.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../src/body-metrics.js'),'utf8'),scope);
 const metrics=scope.window.GymBodyMetrics,plain=value=>JSON.parse(JSON.stringify(value));
 const number=(id,name='Pulse',unit='bpm')=>({id,name,unit,type:'number'});
 test('strict decimal inputs preserve zero and signed values without accepting pressure as a scalar',()=>{

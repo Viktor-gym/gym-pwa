@@ -1,7 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..'),scope={window:{},document:{addEventListener(){}}};
-for(const file of ['exercise-library-v47.js','exercise-motion-v48.js','exercise-repdb-v49.js','exercise-legacy-v51.js','gym-motion-catalog-v55.js','native-motion-catalog-v56.js','exercise-atlas-v54.js'])vm.runInNewContext(fs.readFileSync(path.join(root,file),'utf8'),scope);
+for(const file of ['src/exercise-library.js','src/exercise-motion.js','src/exercise-repdb.js','src/exercise-legacy.js','src/gym-motion-catalog.js','src/native-motion-catalog.js','src/exercise-atlas.js'])vm.runInNewContext(fs.readFileSync(path.join(root,file),'utf8'),scope);
 const atlas=scope.window.GymAtlas;
 
 test('curated catalog and search contain only Ukrainian-named retained movements',()=>{
@@ -34,8 +34,8 @@ test('new Ukrainian names are searchable and archived history still resolves',()
  assert.equal(atlas.search('Випади назад з гантелями')[0].id,'Dumbbell_Rear_Lunge');
  for(const id of ['Plank','Atlas_Stones','Preacher_Curl'])assert.equal(atlas.match({catalogId:id}).id,id);
  const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
- assert(sw.includes("ASSETS.push('./exercise-atlas-v54.js?v=71')"));
- assert(fs.readFileSync(path.join(root,'index.html'),'utf8').includes('exercise-atlas-v54.js?v=71'));
+ assert(sw.includes("'./app.js?v=72'"));
+ assert(fs.readFileSync(path.join(root,'index.html'),'utf8').includes('src="app.js?v=72"'));
 });
 
 test('seated leg curl is removed but lying curl, extensions and saved IDs remain',()=>{

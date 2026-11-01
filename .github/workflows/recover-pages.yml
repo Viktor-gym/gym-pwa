@@ -1,6 +1,9 @@
 name: Recover blocked Pages deployment
 
 on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/recover-pages.yml]
   workflow_dispatch:
     inputs:
       blocked_sha:
@@ -16,7 +19,10 @@ concurrency:
 
 jobs:
   recover:
-    if: github.repository == 'Viktor-gym/gym-pwa'
+    if: >-
+      github.repository == 'Viktor-gym/gym-pwa' &&
+      (github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.head_commit.message, 'Publish unified PWA [recover-pages-once]'))
     runs-on: ubuntu-latest
     timeout-minutes: 18
     permissions:
@@ -28,7 +34,8 @@ jobs:
         with:
           script: |
             const repo = context.repo;
-            const blocked = context.payload.inputs?.blocked_sha;
+            const blocked = context.payload.inputs?.blocked_sha ||
+              (context.eventName === 'push' ? '7c36ef78639d369fbdb76028404a83072e0d03b6' : '');
             if (!/^[a-f0-9]{40}$/.test(blocked || '')) throw new Error('A full blocked deployment SHA is required.');
             // Cancel only the exact deployment explicitly selected by the owner.
             try {
