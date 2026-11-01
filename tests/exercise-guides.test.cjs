@@ -22,3 +22,11 @@ test('illustrated guides are available to the stable offline media cache',()=>{
  assert(worker.includes('self.GYM_EXERCISE_GUIDE_ASSETS||[]'));
  assert(worker.includes('exercises|exercise-guides|poses'));
 });
+
+test('guide zoom stays in the app without a full-size navigation link',()=>{
+ const source=fs.readFileSync(path.join(root,'src/exercise-atlas.js'),'utf8');
+ const tools=source.slice(source.indexOf('<div class="atlasGuideTools">'),source.indexOf('<div class="atlasGuideViewport"'));
+ assert(tools.includes('data-guide-zoom="50"'));assert(tools.includes('data-guide-zoom="-50"'));
+ assert(!tools.includes('<a '));assert(!tools.includes('target='));
+ assert(!source.includes('Full size'));assert(!source.includes('Повний розмір'));
+});
