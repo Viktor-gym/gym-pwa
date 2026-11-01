@@ -2,9 +2,11 @@ name: Recover blocked Pages deployment
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: [.github/workflows/recover-pages.yml]
+    inputs:
+      blocked_sha:
+        description: Exact commit SHA named by the failed Pages deployment
+        required: true
+        type: string
 
 permissions: {}
 
@@ -16,7 +18,7 @@ jobs:
   recover:
     if: github.repository == 'Viktor-gym/gym-pwa'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 18
     permissions:
       pages: write
       actions: write
@@ -26,8 +28,9 @@ jobs:
         with:
           script: |
             const repo = context.repo;
-            const blocked = 'a67ae99147b7b0a7461f01f7387eba3b51a5b54f';
-            // Cancel only the deployment named in both failed deploy logs.
+            const blocked = context.payload.inputs?.blocked_sha;
+            if (!/^[a-f0-9]{40}$/.test(blocked || '')) throw new Error('A full blocked deployment SHA is required.');
+            // Cancel only the exact deployment explicitly selected by the owner.
             try {
               await github.request('POST /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}/cancel', {
                 ...repo, pages_deployment_id: blocked
@@ -49,6 +52,8 @@ jobs:
             }
 
             const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+            // Pages can report completion before its deployment lock is released.
+            await sleep(120000);
             let retried = false;
             let run;
             // Wait for the branch-based Pages run for THIS commit only.
@@ -72,6 +77,7 @@ jobs:
                   if (failed.length !== 1 || failed[0].name !== 'deploy') {
                     throw new Error(`Not retrying a non-deployment failure: ${run.html_url}`);
                   }
+                  await sleep(120000);
                   await github.rest.actions.reRunWorkflowFailedJobs({...repo, run_id: run.id});
                   retried = true;
                   core.info(`Retried failed deployment once: ${run.html_url}`);

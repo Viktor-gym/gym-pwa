@@ -29,11 +29,21 @@ async function scenario({cancelStatus, cancelMessage = 'cancel failed', deployme
   };
   const summary = {addHeading: () => summary, addLink: () => summary, write: async () => {}};
   const core = {info() {}, warning() {}, summary};
-  await execute(github, core, {repo: {owner: 'Viktor-gym', repo: 'gym-pwa'}, sha: 'current'}, fn => fn());
+  await execute(github, core, {
+    repo: {owner: 'Viktor-gym', repo: 'gym-pwa'}, sha: 'current',
+    payload: {inputs: {blocked_sha: 'a67ae99147b7b0a7461f01f7387eba3b51a5b54f'}}
+  }, fn => fn());
   return calls;
 }
 
 const run = conclusion => ({id: 42, name: 'pages build and deployment', status: 'completed', conclusion, html_url: 'https://github.com/example/run'});
+
+test('Pages recovery is manual only, without push or chained workflow triggers', () => {
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /^  (push|workflow_run|schedule):/m);
+  assert.match(workflow, /permissions: \{\}/);
+  assert.doesNotMatch(workflow, /contents: write/);
+});
 
 test('Pages recovery cancels only the known stale SHA and does not retry success', async () => {
   const calls = await scenario({runs: [[run('success')]]});
