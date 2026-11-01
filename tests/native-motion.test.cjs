@@ -17,7 +17,7 @@ test('native payloads are small local H264 videos and single JPEG posters, never
  for(const c of clips){assert(/^\.\/assets\/native-bench\/v56\/[a-z0-9-]+\.mp4$/.test(c.src));const bytes=fs.readFileSync(path.join(root,c.src));assert.equal(bytes.subarray(4,8).toString(),'ftyp');assert(bytes.length<500000);const jpg=fs.readFileSync(path.join(root,c.poster));assert.equal(jpg.readUInt16BE(),0xffd8);}
  const files=fs.readdirSync(path.join(root,'assets/native-bench/v56'));
  assert(!files.some(name=>/\.(blend|json|zip)$/i.test(name)));
- const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');assert(sw.includes('gym-pwa-v70-reviewed-fallbacks'));assert(sw.includes('native-motion-precache-v56.js'));assert(sw.includes('muscle-load-v56.js'));
+ const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');assert(sw.includes('gym-pwa-v71-reviewed-fallbacks'));assert(sw.includes('native-motion-precache-v56.js'));assert(sw.includes('muscle-load-v56.js'));
 });
 
 test('every native guide has three distinct real-camera videos and cached posters',()=>{
@@ -49,8 +49,8 @@ test('barbell and EZ curls keep a forward elbow hinge and use fresh corrected me
 
 test('catalog revision bypasses an older phone cache and is available offline',()=>{
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
- assert(html.includes('src="native-motion-catalog-v56.js?v=70"'));
- assert(sw.includes("ASSETS.push('./native-motion-catalog-v56.js?v=70')"));
+ assert(html.includes('src="native-motion-catalog-v56.js?v=71"'));
+ assert(sw.includes("ASSETS.push('./native-motion-catalog-v56.js?v=71')"));
  assert(html.includes("updateViaCache: 'none'"));
  assert(html.includes("document.addEventListener('visibilitychange', checkForUpdate)"));
 });
@@ -64,7 +64,7 @@ test('two Smith guides have scene-reviewed support, grip checks and three real v
   assert(/^[a-f0-9]{64}$/.test(clip.motionQA.sourceBlendSha256));assert.equal(clip.views.length,3);
   assert(clip.views.every(view=>view.src.includes('-v65')&&view.poster.includes('-v65')));
  }
- assert.equal(clips.length,37);
+ assert.equal(clips.length,36);
 });
 
 test('owner-selected Scott guide is exact, source-bound and honest about soft support',()=>{
@@ -103,8 +103,8 @@ test('concentration curl has working-arm collision checks and three audited view
  assert(/^[a-f0-9]{64}$/.test(clip.motionQA.sourceBlendSha256));
 });
 
-test('v70 retains only the two owner-approved v69 movements',()=>{
- const expected=['Standing_Dumbbell_Press','Dumbbell_Bicep_Curl'];
+test('v71 retains only the owner-approved standing dumbbell curl from v69',()=>{
+ const expected=['Dumbbell_Bicep_Curl'];
  const added=clips.filter(c=>c.release==='v69');
  assert.deepEqual(Array.from(added,c=>c.catalogId).sort(),expected.sort());
  for(const c of added){
@@ -116,7 +116,7 @@ test('v70 retains only the two owner-approved v69 movements',()=>{
   assert(c.views.every(v=>v.src.includes('-v69')&&v.poster.includes('-v69')));
   const entry=atlas.byId.get(c.catalogId);if(entry.motion)assert.equal(c.reviewedReplacement,true);
  }
- for(const id of ['Arnold_Dumbbell_Press','Barbell_Shoulder_Press','Barbell_Shrug']){
+ for(const id of ['Arnold_Dumbbell_Press','Barbell_Shoulder_Press','Barbell_Shrug','Standing_Dumbbell_Press']){
   assert.equal(atlas.nativeMotion(atlas.byId.get(id)),null);
   assert(atlas.entries.some(e=>e.id===id));
  }

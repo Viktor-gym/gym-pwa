@@ -3,13 +3,13 @@
 // - cache bust via CACHE version
 
 // bump version when you publish updates
-importScripts('./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./gym-motion-precache-v55.js','./native-motion-precache-v56.js?v=70');
-const CACHE = 'gym-pwa-v70-reviewed-fallbacks';
+importScripts('./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./gym-motion-precache-v55.js','./native-motion-precache-v56.js?v=71');
+const CACHE = 'gym-pwa-v71-reviewed-fallbacks';
 const MEDIA_CACHE = 'gym-pwa-exercise-media-v1';
 const ASSETS = ['./index.html','./app-v53.js','./studio-v53.css','./body-metrics-v52.js','./muscle-load-v56.js','./native-motion-catalog-v56.js','./native-motion-precache-v56.js','./exercise-library-v47.js','./exercise-motion-v48.js','./exercise-repdb-v49.js','./exercise-legacy-v51.js','./exercise-atlas-v54.js','./gym-motion-catalog-v55.js','./gym-motion-v55.js','./gym-motion-precache-v55.js','./exercise-precache-v47.js','./exercise-repdb-precache-v49.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
 const MOTION_ASSETS=[...Array.from({length:50},(_,index)=>String(index+51).padStart(4,'0')).flatMap(id=>['./assets/motion/'+id+'.jpg','./assets/motion/'+id+'.mp4']),...(self.GYM_SHARED_MOTION_ASSETS||[]),...(self.GYM_NATIVE_MOTION_ASSETS||[])];
-ASSETS.push('./native-motion-catalog-v56.js?v=70');
-ASSETS.push('./exercise-atlas-v54.js?v=70');
+ASSETS.push('./native-motion-catalog-v56.js?v=71');
+ASSETS.push('./exercise-atlas-v54.js?v=71');
 
 self.addEventListener("install", (e) => {
   e.waitUntil(Promise.all([

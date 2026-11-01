@@ -217,3 +217,8 @@ IDs, history and profiles are untouched. The two owner-approved dumbbell guides
 stay unchanged. Active native total37, visible catalog112. Numeric geometry
 checks alone are not approval of technique. Corrected candidates must be shown
 to the owner and explicitly approved before any new publication.
+
+v71 follow-up: owner also rejected the standing dumbbell press after noticing
+an unnatural bottom-position arm. Withdraw that native binding and6 media files
+as well; retain its original exact guide. Only the standing dumbbell curl from
+the v69 batch remains approved. Active native total36; visible catalog112.
