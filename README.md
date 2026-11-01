@@ -23,6 +23,17 @@ batch, wait for Pages deployment to finish, then verify the public website.
 The `?v=72` URL parameter and service-worker cache key invalidate old phone caches;
 they do not create additional app files. Do not clear users' localStorage.
 
+## Publishing
+
+GitHub Pages source is GitHub Actions. `.github/workflows/pages.yml` is the only
+publishing workflow: it checks the committed bundle, syntax and tests, packages
+only runtime files into `_site`, and deploys to the existing GitHub Pages URL.
+The `pages` concurrency group queues publishes without cancelling an active one.
+There are no automatic cancellation/retry loops or separate recovery workflows.
+`build-info.json` on the deployed site identifies the actual commit and runtime
+file hashes. Never treat a successful push or build alone as a successful deploy.
+Sources, tests, dependencies, and personal work folders are not in the artifact.
+
 ## Exercise Guides
 
 The visible library contains 112 retained, Ukrainian-named exercise entries.
