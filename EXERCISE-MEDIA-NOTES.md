@@ -206,3 +206,14 @@ Discrete checks are not continuous collision proof or medical certification.
 The other10 requested candidates are not included in this release. Do not count
 their draft poses or generated views as delivered exercises. Original fallbacks,
 attribution, IDs, history, templates and profiles remain unchanged.
+
+## v70 Owner Review Correction
+
+Owner rejected the Arnold-press arm rotation, standing-barbell-press transition
+and right-arm posture in barbell shrugs. These three native bindings and their
+18 video/poster files were removed from the current public tree/cache list.
+The exercises remain available with their exact original demonstrations; saved
+IDs, history and profiles are untouched. The two owner-approved dumbbell guides
+stay unchanged. Active native total37, visible catalog112. Numeric geometry
+checks alone are not approval of technique. Corrected candidates must be shown
+to the owner and explicitly approved before any new publication.

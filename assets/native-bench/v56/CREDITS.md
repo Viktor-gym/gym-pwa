@@ -39,3 +39,8 @@ barbell shrug. No third-party source imagery is redistributed in these videos.
 Technique references: Muscle & Strength seated Arnold press and barbell shrug;
 ACE standing shoulder press and overhead dumbbell-press demonstrations.
 Earlier source attribution and non-commercial fallback restrictions below remain.
+
+v70 correction: Arnold press, standing barbell press and barbell shrug native
+media from v69 have been withdrawn after owner technique review. Their original
+demonstrations and attribution remain active. Standing dumbbell press and curl
+were approved and are unchanged. Numeric audits do not certify technique.
