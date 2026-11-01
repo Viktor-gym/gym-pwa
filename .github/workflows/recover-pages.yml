@@ -34,8 +34,18 @@ jobs:
               });
               core.info(`Cancellation requested for ${blocked}`);
             } catch (error) {
-              if (error.status !== 404) throw error;
-              core.warning('The stale deployment was not found; checking the new publish without cancelling anything else.');
+              if (error.status === 404) {
+                core.warning('The stale deployment was not found; checking the new publish without cancelling anything else.');
+              } else if (error.status === 400 && /as it's finished\.?$/.test(error.message)) {
+                const status = await github.request('GET /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}', {
+                  ...repo, pages_deployment_id: blocked
+                });
+                const terminal = ['succeed', 'deployment_failed', 'deployment_content_failed', 'deployment_cancelled', 'deployment_lost'];
+                if (!terminal.includes(status.data.status)) throw error;
+                core.info(`The stale deployment has already finished: ${status.data.status}`);
+              } else {
+                throw error;
+              }
             }
 
             const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

@@ -9,13 +9,14 @@ const script = workflow.split('          script: |\n')[1].split('\n')
 const execute = new (Object.getPrototypeOf(async function () {}).constructor)(
   'github', 'core', 'context', 'setTimeout', script);
 
-async function scenario({cancelStatus, runs, failedJobs = [{name: 'deploy', conclusion: 'failure'}]}) {
+async function scenario({cancelStatus, cancelMessage = 'cancel failed', deploymentStatus = 'succeed', runs, failedJobs = [{name: 'deploy', conclusion: 'failure'}]}) {
   const calls = [];
   let index = 0;
   const github = {
     request: async (route, params) => {
       calls.push({route, params});
-      if (cancelStatus) throw Object.assign(new Error('cancel failed'), {status: cancelStatus});
+      if (route.startsWith('GET ')) return {data: {status: deploymentStatus}};
+      if (cancelStatus) throw Object.assign(new Error(cancelMessage), {status: cancelStatus});
     },
     rest: {actions: {
       listWorkflowRunsForRepo: async params => {
@@ -50,6 +51,13 @@ test('Pages recovery retries a failed deploy only once', async () => {
 test('Pages recovery tolerates an absent stale deployment but not denied access', async () => {
   await scenario({cancelStatus: 404, runs: [[run('success')]]});
   await assert.rejects(scenario({cancelStatus: 403, runs: [[run('success')]]}), /cancel failed/);
+});
+
+test('Pages recovery verifies the terminal state when cancellation reports already finished', async () => {
+  const options = {cancelStatus: 400, cancelMessage: "Unable to cancel deployment as it's finished.", runs: [[run('success')]]};
+  await scenario(options);
+  await assert.rejects(scenario({...options, deploymentStatus: 'deployment_queued'}), /Unable to cancel/);
+  await assert.rejects(scenario({...options, cancelMessage: 'Unexpected server error'}), /Unexpected/);
 });
 
 test('Pages recovery never retries a failed build or an unrelated workflow', async () => {
