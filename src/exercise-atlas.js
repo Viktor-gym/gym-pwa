@@ -127,6 +127,7 @@
   }
   function open(entry,options={}) {
     const lang=options.lang||'ua', en=lang==='en';
+    const illustrated=Boolean(entry&&(window.GYM_EXERCISE_GUIDES||{})[entry.id]);
     const previousFocus=document.activeElement;
     const overlay=document.createElement('div');
     overlay.className='atlasOverlay';
@@ -135,8 +136,8 @@
     const head=options.title || label(entry,lang);
     overlay.innerHTML=`<section class="atlasDialog" role="dialog" aria-modal="true" aria-labelledby="atlasTitle" tabindex="-1">
       <div class="atlasDialogHead"><div><span class="atlasEyebrow">${en?'MOVEMENT ATLAS':'АТЛАС РУХІВ'}</span><h2 id="atlasTitle">${esc(head)}</h2><p>${esc(entry?entry.name:(en?'Your custom exercise':'Твоя власна вправа'))}</p></div><button class="btn atlasClose" aria-label="${en?'Close':'Закрити'}">✕</button></div>
-      ${entry?`${variantMarkup(entry,en)}<div class="atlasGuideGrid"><div>${mediaMarkup(entry,en)}</div>
-      <aside class="atlasMusclePanel"><h3>${en?'Muscles at work':'Які м’язи працюють'}</h3>${muscleMap(entry,lang)}<div class="atlasLegend"><span><i></i>${en?'Primary':'Основні'}</span><span><i></i>${en?'Secondary':'Допоміжні'}</span></div>${muscleList(entry.primaryMuscles,lang,'primary')}${muscleList(entry.secondaryMuscles,lang,'secondary')}</aside></div>
+      ${entry?`${variantMarkup(entry,en)}<div class="atlasGuideGrid ${illustrated?'hasIllustratedGuide':''}"><div>${mediaMarkup(entry,en)}</div>
+      ${illustrated?'':`<aside class="atlasMusclePanel"><h3>${en?'Muscles at work':'Які м’язи працюють'}</h3>${muscleMap(entry,lang)}<div class="atlasLegend"><span><i></i>${en?'Primary':'Основні'}</span><span><i></i>${en?'Secondary':'Допоміжні'}</span></div>${muscleList(entry.primaryMuscles,lang,'primary')}${muscleList(entry.secondaryMuscles,lang,'secondary')}</aside>`}</div>
       <div class="atlasFacts"><span>${esc(category(entry.muscleGroup,lang))}</span><span>${esc(en?entry.equipment||'Other':equipmentNames[entry.equipment]||entry.equipment||'Інше')}</span><span>${esc(unitLabel(entry.trackingType,lang))}</span></div>
       ${instructionsMarkup(entry,en)}`:`<div class="atlasUnmatched"><div>◇</div><h3>${en?'Choose a matching movement':'Підбери відповідний рух'}</h3><p>${en?'There is no exact library match for this name. Keep your exercise or choose the correct variant in Edit.':'Для цієї назви немає точного відповідника. Власна вправа збережена; у редагуванні можна вибрати правильний варіант із бібліотеки.'}</p></div>`}
       <div class="atlasDialogActions">${options.onEdit?`<button class="btn" data-edit>${en?'Edit exercise':'Редагувати вправу'}</button>`:''}${options.onAdd?`<button class="btn primary" data-add>${en?'Add to my exercises':'До моїх вправ'}</button>`:''}<button class="btn" data-close>${en?'Done':'Готово'}</button></div>
@@ -158,6 +159,17 @@
     overlay.querySelector('[data-add]')?.addEventListener('click',()=>{close();options.onAdd(entry);});
     overlay.querySelectorAll('[data-guide-variant]').forEach(button=>button.addEventListener('click',()=>{const variant=byId.get(button.dataset.guideVariant);close();open(variant,{...options,title:label(variant,lang)});}));
     bindMedia(overlay,controller.signal,en,entry);
+    const guideViewport=overlay.querySelector('[data-guide-viewport]');
+    if(guideViewport){
+      let scale=100;
+      overlay.querySelectorAll('[data-guide-zoom]').forEach(button=>button.addEventListener('click',()=>{
+        scale=Math.max(100,Math.min(300,scale+Number(button.dataset.guideZoom)));
+        guideViewport.querySelector('img').style.width=scale+'%';
+        overlay.querySelector('[data-guide-scale]').textContent=scale+'%';
+        overlay.querySelector('[data-guide-zoom="-50"]').disabled=scale===100;
+        overlay.querySelector('[data-guide-zoom="50"]').disabled=scale===300;
+      },{signal:controller.signal}));
+    }
     dialog.addEventListener('keydown',event=>{
       if(event.key==='Escape'){event.stopPropagation();close();}
       if(event.key==='Tab'){
@@ -245,9 +257,12 @@
     if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)play();
   }
   function instructionsMarkup(entry,en){
+    const guide=(window.GYM_EXERCISE_GUIDES||{})[entry.id];
+    const illustrated=guide?`<details class="atlasIllustrated" open><summary>${en?'Illustrated guide · Ukrainian':'Ілюстрована інструкція'}</summary><div class="atlasGuideTools"><span>${en?'Zoom and scroll to read details':'Збільшуй і прокручуй, щоб прочитати деталі'}</span><button class="btn" data-guide-zoom="-50" disabled aria-label="${en?'Zoom out':'Зменшити'}">−</button><output data-guide-scale>100%</output><button class="btn" data-guide-zoom="50" aria-label="${en?'Zoom in':'Збільшити'}">+</button><a href="${esc(guide.src)}" target="_blank" rel="noopener noreferrer">${en?'Full size':'Повний розмір'}</a></div><div class="atlasGuideViewport" data-guide-viewport tabindex="0" aria-label="${en?'Scrollable illustrated instructions':'Ілюстрована інструкція з прокручуванням'}"><img src="${esc(guide.src)}" width="${guide.width}" height="${guide.height}" loading="lazy" decoding="async" lang="uk" alt="${esc((en?'Ukrainian illustrated instructions: ':'Ілюстрована інструкція: ')+label(entry,en?'en':'ua'))}"></div></details>`:'';
+    if(guide)return illustrated;
     const steps=en?entry.instructions:entry.instructions_ua||entry.instructions;
-    if(!steps?.length)return `<p class="atlasFootnote">${en?'No written technique is available for this saved variant. You can select an exact matching movement in Edit without deleting your exercise or its results.':'Для цього збереженого варіанта немає текстової техніки. У редагуванні можна вибрати точний відповідник, не видаляючи вправу чи її результати.'}</p>`;
-    return `<details class="atlasInstructions" ${entry.instructions_ua||en?'open':''}><summary>${en?'How to perform':'Як виконувати'}${!en&&!entry.instructions_ua?' · EN':''}</summary><ol>${steps.map(step=>`<li>${esc(step)}</li>`).join('')}</ol></details>`;
+    if(!steps?.length)return illustrated||`<p class="atlasFootnote">${en?'No written technique is available for this saved variant. You can select an exact matching movement in Edit without deleting your exercise or its results.':'Для цього збереженого варіанта немає текстової техніки. У редагуванні можна вибрати точний відповідник, не видаляючи вправу чи її результати.'}</p>`;
+    return illustrated+`<details class="atlasInstructions" ${!guide&&(entry.instructions_ua||en)||en?'open':''}><summary>${en?'How to perform · text':'Як виконувати · текст'}${!en&&!entry.instructions_ua?' · EN':''}</summary><ol>${steps.map(step=>`<li>${esc(step)}</li>`).join('')}</ol></details>`;
   }
   function sourceMarkup(entry,en){
     if(nativeMotion(entry))return `<p class="atlasFootnote">${en?'GymTracker Pro · rendered native 3D character. Stronger color: primary muscles; lighter: secondary muscles. Illustration, not a measurement of activation.':'GymTracker Pro · рендер власного 3D-персонажа. Насичений колір — основні м’язи; світліший — допоміжні. Це ілюстрація, не вимір активації.'} <a href="./assets/native-bench/v56/CREDITS.md" target="_blank" rel="noopener noreferrer">${en?'Sources and credits':'Джерела й авторство'}</a></p>`;
