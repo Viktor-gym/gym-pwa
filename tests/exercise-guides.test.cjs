@@ -3,11 +3,16 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..'),scope={window:{},self:{},document:{addEventListener(){}}};
 for(const name of ['exercise-library','exercise-motion','exercise-repdb','exercise-legacy','gym-motion-catalog','native-motion-catalog','exercise-guides','exercise-guides-precache','exercise-atlas'])vm.runInNewContext(fs.readFileSync(path.join(root,'src',name+'.js'),'utf8'),scope);
 
-test('all 112 visible exercises have one exact illustrated guide, without changing IDs',()=>{
+test('112 illustrated guides remain exact and the new machine Scott has Ukrainian instructions',()=>{
  const entries=scope.window.GymAtlas.entries,guides=scope.window.GYM_EXERCISE_GUIDES;
- assert.equal(entries.length,112);assert.equal(Object.keys(guides).length,112);
+ assert.equal(entries.length,113);assert.equal(Object.keys(guides).length,112);
  for(const entry of entries){
-  const guide=guides[entry.id];assert(guide,entry.id);assert(guide.width>=800&&guide.height>guide.width);
+  const guide=guides[entry.id];
+  if(entry.id==='Machine_Preacher_Curls'){
+   assert(!guide,'do not substitute the barbell or cable guide for this machine');
+   assert(entry.instructions_ua.length>=4);assert(scope.window.GymAtlas.nativeMotion(entry));continue;
+  }
+  assert(guide,entry.id);assert(guide.width>=800&&guide.height>guide.width);
   const bytes=fs.readFileSync(path.join(root,guide.src));
   assert.equal(bytes.subarray(0,4).toString(),'RIFF');assert.equal(bytes.subarray(8,12).toString(),'WEBP');
   assert.equal(guide.language,'ua');assert(guide.src.includes('/exercise-guides/'));

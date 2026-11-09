@@ -8,7 +8,7 @@ test('v75 publishes exactly the three approved guides without new exercise IDs',
  const ids=['Barbell_Deadlift','Svend_Press','repdb-smith-machine-front-squat'].sort();
  const added=scope.window.GYM_NATIVE_MOTIONS.filter(c=>c.release==='v75');
  assert.deepEqual(Array.from(added,c=>c.catalogId).sort(),ids);
- assert.equal(scope.window.GymAtlas.entries.length,112);
+ assert.equal(scope.window.GymAtlas.entries.length,113);
  for(const c of added){
   const e=scope.window.GymAtlas.byId.get(c.catalogId);
   assert(e);assert.equal(scope.window.GymAtlas.nativeMotion(e),c);

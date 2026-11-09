@@ -5,7 +5,7 @@ for(const file of ['src/exercise-library.js','src/exercise-motion.js','src/exerc
 const atlas=scope.window.GymAtlas;
 
 test('curated catalog and search contain only Ukrainian-named retained movements',()=>{
- assert.equal(atlas.entries.length,112);
+ assert.equal(atlas.entries.length,113);
  const available=new Set(atlas.entries.map(entry=>entry.id));
  for(const entry of atlas.entries){
   assert(/[А-Яа-яІіЇїЄєҐґ]/u.test(entry.name_ua),entry.id);
@@ -21,7 +21,8 @@ test('curated catalog and search contain only Ukrainian-named retained movements
 test('explicit removals disappear but completed in-house 3D guides are retained',()=>{
  for(const id of ['repdb-running','Machine_Preacher_Curls','Leverage_High_Row','motion-0094','Leverage_Shoulder_Press','Machine_Bench_Press','Cable_Rear_Delt_Fly','repdb-cat-cow','motion-0070','motion-0072','motion-0065','repdb-side-lying-lateral-raise','Flat_Bench_Lying_Leg_Raise','motion-0071','Flat_Bench_Leg_Pull-In','Plank','motion-0066','Seated_Triceps_Press','Ab_Roller','Russian_Twist','Crunches','Cable_Crunch','Split_Squat_with_Dumbbells','repdb-one-arm-kettlebell-row','EZ-Bar_Skullcrusher','Walking_Treadmill','Butt_Lift_Bridge']){
   assert(atlas.byId.has(id),'historical ID must resolve: '+id);
-  assert(!atlas.entries.some(e=>e.id===id),id);
+  if(id==='Machine_Preacher_Curls') assert(atlas.nativeMotion(atlas.byId.get(id)), 'approved machine Scott is restored only with its native guide');
+  else assert(!atlas.entries.some(e=>e.id===id),id);
  }
  for(const motion of [...scope.window.GYM_NATIVE_MOTIONS,...scope.window.GYM_CUSTOM_MOTIONS]){
   assert(atlas.entries.some(e=>e.id===motion.catalogId),'completed in-house guide retained: '+motion.catalogId);
@@ -34,8 +35,8 @@ test('new Ukrainian names are searchable and archived history still resolves',()
  assert.equal(atlas.search('Випади назад з гантелями')[0].id,'Dumbbell_Rear_Lunge');
  for(const id of ['Plank','Atlas_Stones','Preacher_Curl'])assert.equal(atlas.match({catalogId:id}).id,id);
  const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
- assert(sw.includes("'./app.js?v=76'"));
- assert(fs.readFileSync(path.join(root,'index.html'),'utf8').includes('src="app.js?v=76"'));
+ assert(sw.includes("'./app.js?v=77'"));
+ assert(fs.readFileSync(path.join(root,'index.html'),'utf8').includes('src="app.js?v=77"'));
 });
 
 test('seated leg curl is removed but lying curl, extensions and saved IDs remain',()=>{
