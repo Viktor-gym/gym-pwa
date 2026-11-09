@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const STORAGE_KEY = "gymPwaData_v3";
   const APP_STORAGE_KEY = "gymPwaApp_v4";
+  let identityMergeEnabled=true;
 
   // ---------- i18n ----------
   const i18n = {
@@ -99,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
       trainedOnly: "Вправи (тільки з заняттями)",
       weightProgress: "Прогрес ваги",
       history: "Історія",
-      reset: "🗑 Reset",
+      reset: "🗑 Скинути дані",
       importFail: "Не вдалося імпортувати файл.",
       needSet: "Додай хоча б один підхід з вагою і повторами.",
       tapToOpen: "Натисни на тренування, щоб відкрити деталі або видалити",
@@ -382,8 +383,10 @@ document.addEventListener("DOMContentLoaded", () => {
           date,
           title: w.title || (s.lang==="en" ? `Workout ${fmtDate(date)}` : `Тренування ${fmtDate(date)}`),
           items: rawItems.filter(Boolean).map(it => ({
+            ...it,
             exerciseId: String(it.exerciseId || ""),
             sets: (Array.isArray(it.sets) ? it.sets : []).map(set => ({
+              ...(set&&typeof set==='object'?set:{}),
               weight: parseNum(set?.weight),
               reps: parseNum(set?.reps),
               duration: parseNum(set?.duration),
@@ -440,7 +443,9 @@ document.addEventListener("DOMContentLoaded", () => {
       })).filter(item=>item.exerciseId)
     })).filter(plan=>plan.items.length);
 
-    return s;
+    return identityMergeEnabled&&window.GymExerciseIdentity
+      ? GymExerciseIdentity.mergeProfile(s,ex=>window.GymAtlas?.match(ex)?.id||ex.catalogId)
+      : s;
   }
 
   function load(){
@@ -466,10 +471,13 @@ document.addEventListener("DOMContentLoaded", () => {
   function downloadJson(filename,payload){
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
+    const url=URL.createObjectURL(blob);
+    a.href = url;
     a.download = filename;
+    a.hidden=true;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(a.href);
+    setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},60000);
   }
 
   function safeFilePart(value){
@@ -515,6 +523,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function exMergeKey(ex){
+    const catalogId=window.GymAtlas?.match(ex)?.id||ex?.catalogId;
+    const canonical=window.GymExerciseIdentity?.canonicalId(catalogId);
+    if(canonical&&Object.values(GymExerciseIdentity.aliases).includes(canonical))return `consolidated:${canonical}|${exerciseTracking(ex)}`;
     return [
       String(ex?.name_ua||"").trim().toLowerCase(),
       String(ex?.name_en||"").trim().toLowerCase(),
@@ -739,7 +750,16 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     return normalized;
   }
-  appShell=normalizeAppShell(loadAppShell(),load());
+  const storedShell=loadAppShell(),storedLegacy=load();
+  const identityCandidates=[storedLegacy,...(Array.isArray(storedShell?.profiles)?storedShell.profiles:[]).filter(Boolean).map(profile=>profile.data||profile)].filter(Boolean);
+  if(window.GymExerciseIdentity&&identityCandidates.some(data=>GymExerciseIdentity.needsMerge(data,ex=>window.GymAtlas?.match(ex)?.id||ex.catalogId))){
+    try{
+      if(!localStorage.getItem('gymPwaExerciseMergeBackup_v1'))localStorage.setItem('gymPwaExerciseMergeBackup_v1',JSON.stringify({
+        savedAt:new Date().toISOString(),app:localStorage.getItem(APP_STORAGE_KEY),legacy:localStorage.getItem(STORAGE_KEY)
+      }));
+    }catch(error){identityMergeEnabled=false;console.warn('Exercise merge postponed: local backup could not be saved.',error);}
+  }
+  appShell=normalizeAppShell(storedShell,storedLegacy);
   if(appShell.mode==="trainer") appShell.activeProfileId=null;
   let state=(appShell.profiles.find(profile=>profile.id===appShell.activeProfileId)||appShell.profiles[0]).data;
   if(!appShell.activeProfileId) state.lang=appShell.uiLang;
@@ -764,7 +784,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (tone==="gold") return "gold";
     return "";
   }
-  function exName(ex){ return state.lang==="ua" ? ex.name_ua : ex.name_en; }
+  function exName(ex){
+    const preferred=state.lang==="ua"?ex.name_ua:ex.name_en;
+    const other=state.lang==="ua"?ex.name_en:ex.name_ua;
+    const entry=(!preferred||preferred===other)&&window.GymAtlas?.match(ex);
+    return entry?GymAtlas.label(entry,state.lang):preferred||other||t('exercises');
+  }
   function isFav(id){ return state.favorites.includes(id); }
   function toggleFav(id){
     if (isFav(id)) state.favorites = state.favorites.filter(x=>x!==id);
@@ -971,31 +996,30 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function addAtlasExercise(entry){
-    const existing=state.exercises.find(ex=>GymAtlas.match(ex)?.id===entry.id);
+    const existing=state.exercises.find(ex=>GymAtlas.canonicalId(GymAtlas.match(ex)?.id)===GymAtlas.canonicalId(entry.id));
     if(existing){openAddExerciseModal(existing);return;}
     const ex={id:uid(),name_ua:entry.name_ua||entry.name,name_en:entry.name,category:ensureAtlasCategory(entry),trackingType:entry.trackingType,catalogId:entry.id};
     state.exercises.unshift(ex);save();render();
   }
 
-  let exerciseLibraryView=false,atlasLibraryQuery='',atlasLibraryCategory='all',atlasLibraryLimit=36,atlasAnimatedOnly=false;
+  let exerciseLibraryView=false,atlasLibraryQuery='',atlasLibraryCategory='all',atlasLibraryLimit=36;
   function atlasTabsMarkup(){return `<div class="atlasTabs"><button class="btn ${!exerciseLibraryView?'active':''}" data-exercise-view="mine">${state.lang==='en'?'My exercises':'Мої вправи'}</button><button class="btn ${exerciseLibraryView?'active':''}" data-exercise-view="library">${state.lang==='en'?'Movement library':'Бібліотека рухів'} <small>${GymAtlas.entries.length}</small></button></div>`;}
   function bindAtlasTabs(root){root.querySelectorAll('[data-exercise-view]').forEach(button=>button.onclick=()=>{exerciseLibraryView=button.dataset.exerciseView==='library';render();});}
   function viewExerciseLibrary(){
     const en=state.lang==='en',el=document.createElement('div');
-    el.appendChild(card(`<div class="detailHeader"><div class="detailTitle"><span class="atlasEyebrow">${en?'EXPLORE THE MOVEMENT':'ЗНАЙДИ СВІЙ РУХ'}</span><h2>${en?'Exercise library':'Бібліотека вправ'}</h2><div class="sub">${en?'One exercise. One illustration. Open to explore.':'Одна вправа — одна ілюстрація. Натисни, щоб роздивитися рух.'}</div></div></div>${atlasTabsMarkup()}<div class="atlasLibraryIntro"><div><strong>${en?'See how it moves':'Побач, як рухатися'}</strong><small>${en?'Smooth 3D guides, still photo positions and muscle maps.':'Плавні 3D-покази, фото-позиції та карта м’язів.'}</small></div><span class="atlasCount">${GymAtlas.entries.filter(GymAtlas.hasAnimation).length}<small>3D</small></span></div><input class="btn" id="atlasLibraryQ" type="search" style="width:100%" placeholder="${en?'Search by name, e.g. bench press':'Назва вправи: жим, тяга, присідання…'}" value="${escapeHtml(atlasLibraryQuery)}"><label class="atlasMotionFilter"><input type="checkbox" id="atlasMotionOnly" ${atlasAnimatedOnly?'checked':''}>${en?'With 3D animation only':'Лише з 3D-анімацією'}</label><p class="atlasFootnote">${GymAtlas.entries.filter(entry=>entry.motion?.provider==='repdb').length} ${en?'additional animations:':'додаткових анімацій:'} <a href="https://repdb.co/preview/" target="_blank" rel="noopener noreferrer">RepDB</a> · <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC 4.0</a> · ${en?'non-commercial use only':'лише некомерційне використання'}.</p><div class="categoryRail" id="atlasLibraryCats"></div><div class="muted" id="atlasLibraryCount" style="margin:12px 0"></div><div class="atlasLibraryGrid" id="atlasLibraryList"></div><button class="btn" id="atlasLibraryMore" style="width:100%;margin-top:14px">${en?'Show more':'Показати ще'}</button>`));
+    el.appendChild(card(`<div class="detailHeader"><div class="detailTitle"><span class="atlasEyebrow">${en?'EXPLORE THE MOVEMENT':'ЗНАЙДИ СВІЙ РУХ'}</span><h2>${en?'Exercise library':'Бібліотека вправ'}</h2><div class="sub">${en?'One exercise. One illustration. Open to explore.':'Одна вправа — одна ілюстрація. Натисни, щоб роздивитися рух.'}</div></div></div>${atlasTabsMarkup()}<div class="atlasLibraryIntro"><div><strong>${en?'See how it moves':'Побач, як рухатися'}</strong><small>${en?'Exercise demonstrations and technique guides.':'Покази рухів та інструкції виконання вправ.'}</small></div></div><input class="btn" id="atlasLibraryQ" type="search" style="width:100%" placeholder="${en?'Search by name, e.g. bench press':'Назва вправи: жим, тяга, присідання…'}" value="${escapeHtml(atlasLibraryQuery)}"><div class="categoryRail" id="atlasLibraryCats"></div><div class="muted" id="atlasLibraryCount" style="margin:12px 0"></div><div class="atlasLibraryGrid" id="atlasLibraryList"></div><button class="btn" id="atlasLibraryMore" style="width:100%;margin-top:14px">${en?'Show more':'Показати ще'}</button>`));
     setTimeout(()=>{
       bindAtlasTabs(el);
       const categories=['all',...Object.keys({chest:1,back:1,legs:1,shoulders:1,arms:1,core:1,cardio:1})];
       function list(){
-        const results=GymAtlas.search(atlasLibraryQuery,{category:atlasLibraryCategory,lang:state.lang,limit:1000}).filter(entry=>!atlasAnimatedOnly||GymAtlas.hasAnimation(entry));
+        const results=GymAtlas.search(atlasLibraryQuery,{category:atlasLibraryCategory,lang:state.lang,limit:1000});
         el.querySelector('#atlasLibraryCount').textContent=en?`${results.length} movements · names UA / EN`:`${results.length} рухів · назви UA / EN`;
-        el.querySelector('#atlasLibraryList').innerHTML=results.length?results.slice(0,atlasLibraryLimit).map(entry=>`<button class="atlasLibraryCard" data-library-entry="${entry.id}"><span class="atlasLibraryPhoto">${GymAtlas.previewUrl(entry)?`<img src="${GymAtlas.previewUrl(entry)}" alt="${escapeHtml(GymAtlas.label(entry,state.lang))}" loading="lazy">`:`<span class="muted">${en?'Illustration unavailable':'Ілюстрації поки немає'}</span>`}${GymAtlas.hasAnimation(entry)?'<span class="atlasAnimationBadge">▶ 3D</span>':''}</span><span class="atlasLibraryInfo"><strong>${escapeHtml(GymAtlas.label(entry,state.lang))}</strong><small>${escapeHtml(GymAtlas.category(entry.muscleGroup,state.lang))} · ${GymAtlas.unitLabel(entry.trackingType,state.lang)}</small></span></button>`).join(''):`<div class="atlasEmpty">${en?'No match. Try removing the animation filter, or create your own exercise in My exercises.':'Не знайшли відповідника. Спробуй вимкнути фільтр анімацій або створи власну вправу в «Мої вправи».'}</div>`;
+        el.querySelector('#atlasLibraryList').innerHTML=results.length?results.slice(0,atlasLibraryLimit).map(entry=>`<button class="atlasLibraryCard" data-library-entry="${entry.id}"><span class="atlasLibraryPhoto">${GymAtlas.previewUrl(entry)?`<img src="${GymAtlas.previewUrl(entry)}" alt="${escapeHtml(GymAtlas.label(entry,state.lang))}" loading="lazy">`:`<span class="muted">${en?'Illustration unavailable':'Ілюстрації поки немає'}</span>`}${GymAtlas.hasAnimation(entry)?'<span class="atlasAnimationBadge">▶ 3D</span>':''}</span><span class="atlasLibraryInfo"><strong>${escapeHtml(GymAtlas.label(entry,state.lang))}</strong><small>${escapeHtml(GymAtlas.category(entry.muscleGroup,state.lang))} · ${GymAtlas.unitLabel(entry.trackingType,state.lang)}</small></span></button>`).join(''):`<div class="atlasEmpty">${en?'No match. Try another name, or create your own exercise in My exercises.':'Не знайшли відповідника. Спробуй іншу назву або створи власну вправу в «Мої вправи».'}</div>`;
         el.querySelector('#atlasLibraryMore').hidden=results.length<=atlasLibraryLimit;
         el.querySelectorAll('[data-library-entry]').forEach(button=>button.onclick=()=>GymAtlas.open(GymAtlas.byId.get(button.dataset.libraryEntry),{lang:state.lang,onAdd:addAtlasExercise}));
       }
       function cats(){el.querySelector('#atlasLibraryCats').innerHTML=categories.map(id=>`<button class="fchip ${atlasLibraryCategory===id?'active':''}" data-atlas-cat="${id}">${id==='all'?t('all'):GymAtlas.category(id,state.lang)}</button>`).join('');el.querySelectorAll('[data-atlas-cat]').forEach(button=>button.onclick=()=>{atlasLibraryCategory=button.dataset.atlasCat;atlasLibraryLimit=36;cats();list();});}
       el.querySelector('#atlasLibraryQ').oninput=event=>{atlasLibraryQuery=event.target.value;atlasLibraryLimit=36;list();};
-      el.querySelector('#atlasMotionOnly').onchange=event=>{atlasAnimatedOnly=event.target.checked;atlasLibraryLimit=36;list();};
       el.querySelector('#atlasLibraryMore').onclick=()=>{atlasLibraryLimit+=36;list();};cats();list();
     },0);
     return el;
@@ -1395,9 +1419,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function render(){
+    document.documentElement.lang=state.lang==="en"?"en":"uk";
     $$(".navBtn").forEach(b=>{
       b.classList.toggle("active", b.getAttribute("data-tab")===currentTab);
+      const label=b.querySelector('.navLabel');
+      if(label) label.textContent=t(b.getAttribute('data-tab'));
     });
+    const brandEyebrow=$("header .brandEyebrow");
+    if(brandEyebrow) brandEyebrow.textContent=state.lang==="en"?"Personal performance":"Твій спортивний прогрес";
     const langBtn = $("#langBtn");
     if (langBtn) langBtn.textContent = state.lang.toUpperCase();
     const profileBtn=$("#profileBtn");
@@ -1505,6 +1534,7 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.querySelector("#clientDelete")?.addEventListener("click",()=>{
       if(!confirm(state.lang==="en"?"Delete this client and all their local data?":"Видалити цього клієнта та всі його локальні дані?")) return;
       appShell.appointments.filter(item=>item.profileId===profile.id).forEach(item=>queueCalendarChange("delete",item));
+      localStorage.removeItem('gymPwaExerciseMergeBackup_v1');
       appShell.profiles=appShell.profiles.filter(item=>item.id!==profile.id);
       appShell.appointments=appShell.appointments.filter(item=>item.profileId!==profile.id);
       if(appShell.activeProfileId===profile.id){
@@ -1998,7 +2028,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const box = $("#recentList");
     if (!box) return;
 
-    const last = state.workouts.slice(0, 12);
+    const last = [...state.workouts].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0, 5);
     if (!last.length){
       box.innerHTML = `<div class="muted">${t("noData")}</div>`;
       return;
@@ -3554,7 +3584,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <h2>${t("exercises")}</h2>
           <div class="sub">${state.lang==="en" ? "List + filters" : "Списком + фільтр по категоріях"}</div>
         </div>
-        <button class="btn primary" id="exPlus" title="Add" style="border-radius:50%; width:44px; height:44px; padding:0;">＋</button>
+        <button class="btn primary" id="exPlus" title="${t('addExercise')}" style="border-radius:50%; width:44px; height:44px; padding:0;">＋</button>
       </div>
 
       ${atlasTabsMarkup()}
@@ -5089,7 +5119,7 @@ document.addEventListener("DOMContentLoaded", () => {
       {
         title:en?"New strength guides: inspect movement and grip":"Нові силові покази: роздивись рух і хват",
         sub:en?"Three angles and illustrated instructions":"Три ракурси та ілюстровані інструкції",
-        copy:en?"Arnold press, standing barbell and dumbbell presses, barbell shrug and Romanian deadlift now use the owner-approved character animations. Use Angle, 0.5× and Pause to inspect them. All 112 library exercises have Ukrainian illustrated instructions below their demonstration, replacing the old schematic muscle map and brief steps. Use + and − to zoom and scroll inside the sheet without leaving the app. English mode labels these sheets as Ukrainian. Existing records, IDs, templates and fallback demonstrations stay unchanged. Muscle colors illustrate roles, not measured activation.":"Жим Арнольда, жим штанги й гантелей стоячи, шраги зі штангою та румунська тяга мають погоджені власні анімації. Використовуй «Ракурс», 0.5× і паузу. Для всіх 112 вправ бібліотеки під показом є ілюстрована інструкція українською замість старої схематичної карти м’язів і коротких кроків. Кнопками + і − змінюй масштаб та прокручуй зображення, не виходячи з додатка. В англійському режимі позначено, що зображення українські. Записи, ID, шаблони й резервні покази не змінені. Підсвітка ілюструє роль м’язів, а не вимір активації.",
+        copy:en?"The library contains 111 movements with Ukrainian and English names. Open an exercise for its demonstration and instructions. Use Angle, 0.5× and Pause to inspect animations. Ukrainian mode shows the existing illustrated guides; English mode shows English technique steps and muscle names. Machine Scott is now one entry, separate from barbell Scott. The two Hammer presses are combined under Incline Hammer Press, retaining all sets and history. Plans, templates, favorites and goals follow the combined exercise. A pre-consolidation backup is available in Settings. Search and muscle categories cover the full library without an animation-only filter. Muscle colors illustrate roles, not measured activation.":"У бібліотеці 111 рухів з українськими й англійськими назвами. Відкрий вправу, щоб побачити показ та інструкцію. Для анімацій є «Ракурс», 0.5× і пауза. В українському режимі збережено ілюстровані інструкції, в англійському є англійські кроки виконання й назви м’язів. Скотт у тренажері тепер одна позиція, окрема від Скотта зі штангою. Два жими Hammer об’єднано в «під кутом» зі збереженням усіх підходів та історії. Плани, шаблони, улюблені й цілі посилаються на об’єднану вправу. Резервну копію до об’єднання можна експортувати в налаштуваннях. Пошук і категорії охоплюють усю бібліотеку без фільтра «лише 3D». Підсвітка ілюструє роль м’язів, а не вимір активації.",
         example:en?"Library → Standing dumbbell curl → Angle → 0.5× → Pause.":"Бібліотека → згинання з гантелями стоячи → «Ракурс» → 0.5× → пауза.",
         mini:`<div class="miniTitle">${en?'Strength guides':'Силові покази'}</div><div class="miniField">3D · 3 ${en?'views':'ракурси'} · 0.5×</div>`
       },
@@ -5142,8 +5172,8 @@ document.addEventListener("DOMContentLoaded", () => {
         title:en?"Read Home, Statistics and Body":"Аналізуй головну, статистику й тіло",
         sub:en?"Choose a period and open exercise details":"Обирай період і відкривай деталі вправ",
         copy:en
-          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and recent sessions. Statistics has week/month/year/all filters, insight cards, weekly rhythm bars, load trend, one calorie progress graph, muscle split, type balance and exercise details. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
-          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й останні заняття. «Статистика» має фільтри тиждень/місяць/рік/все, інсайти, ритм по тижнях, тренд навантаження, один графік прогресу калорій, розподіл по групах, баланс типів вправ і деталі кожної вправи. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
+          ?"Home shows goals, a weekly/monthly/yearly overview, favorites and only the five most recent sessions. All saved sessions still contribute to statistics. Statistics has week/month/year/all filters, insight cards, weekly rhythm bars, load trend, one calorie progress graph, muscle split, type balance and exercise details. Tap a favorite or a record to open that exercise's statistics. Body stores partial measurements in a compact form."
+          :"Головна показує цілі, огляд за тиждень/місяць/рік, улюблені вправи й лише п’ять останніх занять. Усі збережені заняття продовжують враховуватись у статистиці. «Статистика» має фільтри тиждень/місяць/рік/все, інсайти, ритм по тижнях, тренд навантаження, один графік прогресу калорій, розподіл по групах, баланс типів вправ і деталі кожної вправи. Натисни улюблену вправу або рекорд, щоб відкрити статистику цієї вправи. «Тіло» зберігає часткові заміри в компактній формі.",
         example:en?"Muscle split offers Volume (weight × reps) or Sets, including unweighted/timed work. Linked library movements allocate 70% to primary and 30% to secondary muscles, equally within each role; without secondary muscles, 100% goes to primary. These are estimates, not measured muscle work. Unknown movements stay in their own category. Example: 100 kg × 8 close-grip bench reps allocate 560 to triceps and 120 each to chest/shoulders; total stays 800.":"У «Розподілі навантаження» обери «Об’єм» (вага × повтори) або «Підходи», зокрема для вправ без ваги чи на час. Для вправ із бібліотеки умовно 70% іде основним, 30% — допоміжним м’язам, порівну всередині ролі; без допоміжних — 100% основним. Це оцінка, а не вимір роботи м’язів. Власні нерозпізнані вправи залишаються у своїй категорії. Приклад: 100 кг × 8 у вузькому жимі дає 560 трицепсу та по 120 грудям і дельтам; сума лишається 800.",
         mini:`<div class="miniRow"><div class="miniStat">${en?"Rhythm":"Ритм"}<strong>▁▃▆█</strong></div><div class="miniStat">${en?"Balance":"Баланс"}<strong>64%</strong></div></div>`
       },
@@ -5313,6 +5343,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <button class="btn" id="importBtn">${state.lang==="en"?"Import all":"Імпорт всього"}</button>
         <button class="btn" id="exportProfileBtn" ${appShell.mode==="trainer"&&!activeProfile()?"disabled":""}>${state.lang==="en"?"Export active profile":"Експорт активного профілю"}</button>
         <button class="btn" id="mergeProfileBtn" ${appShell.mode==="trainer"&&!activeProfile()?"disabled":""}>${state.lang==="en"?"Merge into active profile":"Доповнити активний профіль"}</button>
+        ${localStorage.getItem('gymPwaExerciseMergeBackup_v1')?`<button class="btn" id="exportBeforeMergeBtn">${state.lang==="en"?"Export before consolidation":"Експорт до об’єднання вправ"}</button>`:''}
         <button class="btn" id="resetBtn" ${appShell.mode==="trainer"&&!activeProfile()?"disabled":""}>${t("reset")}</button>
         <input id="importFile" type="file" accept="application/json" style="display:none" />
         <input id="mergeProfileFile" type="file" accept="application/json" style="display:none" />
@@ -5352,6 +5383,11 @@ document.addEventListener("DOMContentLoaded", () => {
       };
       $("#changeModeBtn")?.addEventListener("click",()=>openModeSetup(true));
       $("#openCoachBtn")?.addEventListener("click",clearProfileSelection);
+      $("#exportBeforeMergeBtn")?.addEventListener("click",()=>{
+        const backup=JSON.parse(localStorage.getItem('gymPwaExerciseMergeBackup_v1')||'null');
+        if(backup?.app)downloadJson('gym-before-exercise-consolidation.json',{format:'gymPwaApp_v4',app:JSON.parse(backup.app)});
+        else if(backup?.legacy)downloadJson('gym-before-exercise-consolidation.json',JSON.parse(backup.legacy));
+      });
 
       const exportBtn = $("#exportBtn");
       if (exportBtn) exportBtn.onclick = ()=>{
@@ -5462,6 +5498,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ? (state.lang==="en"?"Clear all data for the active client? Other clients and calendar remain.":"Очистити всі дані активного клієнта? Інші клієнти й календар залишаться.")
           : t("confirmReset");
         if (!confirm(message)) return;
+        localStorage.removeItem('gymPwaExerciseMergeBackup_v1');
         state=freshProfileData();
         state.lang=activeProfile().data.lang||"ua";
         activeProfile().data=state;
@@ -5499,6 +5536,9 @@ document.addEventListener("DOMContentLoaded", () => {
   save();
   render();
   installNativeWorkoutListeners();
+  if(!identityMergeEnabled)setTimeout(()=>alert(state.lang==='en'
+    ?'Exercise consolidation was postponed because a local backup could not be saved. Your history is unchanged. Export all data in Settings before freeing browser storage.'
+    :'Об’єднання вправ відкладено: не вдалося зберегти локальну резервну копію. Історія не змінена. Спершу експортуй усі дані в налаштуваннях, перш ніж звільняти сховище браузера.'),0);
   setTimeout(()=>openModeSetup(false),0);
   checkAppointmentReminders();
   setInterval(checkAppointmentReminders,60*1000);

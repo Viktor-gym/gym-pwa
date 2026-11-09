@@ -11,11 +11,12 @@ vm.runInNewContext(fs.readFileSync(path.join(root,'src/exercise-repdb.js'),'utf8
 const original=JSON.parse(JSON.stringify(scope.window.GYM_EXERCISE_LIBRARY));
 vm.runInNewContext(fs.readFileSync(path.join(root,'src/exercise-legacy.js'),'utf8'),scope);
 vm.runInNewContext(fs.readFileSync(path.join(root,'src/gym-motion-catalog.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(path.join(root,'src/exercise-identity.js'),'utf8'),scope);
 vm.runInNewContext(fs.readFileSync(path.join(root,'src/exercise-atlas.js'),'utf8'),scope);
 const atlas=scope.window.GymAtlas;
 test('library has unique entries and valid local image assets',()=>{
- assert.equal(atlas.entries.length,110);
- assert.equal(new Set(atlas.entries.map(x=>x.id)).size,110);
+ assert.equal(atlas.entries.length,109);
+ assert.equal(new Set(atlas.entries.map(x=>x.id)).size,109);
  for(const entry of atlas.entries){
    assert(entry.name&&Array.isArray(entry.images)&&entry.primaryMuscles.length>=1);
    assert(['strength','reps','time','distance'].includes(entry.trackingType));
@@ -116,10 +117,10 @@ test('photo library is restored exactly and v50 saved variants remain resolvable
   assert(!atlas.entries.some(e=>e.id===entry.id),'legacy variants are not offered as new library entries');
  }
  assert.equal(atlas.previewUrl(atlas.match('Жим штанги лежачи')),atlas.customMotion(atlas.match('Жим штанги лежачи')).poster);
- assert.equal(atlas.search('',{limit:1000}).length,110);
+ assert.equal(atlas.search('',{limit:1000}).length,109);
  const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
  assert(!index.includes('exercise-poses-v50.js'));
- assert(index.includes('src="app.js?v=77"'));
+ assert(index.includes('src="app.js?v=78"'));
  assert(fs.readFileSync(path.join(root,'app.js'),'utf8').includes('Source: src/exercise-legacy.js'));
  assert(!fs.readFileSync(path.join(root,'src/exercise-atlas.js'),'utf8').includes('bindPoses'));
 });

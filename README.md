@@ -20,7 +20,7 @@ After source edits: `npm run build`. Run `npm test`, `npm run check:js`, and
 `npm run check:bundle` for regression, syntax and generated-file checks.
 Commit the generated files together with their sources. Publish one completed
 batch, wait for Pages deployment to finish, then verify the public website.
-The `?v=77` URL parameter and service-worker cache key invalidate old phone caches;
+The `?v=78` URL parameter and service-worker cache key invalidate old phone caches;
 they do not create additional app files. Do not clear users' localStorage.
 
 ## Publishing
@@ -36,7 +36,7 @@ Sources, tests, dependencies, and personal work folders are not in the artifact.
 
 ## Exercise Guides
 
-The visible library contains 113 retained, Ukrainian-named exercise entries.
+The visible library contains 111 retained, Ukrainian-named exercise entries.
 Historical source catalogs and all 68 original 3D records remain available for
 saved IDs and exact fallbacks: 50 Vital Free50 and 18 RepDB previews. The current
 release also binds 51 reviewed native guides with three actual camera views.
@@ -45,9 +45,21 @@ The v77 batch adds machine Scott curls, incline Hammer press, straight-arm
 pulldown, cable crossover and kneeling single-arm high pulley row. The lever
 row keeps its mechanism and receives the corrected left grip. The kneeling
 guide includes an overhead view. The rejected trap-bar draft is not included.
-Machine Scott retains its existing ID and has Ukrainian text instructions;
+The machine Scott animation is now bound to the main Scott entry;
 the 112 existing illustrated guides are preserved without substituting a
 barbell or cable guide for the new machine. Storage formats are unchanged.
+
+The v78 consolidation hides the duplicate machine Scott and horizontal Hammer
+choices. Historical catalog IDs still resolve. On load/import, each profile
+combines matching exercise references without dropping sets, sessions or body
+metrics; favorites, goals, plans, templates and PRs follow the retained ID.
+The old Hammer user exercise ID is preferred. Before the first migration, raw
+local storage is backed up locally and can be exported from Settings. If that
+backup cannot be saved, consolidation is deferred. No personal data is uploaded.
+Home lists only five recent workouts without removing older history. The
+animation-only filter and provider-count marketing text are removed, but source
+credits remain in exercise details. Both languages have names and technique:
+UA keeps illustrated sheets; EN shows English steps and muscle roles.
 Other entries use their original two still photographs, with manual 01 Start /
 02 Finish buttons. No three-frame drawings, slideshow, interpolation or photo
 animation is loaded. List cards always use one still poster or photograph.

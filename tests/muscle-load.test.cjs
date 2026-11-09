@@ -5,7 +5,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 const root=path.resolve(__dirname,'..'),scope={window:{},document:{addEventListener(){}}};
 for(const file of ['src/exercise-library.js','src/exercise-motion.js','src/exercise-repdb.js',
-  'src/exercise-legacy.js','src/gym-motion-catalog.js','src/exercise-atlas.js','src/muscle-load.js']){
+  'src/exercise-legacy.js','src/gym-motion-catalog.js','src/exercise-identity.js','src/exercise-atlas.js','src/muscle-load.js']){
   vm.runInNewContext(fs.readFileSync(path.join(root,file),'utf8'),scope);
 }
 const api=scope.window.GymMuscleLoad,atlas=scope.window.GymAtlas;

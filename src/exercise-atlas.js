@@ -22,7 +22,8 @@
   const customMotions=new Map((window.GYM_CUSTOM_MOTIONS||[]).map(motion=>[motion.catalogId,motion]));
   const customMotion=entry=>entry?customMotions.get(entry.id)||null:null;
   const nativeMotions=new Map((window.GYM_NATIVE_MOTIONS||[]).map(motion=>[motion.catalogId,motion]));
-  const nativeMotion=entry=>{const clip=entry&&nativeMotions.get(entry.id);return clip&&(!entry.motion||clip.reviewedReplacement===true)?clip:null;};
+  const canonicalId=id=>window.GymExerciseIdentity?.canonicalId(id)||id;
+  const nativeMotion=entry=>{const clip=entry&&nativeMotions.get(canonicalId(entry.id));return clip&&(!entry.motion||clip.reviewedReplacement===true)?clip:null;};
   const hasAnimation=entry=>Boolean(entry?.motion||nativeMotion(entry)||customMotion(entry));
   // Curate new choices only. Historical catalog IDs and names must still resolve.
   const removedIds = new Set([
@@ -39,6 +40,7 @@
     'Atlas_Stone_Trainer','Atlas_Stones','Axle_Deadlift','Seated_Leg_Curl'
   ]);
   const entries = savedEntries.filter(entry => {
+    if(canonicalId(entry.id)!==entry.id)return false;
     // The owner's exception covers our completed native/shared-character guides,
     // not downloaded third-party animations.
     if(nativeMotion(entry)||customMotion(entry)) return true;
@@ -126,6 +128,7 @@
     return `<div class="atlasMuscleTags ${kind}">${(items||[]).map(m=>`<span>${esc(lang==='en'?m:muscleNames[m]||m)}</span>`).join('')}</div>`;
   }
   function open(entry,options={}) {
+    if(entry) entry=byId.get(canonicalId(entry.id))||entry;
     const lang=options.lang||'ua', en=lang==='en';
     const illustrated=Boolean(entry&&(window.GYM_EXERCISE_GUIDES||{})[entry.id]);
     const previousFocus=document.activeElement;
@@ -258,11 +261,12 @@
   }
   function instructionsMarkup(entry,en){
     const guide=(window.GYM_EXERCISE_GUIDES||{})[entry.id];
-    const illustrated=guide?`<details class="atlasIllustrated" open><summary>${en?'Illustrated guide · Ukrainian':'Ілюстрована інструкція'}</summary><div class="atlasGuideTools"><span>${en?'Zoom and scroll to read details':'Збільшуй і прокручуй, щоб прочитати деталі'}</span><button class="btn" data-guide-zoom="-50" disabled aria-label="${en?'Zoom out':'Зменшити'}">−</button><output data-guide-scale>100%</output><button class="btn" data-guide-zoom="50" aria-label="${en?'Zoom in':'Збільшити'}">+</button></div><div class="atlasGuideViewport" data-guide-viewport tabindex="0" aria-label="${en?'Scrollable illustrated instructions':'Ілюстрована інструкція з прокручуванням'}"><img src="${esc(guide.src)}" width="${guide.width}" height="${guide.height}" loading="lazy" decoding="async" lang="uk" alt="${esc((en?'Ukrainian illustrated instructions: ':'Ілюстрована інструкція: ')+label(entry,en?'en':'ua'))}"></div></details>`:'';
-    if(guide)return illustrated;
+    const illustrated=guide&&!en?`<details class="atlasIllustrated" open><summary>${en?'Illustrated guide · Ukrainian':'Ілюстрована інструкція'}</summary><div class="atlasGuideTools"><span>${en?'Zoom and scroll to read details':'Збільшуй і прокручуй, щоб прочитати деталі'}</span><button class="btn" data-guide-zoom="-50" disabled aria-label="${en?'Zoom out':'Зменшити'}">−</button><output data-guide-scale>100%</output><button class="btn" data-guide-zoom="50" aria-label="${en?'Zoom in':'Збільшити'}">+</button></div><div class="atlasGuideViewport" data-guide-viewport tabindex="0" aria-label="${en?'Scrollable illustrated instructions':'Ілюстрована інструкція з прокручуванням'}"><img src="${esc(guide.src)}" width="${guide.width}" height="${guide.height}" loading="lazy" decoding="async" lang="uk" alt="${esc((en?'Ukrainian illustrated instructions: ':'Ілюстрована інструкція: ')+label(entry,en?'en':'ua'))}"></div></details>`:'';
+    if(guide&&!en)return illustrated;
     const steps=en?entry.instructions:entry.instructions_ua||entry.instructions;
     if(!steps?.length)return illustrated||`<p class="atlasFootnote">${en?'No written technique is available for this saved variant. You can select an exact matching movement in Edit without deleting your exercise or its results.':'Для цього збереженого варіанта немає текстової техніки. У редагуванні можна вибрати точний відповідник, не видаляючи вправу чи її результати.'}</p>`;
-    return illustrated+`<details class="atlasInstructions" ${!guide&&(entry.instructions_ua||en)||en?'open':''}><summary>${en?'How to perform · text':'Як виконувати · текст'}${!en&&!entry.instructions_ua?' · EN':''}</summary><ol>${steps.map(step=>`<li>${esc(step)}</li>`).join('')}</ol></details>`;
+    const muscles=en?`<section class="atlasFootnote"><h3>Muscles at work</h3><strong>Primary</strong>${muscleList(entry.primaryMuscles,'en','primary')}<strong>Secondary</strong>${muscleList(entry.secondaryMuscles,'en','secondary')}</section>`:'';
+    return illustrated+muscles+`<details class="atlasInstructions" ${!guide&&(entry.instructions_ua||en)||en?'open':''}><summary>${en?'How to perform · text':'Як виконувати · текст'}${!en&&!entry.instructions_ua?' · EN':''}</summary><ol>${steps.map(step=>`<li>${esc(step)}</li>`).join('')}</ol></details>`;
   }
   function sourceMarkup(entry,en){
     if(nativeMotion(entry))return `<p class="atlasFootnote">${en?'GymTracker Pro · rendered native 3D character. Stronger color: primary muscles; lighter: secondary muscles. Illustration, not a measurement of activation.':'GymTracker Pro · рендер власного 3D-персонажа. Насичений колір — основні м’язи; світліший — допоміжні. Це ілюстрація, не вимір активації.'} <a href="./assets/native-bench/v56/CREDITS.md" target="_blank" rel="noopener noreferrer">${en?'Sources and credits':'Джерела й авторство'}</a></p>`;
@@ -272,8 +276,8 @@
   function originalSourceMarkup(entry,en){
     if(!entry)return '';
     if(entry.sourceProvider==='workout-guide')return `<a class="atlasSource" href="https://github.com/bryllim/workout-guide" target="_blank" rel="noopener noreferrer">${en?'Saved movement metadata:':'Дані збереженого руху:'} Workout Guide · Bryl Lim · CC BY-SA 4.0</a><p class="atlasFootnote"><a href="./assets/poses/ATTRIBUTION.md" target="_blank" rel="noopener noreferrer">${en?'Credits':'Авторство'}</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a></p>`;
-    if(entry.motion?.provider==='repdb')return `<a class="atlasSource" href="https://repdb.co/preview/" target="_blank" rel="noopener noreferrer">Exercise data & images: RepDB (https://repdb.co)</a><p class="atlasFootnote"><a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC 4.0</a> · ${en?'Personal / non-commercial use only. Resized and transcoded from the preview animation.':'Лише особисте / некомерційне використання. Анімацію зменшено й перекодовано з preview-набору.'}</p>`;
+    if(entry.motion?.provider==='repdb')return `<a class="atlasSource" href="https://repdb.co/preview/" target="_blank" rel="noopener noreferrer">${en?'Exercise data and images:':'Дані вправ і зображення:'} RepDB (https://repdb.co)</a><p class="atlasFootnote"><a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC 4.0</a> · ${en?'Personal / non-commercial use only. Resized and transcoded from the preview animation.':'Лише особисте / некомерційне використання. Анімацію зменшено й перекодовано з preview-набору.'}</p>`;
     return `<a class="atlasSource" href="${entry.motion?'https://vitalanimations.com/free-pack':'https://github.com/yuhonas/free-exercise-db'}" target="_blank" rel="noopener noreferrer">${entry.motion?(en?'3D motion: Vital Animations · Free50 pack':'3D-анімація: Vital Animations · безкоштовний набір Free50'):(en?'Photos and movement data: Free Exercise DB · Unlicense':'Фото та дані рухів: Free Exercise DB · Unlicense')}</a>`;
   }
-  window.GymAtlas={entries,byId,match,search,label,category,unitLabel,thumbnail,imageUrl,previewUrl,open,normalize,escape:esc,muscleNames,customMotion,nativeMotion,hasAnimation};
+  window.GymAtlas={entries,byId,match,search,label,category,unitLabel,thumbnail,imageUrl,previewUrl,open,normalize,escape:esc,muscleNames,customMotion,nativeMotion,hasAnimation,canonicalId};
 })();

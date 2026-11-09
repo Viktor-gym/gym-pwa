@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const modules = [
   'exercise-library', 'exercise-motion', 'exercise-repdb', 'exercise-legacy',
-  'gym-motion-catalog', 'gym-motion', 'native-motion-catalog', 'exercise-guides', 'exercise-atlas',
+  'gym-motion-catalog', 'gym-motion', 'native-motion-catalog', 'exercise-guides', 'exercise-identity', 'exercise-atlas',
   'body-metrics', 'muscle-load', 'app'
 ];
 const precaches = ['exercise-precache', 'exercise-repdb-precache', 'gym-motion-precache', 'native-motion-precache', 'exercise-guides-precache'];
@@ -25,4 +25,4 @@ for (const [name, text] of Object.entries(outputs)) {
     fs.writeFileSync(path.join(root, name), text);
   }
 }
-console.log(process.argv.includes('--check') ? 'Single-app bundles are current.' : 'Built app.js and media-precache.js. Storage and exercise IDs unchanged.');
+console.log(process.argv.includes('--check') ? 'Single-app bundles are current.' : 'Built app.js and media-precache.js. Storage schema unchanged.');
