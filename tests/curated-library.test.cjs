@@ -34,8 +34,8 @@ test('new Ukrainian names are searchable and archived history still resolves',()
  assert.equal(atlas.search('Випади назад з гантелями')[0].id,'Dumbbell_Rear_Lunge');
  for(const id of ['Plank','Atlas_Stones','Preacher_Curl'])assert.equal(atlas.match({catalogId:id}).id,id);
  const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
- assert(sw.includes("'./app.js?v=78'"));
- assert(fs.readFileSync(path.join(root,'index.html'),'utf8').includes('src="app.js?v=78"'));
+ assert(sw.includes("'./app.js?v=79'"));
+ assert(fs.readFileSync(path.join(root,'index.html'),'utf8').includes('src="app.js?v=79"'));
 });
 
 test('seated leg curl is removed but lying curl, extensions and saved IDs remain',()=>{
