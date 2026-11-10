@@ -15,7 +15,7 @@ test('v79 publishes exactly the six approved sources with existing exercise IDs'
  const clips=scope.window.GYM_NATIVE_MOTIONS.filter(clip=>clip.release==='v79');
  assert.deepEqual(Array.from(clips,clip=>clip.catalogId).sort(),Object.keys(approved).sort());
  assert.equal(scope.window.GymAtlas.entries.length,111);
- assert.equal(scope.window.GYM_NATIVE_MOTIONS.length,57);
+ assert.equal(scope.window.GYM_NATIVE_MOTIONS.length,65);
  const cached=new Set(scope.self.GYM_NATIVE_MOTION_ASSETS);
  for(const clip of clips){
   assert.equal(clip.motionQA.sourceBlendSha256,approved[clip.catalogId]);

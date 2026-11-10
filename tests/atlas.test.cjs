@@ -120,7 +120,7 @@ test('photo library is restored exactly and v50 saved variants remain resolvable
  assert.equal(atlas.search('',{limit:1000}).length,109);
  const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
  assert(!index.includes('exercise-poses-v50.js'));
- assert(index.includes('src="app.js?v=79"'));
+ assert(index.includes('src="app.js?v=80"'));
  assert(fs.readFileSync(path.join(root,'app.js'),'utf8').includes('Source: src/exercise-legacy.js'));
  assert(!fs.readFileSync(path.join(root,'src/exercise-atlas.js'),'utf8').includes('bindPoses'));
 });

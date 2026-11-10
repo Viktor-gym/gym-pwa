@@ -6,7 +6,7 @@ const expected=['Cable_Preacher_Curl','Leverage_Incline_Chest_Press','Straight-A
 test('v77 contains exactly the six authorized guides and excludes the rejected trap-bar draft',()=>{
  const added=s.window.GYM_NATIVE_MOTIONS.filter(c=>c.release==='v77');
  assert.deepEqual(Array.from(added,c=>c.catalogId).sort(),expected);
- assert.equal(s.window.GYM_NATIVE_MOTIONS.length,57);
+ assert.equal(s.window.GYM_NATIVE_MOTIONS.length,65);
  assert.equal(s.window.GymAtlas.entries.length,111);
  for(const c of added){
   assert.equal(c.views.length,3);assert.equal(c.motionQA.posesChecked,49);
