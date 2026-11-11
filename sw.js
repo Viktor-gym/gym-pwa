@@ -3,10 +3,10 @@
 // - cache bust via CACHE version
 
 // bump version when you publish updates
-importScripts('./media-precache.js?v=80');
-const CACHE = 'gym-pwa-v80-unified';
+importScripts('./media-precache.js?v=81');
+const CACHE = 'gym-pwa-v81-unified';
 const MEDIA_CACHE = 'gym-pwa-exercise-media-v1';
-const ASSETS = ['./index.html','./app.js?v=80','./app.css?v=80','./media-precache.js?v=80','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
+const ASSETS = ['./index.html','./app.js?v=81','./app.css?v=81','./media-precache.js?v=81','./manifest.json','./icons/icon-192.png','./icons/icon-512.png'];
 const MOTION_ASSETS=[...Array.from({length:50},(_,index)=>String(index+51).padStart(4,'0')).flatMap(id=>['./assets/motion/'+id+'.jpg','./assets/motion/'+id+'.mp4']),...(self.GYM_SHARED_MOTION_ASSETS||[]),...(self.GYM_NATIVE_MOTION_ASSETS||[])];
 
 self.addEventListener("install", (e) => {
