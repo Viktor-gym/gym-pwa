@@ -27,6 +27,8 @@ test('v83 exposes the nine approved motions and caches all three angles', () => 
     assert.equal(clip.motionQA.surfaceAuditPassed, true);
     assert.deepEqual(Array.from(clip.motionQA.renderedFramesPerView), [48, 48, 48]);
     assert.deepEqual(Array.from(clip.views, view => view.id), ['primary', 'side', 'opposite']);
+    assert.deepEqual(Array.from(clip.views, view => view.label_ua), ['Основний', 'Збоку', 'Інший бік']);
+    assert.deepEqual(Array.from(clip.views, view => view.label_en), ['Main', 'Side', 'Other side']);
     for (const view of clip.views) {
       assert(view.src.includes(`-v83-${clip.motionQA.sourceBlendSha256.slice(0,12)}-`));
       assert(cache.has(view.src));
