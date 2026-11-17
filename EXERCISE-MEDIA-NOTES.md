@@ -222,3 +222,11 @@ v71 follow-up: owner also rejected the standing dumbbell press after noticing
 an unnatural bottom-position arm. Withdraw that native binding and6 media files
 as well; retain its original exact guide. Only the standing dumbbell curl from
 the v69 batch remains approved. Active native total36; visible catalog112.
+
+## v82: Twelve Approved Guides
+
+Twelve existing catalog entries receive three cameras each. The main clips are
+the ones from the owner review; the two alternate cameras use the same saved
+motions. Original fallbacks, exercise IDs, instructions, and storage are unchanged.
+The latest Roman-chair animation has the approved crossed arms and a 49-frame
+surface audit. Eight exercises from the larger review queue are not included.
