@@ -1,5 +1,12 @@
 # Next Exercise Media Search
 
+## Machines and Hip Thrust v83 (2026-11-17)
+
+Eight approved native machine guides and a revised barbell hip thrust. The
+release includes three camera angles per guide, each with a 48-frame MP4 and
+a matching JPEG poster. The hip thrust keeps its existing catalog ID.
+Prior media files remain available for older cached app versions.
+
 ## Concentration Curl v68 (2026-10-31)
 
 Adds Concentration_Curls, right working arm, in three actual camera views.
