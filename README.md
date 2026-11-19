@@ -11,6 +11,10 @@ offline media lists into `media-precache.js`. It does not change application log
 localStorage keys, profile schemas, exercise IDs or media URLs. Asset revision
 names identify distinct reviewed illustrations, not separate app versions.
 
+## Reviewed twenty v85 (2026-11-19)
+
+Twenty approved native exercise guides replace their exact existing motions, each with three real camera views and cached posters. The standing lateral raise retains its corrected illustrated guide. The treadmill entry shows walking and keeps its historical catalog ID. The side plank rises into a held pose and stops at the end of the camera orbit. Previous assets and saved workout IDs remain available.
+
 ## Development
 
 Serve this folder with a local HTTP server. No build step or API key is needed.
@@ -20,7 +24,7 @@ After source edits: `npm run build`. Run `npm test`, `npm run check:js`, and
 `npm run check:bundle` for regression, syntax and generated-file checks.
 Commit the generated files together with their sources. Publish one completed
 batch, wait for Pages deployment to finish, then verify the public website.
-The `?v=81` URL parameter and service-worker cache key invalidate old phone caches;
+The `?v=85` URL parameter and service-worker cache key invalidate old phone caches;
 they do not create additional app files. Do not clear users' localStorage.
 
 ## Publishing

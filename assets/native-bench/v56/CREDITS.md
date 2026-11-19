@@ -47,3 +47,14 @@ were approved and are unchanged. Numeric audits do not certify technique.
 
 v71: the standing dumbbell press was also withdrawn after further owner review.
 Only the standing dumbbell curl from the v69 batch remains approved and active.
+
+# Reviewed twenty v85
+
+Twenty further native guides were reviewed by the owner on 2026-11-19.
+Each uses the same native character and three actual rendered camera views.
+They include the standing lateral raise machine, alternating battle ropes,
+treadmill walking and a side plank with an initial rise and static hold.
+The two upright bar rows have localized elbow surface fairing. The elbow mesh
+is closed; soft skin folds are illustrative and may still overlap locally.
+Saved-scene checks and source hashes remain in the local production archive.
+These rendered assets contain no personal profiles or source Blender models.

@@ -1,5 +1,28 @@
 # Next Exercise Media Search
 
+## Reviewed twenty v85 (2026-11-19)
+
+Twenty owner-approved native replacements, each with three real camera views.
+The Smith stiff-leg hinge was rechecked against the application's existing
+0084 clip: arms stay extended through the lowering phase and the bar follows
+the original Smith rails. The standing lateral raise uses the approved guide
+sheet and revised instructions. The mountain climber releases the planted-toe
+bend during leg swing. Treadmill walking retains Running_Treadmill
+for saved records. The side plank rises into a static hold and stops after
+the camera orbit instead of restarting automatically.
+
+Repeated the free-motion search against the official
+[Vital Animations catalog](https://vitalanimations.com/exercises/gym-exercises)
+and [RepDB preview](https://repdb.co/preview/). No new third-party assets were
+introduced in this release. Existing exact motions, including the remaining
+stepmill, air-bike and barbell-march clips, remain available until their own
+native replacement is reviewed. No unrelated movement was substituted.
+
+Native source scenes, source hashes and sampled checks remain in the local
+production archive; only rendered MP4/JPEG assets enter this PWA repository.
+The two upright bar rows have closed elbow surfaces with localized skin
+fairing; soft folds may overlap and are not a full contact simulation.
+
 ## Machines and Hip Thrust v83 (2026-11-17)
 
 Eight approved native machine guides and a revised barbell hip thrust. The
