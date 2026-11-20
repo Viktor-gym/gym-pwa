@@ -11,6 +11,10 @@ offline media lists into `media-precache.js`. It does not change application log
 localStorage keys, profile schemas, exercise IDs or media URLs. Asset revision
 names identify distinct reviewed illustrations, not separate app versions.
 
+## Complete native coverage v86 (2026-11-20)
+
+Six approved guides use the current shared athlete: two front squats replace their earlier actors, while both stepmill entries, Air Bike sprint and barbell march replace their exact original animations. Every guide has three actual camera views with offline posters. All 111 visible exercise entries now have a native guide. Historical IDs, saved records and previous media stay available.
+
 ## Reviewed twenty v85 (2026-11-19)
 
 Twenty approved native exercise guides replace their exact existing motions, each with three real camera views and cached posters. The standing lateral raise retains its corrected illustrated guide. The treadmill entry shows walking and keeps its historical catalog ID. The side plank rises into a held pose and stops at the end of the camera orbit. Previous assets and saved workout IDs remain available.
@@ -24,7 +28,7 @@ After source edits: `npm run build`. Run `npm test`, `npm run check:js`, and
 `npm run check:bundle` for regression, syntax and generated-file checks.
 Commit the generated files together with their sources. Publish one completed
 batch, wait for Pages deployment to finish, then verify the public website.
-The `?v=85` URL parameter and service-worker cache key invalidate old phone caches;
+The `?v=86` URL parameter and service-worker cache key invalidate old phone caches;
 they do not create additional app files. Do not clear users' localStorage.
 
 ## Publishing
@@ -43,7 +47,7 @@ Sources, tests, dependencies, and personal work folders are not in the artifact.
 The visible library contains 111 retained, Ukrainian-named exercise entries.
 Historical source catalogs and all 68 original 3D records remain available for
 saved IDs and exact fallbacks: 50 Vital Free50 and 18 RepDB previews. The current
-release also binds 67 native guides, including the three-angle v81 rope
+release binds 111 native guides, including the three-angle v81 rope
 pullover and face pull. Both keep their existing exercise IDs.
 
 The v77 batch adds machine Scott curls, incline Hammer press, straight-arm

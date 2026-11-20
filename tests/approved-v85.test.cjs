@@ -12,7 +12,7 @@ const expected=['Lying_Leg_Curls','One_Leg_Barbell_Squat','motion-0084','Front_P
  'Rowing_Stationary','Bicycling_Stationary','Elliptical_Trainer','Running_Treadmill'];
 test('v85 activates the exact approved twenty with three complete offline camera views',()=>{
  const all=scope.window.GYM_NATIVE_MOTIONS,clips=all.filter(c=>c.release==='v85');
- assert.equal(all.length,107);
+ assert.equal(all.length,111);
  assert.deepEqual(Array.from(clips,c=>c.catalogId).sort(),expected.slice().sort());
  const cached=new Set(scope.self.GYM_NATIVE_MOTION_ASSETS);
  for(const clip of clips){

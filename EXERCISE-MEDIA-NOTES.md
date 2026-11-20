@@ -1,5 +1,14 @@
 # Next Exercise Media Search
 
+## Final native batch v86 (2026-11-20)
+
+The owner reviewed and authorized all six guides: Front_Barbell_Squat, repdb-smith-machine-front-squat, Step_Mill, motion-0082, motion-0053 and motion-0058. They use the current shared athlete, retain exact catalog IDs and expose three real camera renders each. The stairmill has the approved compact rounded enclosure, inclined handrails, lower console, removed upper ledge and revised support-leg extension/heel transfer. Air Bike has a broad rotor inside its protective cage. The march retains the reviewed back-rack grip.
+
+Four previously external bindings become native and two older native characters are replaced. Total 111 native guides cover all 111 visible entries. Original media and historical IDs remain available. Only rendered MP4/JPEG assets ship; source scenes, source-bound 97-pose grip/joint and sampled support checks remain local. These checks are discrete regressions, not continuous collision or soft-tissue pressure simulation.
+
+Repeated the official Vital/RepDB free-motion search before release; no new third-party assets were downloaded or added. The published batch consists of the owner-approved native renders.
+
+
 ## Reviewed twenty v85 (2026-11-19)
 
 Twenty owner-approved native replacements, each with three real camera views.

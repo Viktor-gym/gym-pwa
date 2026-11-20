@@ -58,3 +58,7 @@ The two upright bar rows have localized elbow surface fairing. The elbow mesh
 is closed; soft skin folds are illustrative and may still overlap locally.
 Saved-scene checks and source hashes remain in the local production archive.
 These rendered assets contain no personal profiles or source Blender models.
+
+# Final native batch v86
+
+Six owner-approved guides, three actual camera renders each, on the shared MB-Lab athlete. Animation and generic equipment prepared locally; no new third-party media, source models or private profiles are distributed. The original exact clips remain available as fallbacks. Saved-pose joint/grip and sampled support checks are retained locally; no continuous collision or soft-tissue pressure simulation is claimed.

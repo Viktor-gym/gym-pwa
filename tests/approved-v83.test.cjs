@@ -14,7 +14,7 @@ test('v83 exposes the nine approved motions and caches all three angles', () => 
   }
   const all = scope.window.GYM_NATIVE_MOTIONS;
   const release = all.filter(clip => clip.release === 'v83');
-  assert.equal(all.filter(clip => clip.release !== 'v85').length, 87);
+  assert.equal(all.filter(clip => !['v85','v86'].includes(clip.release)).length, 85);
   assert.deepEqual(Array.from(release, clip => clip.catalogId).sort(), [
     'Leg_Press', 'Hack_Squat', 'Leg_Extensions', 'Seated_Calf_Raise', 'Thigh_Abductor',
     'Butterfly', 'Reverse_Machine_Flyes', 'One-Legged_Cable_Kickback', 'Barbell_Hip_Thrust',
